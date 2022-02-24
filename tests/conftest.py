@@ -1,4 +1,4 @@
-from brownie import chain, interface
+from brownie import chain, interface, PositionManager, accounts
 from math import sqrt
 import pytest
 from web3 import Web3
@@ -73,6 +73,15 @@ def pool(MockToken, router, pm, gov, users):
     yield pool
 
 
+@pytest.fixture(scope="module")
+def position_manager(PositionManager, gov, user):
+    yield gov.deploy(PositionManager, user)
+
+@pytest.fixture(scope="module")
+def ERC721(ERC721, gov, user, position_manager):
+    erc721 = interface.IERC721(position_manager)
+    yield erc721
+
 @pytest.fixture
 def tokens(MockToken, pool):
     return MockToken.at(pool.token0()), MockToken.at(pool.token1())
@@ -80,3 +89,4 @@ def tokens(MockToken, pool):
 @pytest.fixture
 def userNFT(pool, users):
     tx = router.mint(pool, -60000, 60000, 1e15, {"from": users[0]})
+
