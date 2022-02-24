@@ -2,21 +2,18 @@
 
 pragma solidity 0.7.6;
 
-import "OpenZeppelin/openzeppelin-contracts@3.4.0/contracts/math/SafeMath.sol";
-import "OpenZeppelin/openzeppelin-contracts@3.4.0/contracts/token/ERC20/IERC20.sol";
-import "OpenZeppelin/openzeppelin-contracts@3.4.0/contracts/token/ERC20/SafeERC20.sol";
-import "OpenZeppelin/openzeppelin-contracts@3.4.0/contracts/token/ERC721/ERC721.sol";
-import "OpenZeppelin/openzeppelin-contracts@3.4.0/contracts/token/ERC721/IERC721.sol";
-import "OpenZeppelin/openzeppelin-contracts@3.4.0/contracts/token/ERC721/IERC721Metadata.sol";
-import "Uniswap/uniswap-v3-periphery@1.0.0/contracts/interfaces/INonfungiblePositionManager.sol";
-import "OpenZeppelin/openzeppelin-contracts@3.4.0/contracts/utils/ReentrancyGuard.sol";
-import "Uniswap/uniswap-v3-core@1.0.0/contracts/interfaces/callback/IUniswapV3MintCallback.sol";
-import "Uniswap/uniswap-v3-core@1.0.0/contracts/interfaces/callback/IUniswapV3SwapCallback.sol";
-import "Uniswap/uniswap-v3-core@1.0.0/contracts/interfaces/IUniswapV3Pool.sol";
-import "Uniswap/uniswap-v3-core@1.0.0/contracts/libraries/TickMath.sol";
-import "Uniswap/uniswap-v3-periphery@1.0.0/contracts/libraries/LiquidityAmounts.sol";
-import "Uniswap/uniswap-v3-periphery@1.0.0/contracts/libraries/PositionKey.sol";
-import "../interfaces/IVault.sol";
+import "@openzeppelin/contracts/math/Math.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@uniswap/v3-core/contracts/interfaces/callback/IUniswapV3MintCallback.sol";
+import "@uniswap/v3-core/contracts/interfaces/callback/IUniswapV3SwapCallback.sol";
+import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import "@uniswap/v3-core/contracts/libraries/TickMath.sol";
+import "@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol";
+import "@uniswap/v3-periphery/contracts/libraries/PositionKey.sol";
 
 /**
  * @title   Position Manager
