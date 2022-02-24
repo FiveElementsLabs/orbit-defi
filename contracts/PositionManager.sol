@@ -21,7 +21,7 @@ import "@uniswap/v3-periphery/contracts/libraries/PositionKey.sol";
  * @notice  User can Deposit here its Uni-v3 position
  * @notice  If user does so, he is sure that idle liquidity will always be employed in protocols
  * @notice  User will pay fee to external keepers
- * @notice  vault works for multiple positions
+ * @notice  vault works for multiple positionsdds
  */
 
 contract PositionManager is
