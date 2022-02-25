@@ -1,8 +1,9 @@
-from brownie import chain, interface, PositionManager, accounts
+from brownie import chain, interface, PositionManager, accounts, TestRouter
 from math import sqrt
 import pytest
 from web3 import Web3
 import random
+
 
 UNISWAP_V3_CORE = "Uniswap/v3-core@1.0.0"
 
@@ -66,11 +67,34 @@ def pool(MockToken, router, pm, gov, users):
     
     router.mint(pool, -max_tick, max_tick, 1e16, {"from": gov})
 
+
     # Increase cardinality and fast forward so TWAP works
     pool.increaseObservationCardinalityNext(100, {"from": gov})
     chain.sleep(3600)
     
     yield pool
+
+@pytest.fixture
+def tokenId(pool, user):
+    nonFungiblePositionManager = interface.INonfungiblePositionManager
+    max_tick = 887272 // 60 * 60
+
+    params = {
+        "token0": pool.token0(),
+        "token1": pool.token1(),
+        "fee": pool.fee(),
+        "tickLower": -max_tick,
+        "tickUpper": max_tick,
+        "amount0Desired": 1e10,
+        "amount1Desired": 1e10,
+        "amount0Min": 0,
+        "amount1Min": 0,
+        "recipient": user,
+        "deadline": 1545730073,
+    }
+
+    tokenId = nonFungiblePositionManager.mint(params)
+    yield tokenId
 
 
 @pytest.fixture(scope="module")
@@ -78,9 +102,9 @@ def position_manager(PositionManager, gov, user):
     yield gov.deploy(PositionManager, user)
 
 @pytest.fixture(scope="module")
-def ERC721(ERC721, gov, user, position_manager):
-    erc721 = interface.IERC721(position_manager)
-    yield erc721
+def ERC1155(position_manager):
+    erc1155 = interface.IERC1155(position_manager)
+    yield erc1155
 
 @pytest.fixture
 def tokens(MockToken, pool):
