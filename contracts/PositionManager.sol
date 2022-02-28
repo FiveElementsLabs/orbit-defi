@@ -66,5 +66,4 @@ contract PositionManager is
         emit DepositUni(from, tokenId);
     }
 
-    
 }

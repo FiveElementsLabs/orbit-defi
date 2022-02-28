@@ -2,10 +2,10 @@ install all package
 npm i
 
 first time / every time you modify some contract
-truffle compile
+truffle compile / npm run compile
 
 start development network (dont close until you have finished to run test)
-truffle develop
+truffle develop / npm run development
 
 start test
-npm run test or truffle test
+truffle test / npm run test
