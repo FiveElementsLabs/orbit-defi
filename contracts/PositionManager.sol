@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
@@ -28,7 +29,7 @@ import "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.s
 
 contract PositionManager is
     IVault,
-    ERC721,
+    ERC1155,
     ReentrancyGuard
 {
     using SafeERC20 for IERC20;
@@ -52,7 +53,7 @@ contract PositionManager is
     constructor(
         address userAddress
     )
-    ERC721("Position Manger", "PM") 
+    ERC1155("https://www.google.com") 
     {
         owner = userAddress;
     } 
@@ -60,8 +61,8 @@ contract PositionManager is
     /**
      * @notice add uniswap position to the position manager
      */
-    function depositUniNft(address from, uint256 tokenId) external override {
-        safeTransferFrom(from, address(this), tokenId);
+    function depositUniNft(address from, uint256 tokenId, uint256 amount) external override {
+        safeTransferFrom(from, address(this), tokenId, amount, "0x0");
         emit DepositUni(from, tokenId);
     }
 
