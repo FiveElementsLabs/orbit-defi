@@ -30,8 +30,7 @@ beforeEach(async () => {
     eth.methods.mint(deployer, "0x" + 1e20.toString(16)).call();
     usdc.methods.mint(deployer, "0x" + 1e10.toString(16)).call();
 
-    //deploy factory
-    
+    //deploy factory 
     factory = await new web3.eth.Contract(factoryjson['abi'])
       .deploy({ data: factoryjson['bytecode'] })
       .send({ from: deployer, gas: 6700000 })
