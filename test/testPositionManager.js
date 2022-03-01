@@ -8,7 +8,7 @@ const nonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/
 const positionManagerjson = require('../build/contracts/PositionManager.json');
 const mockTokenjson = require('../build/contracts/MockToken.json')
 let accounts;
-let positionManager, eth, usdc, factory, pool, NonfungiblePositionManager;
+let positionManager, eth, usdc, factory, pool, nonFungiblePositionManager;
 let deployer;
 
 beforeEach(async () => {
@@ -46,6 +46,16 @@ beforeEach(async () => {
     nonFungiblePositionManager = await new web3.eth.Contract(nonFungiblePositionManagerjson['abi'])
       .deploy({ data: nonFungiblePositionManagerjson['bytecode'], arguments: [ factory._address, eth._address, eth._address] })
       .send({ from:  deployer, gas: 6700000 })
+
+
+    eth.methods.approve(nonFungiblePositionManager._address, '0x' + Math.pow(2,254).toString(16)).call({from: deployer})
+    usdc.methods.approve(nonFungiblePositionManager._address, '0x' + Math.pow(2,254).toString(16)).call({from: deployer})
+
+    console.log(nonFungiblePositionManager)
+    let res = await nonFungiblePositionManager.methods.mint([
+      eth._address, usdc._address, 5000,  -1000,  1000, 
+       '1000000000000',  '1000000',  0,  0,  deployer,  Date.now() + 1000
+    ]).send({from: deployer})
 
   });
 
