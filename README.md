@@ -1,11 +1,11 @@
-#Uni Optimizer
+# Uni Optimizer
 
-##Scope
+## Scope
 
 The scope of this project is to create a position manager.
 The objective is to create a smart vault to manage the customers assets.
 
-##How to run it
+## How to run it
 
 - Install all packages
 `npm i`
