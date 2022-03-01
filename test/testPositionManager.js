@@ -47,15 +47,13 @@ beforeEach(async () => {
       .deploy({ data: nonFungiblePositionManagerjson['bytecode'], arguments: [ factory._address, eth._address, eth._address] })
       .send({ from:  deployer, gas: 6700000 })
 
+    await eth.methods.approve(nonFungiblePositionManager._address, '0x' + Math.pow(2,254).toString(16)).call({from: deployer})
+    await usdc.methods.approve(nonFungiblePositionManager._address, '0x' + Math.pow(2,254).toString(16)).call({from: deployer})
 
-    eth.methods.approve(nonFungiblePositionManager._address, '0x' + Math.pow(2,254).toString(16)).call({from: deployer})
-    usdc.methods.approve(nonFungiblePositionManager._address, '0x' + Math.pow(2,254).toString(16)).call({from: deployer})
-
-    console.log(nonFungiblePositionManager)
     let res = await nonFungiblePositionManager.methods.mint([
       eth._address, usdc._address, 5000,  -1000,  1000, 
-       '1000000000000',  '1000000',  0,  0,  deployer,  Date.now() + 1000
-    ]).send({from: deployer})
+       100000000,  10000000,  0,  0,  deployer,  Date.now() + 1000
+    ]).send({ from: deployer, value: '10000000000000000' })
 
   });
 
