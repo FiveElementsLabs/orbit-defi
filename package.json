@@ -1,5 +1,21 @@
 {
+  "name": "truffleproject",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "truffle test",
+    "compile": "truffle compile",
+    "development": "truffle develop"
+  },
+  "author": "",
+  "license": "ISC",
   "dependencies": {
-    "@openzeppelin/contracts": "^4.5.0"
+    "@uniswap/v3-core": "^1.0.1",
+    "@uniswap/v3-periphery": "^1.4.0",
+    "assert": "^2.0.0",
+    "ganache-cli": "^6.12.2",
+    "truffle": "^5.5.2",
+    "web3": "^1.7.0"
   }
 }
