@@ -7,8 +7,8 @@ const pooljson = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Pool.sol
 const positionManagerjson = require('../build/contracts/PositionManager.json');
 const mockTokenjson = require('../build/contracts/MockToken.json')
 
-const { Pool } = require("@uniswap/v3-sdk");
-const { Token } = require("@uniswap/sdk-core");
+const { Pool, Position, NonfungiblePositionManager } = require("@uniswap/v3-sdk");
+const { Token, Percent } = require("@uniswap/sdk-core");
 
 let accounts;
 let positionManager, eth, usdc, factory, pool;
@@ -20,6 +20,15 @@ function encodePriceSqrt(reserve1, reserve0) {
   
 }
 
+const MIN_TICK = -887272
+const MAX_TICK = -MIN_TICK
+
+function nearestUsableTick(tick, tickSpacing) {
+  const rounded = Math.round(tick / tickSpacing) * tickSpacing
+  if (rounded < MIN_TICK) return rounded + tickSpacing
+  else if (rounded > MAX_TICK) return rounded - tickSpacing
+  else return rounded
+}
 
 beforeEach(async () => {
     accounts = await web3.eth.getAccounts();
@@ -61,20 +70,12 @@ beforeEach(async () => {
 
     pool = await new web3.eth.Contract(pooljson['abi'], tx)
 
-    //const fees = await pool.methods.fee().call()
     const tick = -200000
     const price = Math.pow(1.0001, tick)
     console.log(price)
 
     await pool.methods.initialize('0x' + (Math.sqrt(price) * Math.pow(2,96)).toString(16)).call()
     await pool.methods.increaseObservationCardinalityNext(100).call()
-
-
-
-    console.log('before fee')
-    /* const fees = await pool.methods.liquidity().call()
-    console.log('fees')
-    console.log(fees) */
 
     const TokenB = new Token(chainId, usdc._address, 6, "USDC", "USDC");
     const TokenA = new Token(chainId, eth._address, 18, "ETH", "ETH");
@@ -90,7 +91,24 @@ beforeEach(async () => {
     );
 
 
-    console.log(poolExample)
+    //const tickSpacing = 
+    const position = new Position({
+      pool: poolExample,
+      liquidity: 1000,
+      tickLower: nearestUsableTick(tick, poolExample.tickSpacing) - poolExample.tickSpacing  * 2,
+      tickUpper: nearestUsableTick(tick, poolExample.tickSpacing) + poolExample.tickSpacing * 2
+    })
+
+    console.log(position.mintAmounts)
+
+    const { calldata, value } = NonfungiblePositionManager.addCallParameters(position, {
+      slippageTolerance: new Percent(50, 10000),
+      recipient: deployer,
+      deadline: Date.now() + 1000
+      });
+
+    console.log(calldata)
+    console.log(value)
 
 
 
