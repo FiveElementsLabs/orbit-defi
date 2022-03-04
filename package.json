@@ -18,5 +18,9 @@
     "ganache-cli": "^6.12.2",
     "truffle": "^5.5.2",
     "web3": "^1.7.0"
+  },
+  "devDependencies": {
+    "@uniswap/sdk-core": "^3.0.1",
+    "@uniswap/v3-sdk": "^3.8.2"
   }
 }

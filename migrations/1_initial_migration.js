@@ -1,5 +1,5 @@
-const PositionManager = artifacts.require("PositionManager");
+const Migrations = artifacts.require("Migrations");
 
-module.exports = function (deployer, accounts) {
-  deployer.deploy(PositionManager, '0xbe556cbbd2dfe48a47c3d9ba3f46920fd92dab48');
+module.exports = function (deployer) {
+  deployer.deploy(Migrations);
 };
