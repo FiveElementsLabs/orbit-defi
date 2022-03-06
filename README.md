@@ -1,22 +1,15 @@
-# Uni Optimizer
+# Basic Sample Hardhat Project
 
-## Scope
+This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, a sample script that deploys that contract, and an example of a task implementation, which simply lists the available accounts.
 
-The scope of this project is to create a position manager.
-The objective is to create a smart vault to manage the customers assets.
+Try running some of the following tasks:
 
-## How to run it
-
-- Install all packages
-`npm i`
-
-- first time / every time you modify some contract
-`truffle compile / npm run compile`
-
-- start development network (dont close until you have finished to run test)
-`truffle develop / npm run development`
-
-
-- Start testing
-`truffle test / npm run test`
-
+```shell
+npx hardhat accounts
+npx hardhat compile
+npx hardhat clean
+npx hardhat test
+npx hardhat node
+node scripts/sample-script.js
+npx hardhat help
+```
