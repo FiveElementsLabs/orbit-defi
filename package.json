@@ -1,4 +1,9 @@
 {
+  "name": "uni-optimizer",
+  "version": "1.0.0",
+  "description": "Uniswap v3 optimizer",
+  "repository": "https://github.com/FiveElementsLabs/uni-optimizer.git",
+  "author": "FiveElementsLabs",
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.0",
     "@nomiclabs/hardhat-etherscan": "^2.1.3",

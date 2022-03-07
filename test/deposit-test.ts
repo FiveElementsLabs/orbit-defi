@@ -1,9 +1,7 @@
-import { expect } from "chai";
-import "@nomiclabs/hardhat-ethers";
-import { PositionManager } from "../typechain";
-import { Wallet } from 'ethers';
+import { expect } from 'chai';
+import '@nomiclabs/hardhat-ethers';
 import { ethers, waffle } from 'hardhat';
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
 
 // `describe` is a Mocha function that allows you to organize your tests. It's
 // not actually needed, but having your tests organized makes debugging them
@@ -13,8 +11,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-wit
 // The callback must define the tests of that section. This callback can't be
 // an async function.
 
-
-describe("Position manager contract", function () {
+describe('Position manager contract', function () {
   // Mocha has four functions that let you hook into the the test runner's
   // lifecyle. These are: `before`, `beforeEach`, `after`, `afterEach`.
 
@@ -25,28 +22,22 @@ describe("Position manager contract", function () {
   // `before` and `beforeEach` callbacks.
   // @ts-ignore
   let PositionManagerInstance;
-  let owner : SignerWithAddress;
-
+  let owner: SignerWithAddress;
 
   // `beforeEach` will run before each test, re-deploying the contract every
   // time. It receives a callback, which can be async.
   beforeEach(async function () {
     // Get the ContractFactory and Signers here.
     [owner] = await ethers.getSigners();
-    const PositionManager = await ethers.getContractFactory("PositionManager");
+    const PositionManager = await ethers.getContractFactory('PositionManager');
     PositionManagerInstance = await PositionManager.deploy(owner.address);
     await PositionManagerInstance.deployed();
-
   });
 
-
-  describe("Deploy correctly", function () {
-    it("Should correcly initialize constructor", async function () {
+  describe('Deploy correctly', function () {
+    it('Should correcly initialize constructor', async function () {
       // @ts-ignore
       expect(await PositionManagerInstance.owner()).to.equal(owner.address);
     });
-
-
-
   });
 });
