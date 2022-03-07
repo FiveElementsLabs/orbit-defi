@@ -3,15 +3,9 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-import "@uniswap/v3-core/contracts/libraries/TickMath.sol";
-import "@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol";
-import "@uniswap/v3-periphery/contracts/libraries/PositionKey.sol";
-import "@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol";
 import "../interfaces/IVault.sol";
 import "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
-import "@uniswap/v3-periphery/contracts/NonfungiblePositionManager.sol";
 
 /**
  * @title   Position Manager
@@ -22,7 +16,7 @@ import "@uniswap/v3-periphery/contracts/NonfungiblePositionManager.sol";
  * @notice  vault works for multiple positions
  */
 
-contract PositionManager is IVault, NonfungiblePositionManager {
+contract PositionManager is IVault, INonfungiblePositionManager {
     using SafeMath for uint256;
 
     // Protocol fee to compensate keeper
@@ -37,12 +31,7 @@ contract PositionManager is IVault, NonfungiblePositionManager {
     /**
      * @dev After deploying, strategy needs to be set via `setStrategy()`
      */
-    constructor(
-        address userAddress,
-        address _factory,
-        address _weth,
-        address _tokenDescriptor
-    ) NonfungiblePositionManager(_factory, _weth, _tokenDescriptor) {
+    constructor(address userAddress) {
         owner = userAddress;
     }
 

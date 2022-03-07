@@ -1,10 +1,9 @@
 import { expect } from "chai";
 import "@nomiclabs/hardhat-ethers";
-import { PositionManager } from "../typechain";
-import { UniswapV3Factoryjson } from "@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factoryjson"
-import { Wallet } from "ethers";
-import { ethers, waffle } from "hardhat";
+const UniswapV3Factoryjson = require("@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json");
+import { ethers } from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
+import { tokensFixture } from "./shared/fixtures";
 
 // `describe` is a Mocha function that allows you to organize your tests. It's
 // not actually needed, but having your tests organized makes debugging them
@@ -30,12 +29,30 @@ describe("Position manager contract", function () {
   // `beforeEach` will run before each test, re-deploying the contract every
   // time. It receives a callback, which can be async.
   beforeEach(async function () {
-    // Get the factory
-    const factory = await ethers.ContractFactory("")
-    // Get the ContractFactory and Signers here.
+    //Get signer
     [owner] = await ethers.getSigners();
+
+    // Get token
+    const { token0, token1 } = await tokensFixture();
+    console.log(token0);
+    console.log(token1);
+
+    // Get the factory
+    const UniswapV3FactoryFactory = new ethers.ContractFactory(
+      UniswapV3Factoryjson.abi,
+      UniswapV3Factoryjson.bytecode,
+      owner
+    );
+    const UniswapV3Factory = await UniswapV3FactoryFactory.deploy();
+
+    // Get the ContractFactory and Signers here.
     const PositionManager = await ethers.getContractFactory("PositionManager");
-    PositionManagerInstance = await PositionManager.deploy(owner.address);
+    PositionManagerInstance = await PositionManager.deploy(
+      owner.address,
+      UniswapV3Factory.address,
+      token0.address,
+      token0.address
+    );
     await PositionManagerInstance.deployed();
   });
 
