@@ -16,9 +16,7 @@ import "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.s
  * @notice  vault works for multiple positions
  */
 
-contract PositionManager is IVault, INonfungiblePositionManager {
-    using SafeMath for uint256;
-
+contract PositionManager is IVault, ERC1155 {
     // Protocol fee to compensate keeper
     uint256 protocolfee = 1e6;
     // Array with list of UNI v3 positions
@@ -31,7 +29,7 @@ contract PositionManager is IVault, INonfungiblePositionManager {
     /**
      * @dev After deploying, strategy needs to be set via `setStrategy()`
      */
-    constructor(address userAddress) {
+    constructor(address userAddress) ERC1155("www.google.com") {
         owner = userAddress;
     }
 
@@ -42,8 +40,12 @@ contract PositionManager is IVault, INonfungiblePositionManager {
     /**
      * @notice add uniswap position to the position manager
      */
-    function depositUniNft(address from, uint256 tokenId) external override {
-        safeTransferFrom(from, address(this), tokenId, "0x0");
+    function depositUniNft(
+        address from,
+        uint256 tokenId,
+        uint256 amount
+    ) external override {
+        safeTransferFrom(from, address(this), tokenId, amount, "0x0");
         emit DepositUni(from, tokenId);
     }
 
