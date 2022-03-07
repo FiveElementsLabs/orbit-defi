@@ -1,6 +1,9 @@
-__pycache__
+node_modules
 .env
-.history
-.hypothesis/
-build/
-reports/
+coverage
+coverage.json
+typechain
+
+#Hardhat files
+cache
+artifacts
