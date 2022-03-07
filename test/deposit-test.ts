@@ -39,7 +39,7 @@ describe("Position manager contract", function () {
     );
     NonFungiblePositionManager = NonfungiblePositionManager;
     const signers = await ethers.getSigners();
-    const user = signers[1];
+    const user = signers[0];
     await token0.mint(user.address, ethers.utils.parseEther("1000000000000"));
     await token1.mint(user.address, ethers.utils.parseEther("1000000000000"));
     let startTick = -240000;
@@ -56,22 +56,27 @@ describe("Position manager contract", function () {
         NonFungiblePositionManager.address,
         ethers.utils.parseEther("1000000000000")
       );
-    await token1
-      .connect(signers[0])
-      .approve(
-        NonFungiblePositionManager.address,
-        ethers.utils.parseEther("1000000000000")
-      );
+    await token1.approve(
+      NonFungiblePositionManager.address,
+      ethers.utils.parseEther("1000000000000"),
+      { from: signers[0].address }
+    );
+
+    const res = await token1.allowance(
+      NonFungiblePositionManager.address,
+      signers[0].address
+    );
+    console.log(res);
 
     const tx = await NonFungiblePositionManager.mint(
       [
         token0.address,
         token1.address,
         3000,
-        -180000,
-        240000,
-        10,
-        10,
+        -240060,
+        -239940,
+        1000,
+        1000,
         0,
         0,
         signers[0].address,
@@ -79,7 +84,8 @@ describe("Position manager contract", function () {
       ],
       { from: signers[0].address, gasLimit: 670000 }
     );
-    console.log(await tx.wait());
+    const receipt = await tx.wait();
+    console.log(receipt.events);
   });
 
   // `beforeEach` will run before each test, re-deploying the contract every
