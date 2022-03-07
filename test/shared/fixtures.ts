@@ -1,6 +1,7 @@
 import { Contract } from "ethers";
 import { ethers } from "hardhat";
 import { ContractFactory } from "ethers";
+import { sign } from "crypto";
 const UniswapV3Factory = require("@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json");
 const UniswapV3Pool = require("@uniswap/v3-core/artifacts/contracts/UniswapV3Pool.sol/UniswapV3Pool.json");
 const NonFungiblePositionManager = require("@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json");
@@ -12,8 +13,8 @@ interface TokensFixture {
 
 export async function tokensFixture(): Promise<TokensFixture> {
   const tokenFactory = await ethers.getContractFactory("MockToken");
-  const token0 = await tokenFactory.deploy("WETH", "WETH", 18);
-  const token1 = await tokenFactory.deploy("USDC", "USDC", 6);
+  const token0 = await tokenFactory.deploy("USDC", "USDC", 6);
+  const token1 = await tokenFactory.deploy("WETH", "WETH", 18);
   return { token0, token1 };
 }
 
@@ -36,9 +37,18 @@ export async function poolFixture(
     UniswapV3Pool["abi"],
     signers[0]
   );
-  return pool;
-}
 
-export async function nonFungiblePositionManager(): Promise<any> {
-  //Deploy descriptor and Non fungible here
+  const NonfungiblePositionManagerFactory = new ContractFactory(
+    NonFungiblePositionManager["abi"],
+    NonFungiblePositionManager["bytecode"],
+    signers[0]
+  );
+  const NonfungiblePositionManager =
+    await NonfungiblePositionManagerFactory.deploy(
+      factory.address,
+      token1.address,
+      token1.address
+    );
+
+  return { pool, NonfungiblePositionManager };
 }

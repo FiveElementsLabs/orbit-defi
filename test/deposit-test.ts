@@ -1,9 +1,11 @@
 import { expect } from "chai";
 import "@nomiclabs/hardhat-ethers";
-const UniswapV3Factoryjson = require("@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json");
-import { ethers } from "hardhat";
+import { NonfungiblePositionManager, PositionManager } from "../typechain";
+import { Contract, Wallet } from "ethers";
+import { ethers, waffle } from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
-import { tokensFixture } from "./shared/fixtures";
+import { IUniswapV3Pool } from "../typechain";
+import { tokensFixture, poolFixture } from "./shared/fixtures";
 
 // `describe` is a Mocha function that allows you to organize your tests. It's
 // not actually needed, but having your tests organized makes debugging them
@@ -25,34 +27,43 @@ describe("Position manager contract", function () {
   // @ts-ignore
   let PositionManagerInstance;
   let owner: SignerWithAddress;
+  let user: SignerWithAddress;
+  let NonFungiblePositionManager: Contract;
+
+  before(async function () {
+    // Initializing pool states
+    const { token0, token1 } = await tokensFixture();
+    const { pool, NonfungiblePositionManager } = await poolFixture(
+      token0,
+      token1
+    );
+    NonFungiblePositionManager = NonfungiblePositionManager;
+    const signers = await ethers.getSigners();
+    const user = signers[1];
+    await token0.mint(user.address, ethers.utils.parseEther("1000000000000"));
+    await token1.mint(user.address, ethers.utils.parseEther("1000000000000"));
+    let startTick = -240000;
+    const price = Math.pow(1.0001, startTick);
+    await pool.initialize(
+      "0x" + (Math.sqrt(price) * Math.pow(2, 96)).toString(16)
+    );
+    await pool.increaseObservationCardinalityNext(100);
+    const { sqrtPriceX96, tick } = await pool.slot0();
+    await token0
+      .connect(signers[0])
+      .approve(pool.address, ethers.utils.parseEther("1000000000000"));
+    await token1
+      .connect(signers[0])
+      .approve(pool.address, ethers.utils.parseEther("1000000000000"));
+  });
 
   // `beforeEach` will run before each test, re-deploying the contract every
   // time. It receives a callback, which can be async.
   beforeEach(async function () {
-    //Get signer
-    [owner] = await ethers.getSigners();
-
-    // Get token
-    const { token0, token1 } = await tokensFixture();
-    console.log(token0);
-    console.log(token1);
-
-    // Get the factory
-    const UniswapV3FactoryFactory = new ethers.ContractFactory(
-      UniswapV3Factoryjson.abi,
-      UniswapV3Factoryjson.bytecode,
-      owner
-    );
-    const UniswapV3Factory = await UniswapV3FactoryFactory.deploy();
-
     // Get the ContractFactory and Signers here.
+    [owner] = await ethers.getSigners();
     const PositionManager = await ethers.getContractFactory("PositionManager");
-    PositionManagerInstance = await PositionManager.deploy(
-      owner.address,
-      UniswapV3Factory.address,
-      token0.address,
-      token0.address
-    );
+    PositionManagerInstance = await PositionManager.deploy(owner.address);
     await PositionManagerInstance.deployed();
   });
 
@@ -60,6 +71,14 @@ describe("Position manager contract", function () {
     it("Should correcly initialize constructor", async function () {
       // @ts-ignore
       expect(await PositionManagerInstance.owner()).to.equal(owner.address);
+    });
+  });
+
+  describe("NonfungiblePositionToken deployed correctly", function () {
+    it("Should correctly initialize constructor", async function () {
+      expect(await NonFungiblePositionManager.signer.getAddress()).to.equal(
+        owner.address
+      );
     });
   });
 });
