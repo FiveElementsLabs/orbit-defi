@@ -26,7 +26,7 @@ describe("Position manager contract", function () {
   // `before` and `beforeEach` callbacks.
   // @ts-ignore
   let PositionManagerInstance;
-  let owner: SignerWithAddress;
+  let owner: any;
   let user: SignerWithAddress;
   let NonFungiblePositionManager: Contract;
 
@@ -49,12 +49,37 @@ describe("Position manager contract", function () {
     );
     await pool.increaseObservationCardinalityNext(100);
     const { sqrtPriceX96, tick } = await pool.slot0();
+    console.log(tick);
     await token0
       .connect(signers[0])
-      .approve(pool.address, ethers.utils.parseEther("1000000000000"));
+      .approve(
+        NonFungiblePositionManager.address,
+        ethers.utils.parseEther("1000000000000")
+      );
     await token1
       .connect(signers[0])
-      .approve(pool.address, ethers.utils.parseEther("1000000000000"));
+      .approve(
+        NonFungiblePositionManager.address,
+        ethers.utils.parseEther("1000000000000")
+      );
+
+    const tx = await NonFungiblePositionManager.mint(
+      [
+        token0.address,
+        token1.address,
+        3000,
+        -180000,
+        240000,
+        10,
+        10,
+        0,
+        0,
+        signers[0].address,
+        Date.now() + 1000,
+      ],
+      { from: signers[0].address, gasLimit: 670000 }
+    );
+    console.log(await tx.wait());
   });
 
   // `beforeEach` will run before each test, re-deploying the contract every
