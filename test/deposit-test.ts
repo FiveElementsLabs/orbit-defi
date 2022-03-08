@@ -7,6 +7,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { IUniswapV3Pool } from '../typechain';
 import { tokensFixture, poolFixture } from './shared/fixtures';
 import { sign } from 'crypto';
+import { time } from 'console';
 
 // `describe` is a Mocha function that allows you to organize your tests. It's
 // not actually needed, but having your tests organized makes debugging them
@@ -112,6 +113,7 @@ describe('Position manager contract', function () {
 
     it('Should deposit nft in smart vault', async function () {
       const tx = await NonFungiblePositionManager.mint(
+        //ERC721
         [
           token0.address,
           token1.address,
@@ -128,25 +130,26 @@ describe('Position manager contract', function () {
         { from: signers[0].address, gasLimit: 670000 },
       );
 
-      console.log('token0 balance', await token0.balanceOf(poolI.address));
-      console.log('token1 balance', await token1.balanceOf(poolI.address));
+      const contractRes = await tx.wait();
+      console.log(contractRes);
+      console.log('TO', contractRes.to);
 
-      console.log(await NonFungiblePositionManager.balanceOf(owner.address));
-      console.log('OWNER ADDRESS', signers[0].address);
-      console.log('OWNER ADDRESS', owner.address);
+      console.log('OWNER', await NonFungiblePositionManager.ownerOf(2));
+
+      console.log(await NonFungiblePositionManager.setApprovalForAll(contractRes.to, true));
 
       //console.log(NonFungiblePositionManager.increaseLiquidity.toString());
-      await NonFungiblePositionManager.increaseLiquidity(
-        [
-          2, // uint256 tokenId;
-          '0x' + (1e18).toString(16), // uint256 amount0Desired;
-          '0x' + (3e6).toString(16), // uint256 amount0Desired;
-          0, // uint256 amount0Min;
-          0, // uint256 amount1Min;
-          Date.now() + 1000, // uint256 deadline;
-        ],
-        { from: signers[0].address, gasLimit: 670000 },
-      );
+      // await NonFungiblePositionManager.increaseLiquidity(
+      //   [
+      //     2, // uint256 tokenId;
+      //     '0x' + (1e18).toString(16), // uint256 amount0Desired;
+      //     '0x' + (3e6).toString(16), // uint256 amount0Desired;
+      //     0, // uint256 amount0Min;
+      //     0, // uint256 amount1Min;
+      //     Date.now() + 1000, // uint256 deadline;
+      //   ],
+      //   { from: signers[0].address, gasLimit: 670000 },
+      // );
 
       // console.log('token0 balance', await token0.balanceOf(poolI.address));
       // console.log('token1 balance', await token1.balanceOf(poolI.address));
@@ -160,11 +163,14 @@ describe('Position manager contract', function () {
       //   true,
       // );
       // //console.log(JSON.stringify(await approveRes.wait()));
-      // const balanceOf = await PositionManagerInstance.balanceOf(signers[0].address, 2);
+      // const balanceOf = await PositionManagerInstance.balanceOf(signers[0].address, 1);
       // console.log(balanceOf);
 
-      const res = await PositionManagerInstance.depositUniNft(signers[0].address, 2, 1);
-      console.log(res);
+      const res = await PositionManagerInstance.depositUniNft(
+        await NonFungiblePositionManager.ownerOf(2),
+        2,
+        1,
+      );
     });
   });
 });
