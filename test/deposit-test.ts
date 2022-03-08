@@ -99,6 +99,8 @@ describe('Position manager contract', function () {
       const receipt = await tx.wait();
       const data = receipt.events[receipt.events.length - 1].args;
       expect(data.tokenId).to.equal(1);
+
+      console.log('MINT #1', await NonFungiblePositionManager.balanceOf(owner.address));
     });
   });
 
@@ -116,8 +118,8 @@ describe('Position manager contract', function () {
           3000,
           -240060,
           -239940,
-          '0x' + (1e18).toString(16),
-          '0x' + (3e6).toString(16),
+          '0x' + (1e15).toString(16),
+          '0x' + (3e3).toString(16),
           0,
           0,
           signers[0].address,
@@ -125,6 +127,29 @@ describe('Position manager contract', function () {
         ],
         { from: signers[0].address, gasLimit: 670000 },
       );
+
+      console.log('token0 balance', await token0.balanceOf(poolI.address));
+      console.log('token1 balance', await token1.balanceOf(poolI.address));
+
+      console.log(await NonFungiblePositionManager.balanceOf(owner.address));
+      console.log('OWNER ADDRESS', signers[0].address);
+      console.log('OWNER ADDRESS', owner.address);
+
+      //console.log(NonFungiblePositionManager.increaseLiquidity.toString());
+      await NonFungiblePositionManager.increaseLiquidity(
+        [
+          2, // uint256 tokenId;
+          '0x' + (1e18).toString(16), // uint256 amount0Desired;
+          '0x' + (3e6).toString(16), // uint256 amount0Desired;
+          0, // uint256 amount0Min;
+          0, // uint256 amount1Min;
+          Date.now() + 1000, // uint256 deadline;
+        ],
+        { from: signers[0].address, gasLimit: 670000 },
+      );
+
+      // console.log('token0 balance', await token0.balanceOf(poolI.address));
+      // console.log('token1 balance', await token1.balanceOf(poolI.address));
 
       // const receipt = await tx.wait();
       // const data = await receipt.events[receipt.events.length - 1].args;
@@ -138,8 +163,8 @@ describe('Position manager contract', function () {
       // const balanceOf = await PositionManagerInstance.balanceOf(signers[0].address, 2);
       // console.log(balanceOf);
 
-      // const res = await PositionManagerInstance.depositUniNft(signers[0].address, 2, 1);
-      // console.log(res);
+      const res = await PositionManagerInstance.depositUniNft(signers[0].address, 2, 1);
+      console.log(res);
     });
   });
 });
