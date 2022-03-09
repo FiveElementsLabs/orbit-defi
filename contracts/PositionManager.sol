@@ -95,6 +95,13 @@ contract PositionManager is IVault, ERC721Holder {
         nonfungiblePositionManager.burn(tokenId);
     } */
 
+    /**
+     * @notice close and burn uniswap position; tokenId need to be approved
+     */
+    /* function closeUniPosition(uint256 tokenId) external view {
+        this.burn(tokenId);
+    } */
+
     /* function collectPositionFee(uint256 tokenId) external view returns (uint256 amount0, uint256 amount1) {
         INonfungiblePositionManager.CollectParams memory params = 
             INonfungiblePositionManager.CollectParams({
