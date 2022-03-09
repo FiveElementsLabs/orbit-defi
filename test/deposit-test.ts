@@ -34,7 +34,6 @@ describe('Position manager contract', function () {
   let NonFungiblePositionManager: Contract
   let token0: Contract, token1: Contract
   let poolI: any
-  let positionManagerDescriptor: Contract, factory: Contract
 
   before(async function () {
     // Initializing pool states
@@ -42,8 +41,6 @@ describe('Position manager contract', function () {
     token0 = token0Fixture
     token1 = token1Fixture
     const { pool, NonfungiblePositionManager } = await poolFixture(token0, token1)
-    //factory = Factory
-    //positionManagerDescriptor = descriptorContract
     NonFungiblePositionManager = NonfungiblePositionManager
     signers = await ethers.getSigners()
     const user = signers[0]
@@ -54,15 +51,16 @@ describe('Position manager contract', function () {
     await pool.initialize('0x' + (Math.sqrt(price) * Math.pow(2, 96)).toString(16))
     await pool.increaseObservationCardinalityNext(100)
     const { sqrtPriceX96, tick } = await pool.slot0()
-
     await token0
       .connect(signers[0])
       .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'))
-    await token1
-      .connect(signers[0])
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'))
+    await token1.approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'), {
+      from: signers[0].address,
+    })
 
     poolI = pool
+
+    const res = await token1.allowance(NonFungiblePositionManager.address, signers[0].address)
   })
 
   // `beforeEach` will run before each test, re-deploying the contract every
@@ -76,7 +74,7 @@ describe('Position manager contract', function () {
   })
 
   describe('NonfungiblePositionToken deployed correctly', function () {
-    /* it('Should correctly initialize constructor', async function () {
+    it('Should correctly initialize constructor', async function () {
       expect(await NonFungiblePositionManager.signer.getAddress()).to.equal(owner.address)
     })
     it('Should mint a NFT, with id with all the correct data', async function () {
@@ -102,7 +100,7 @@ describe('Position manager contract', function () {
       expect(data.tokenId).to.equal(1)
 
       console.log('MINT #1', await NonFungiblePositionManager.balanceOf(owner.address))
-    }) */
+    })
   })
 
   describe('Deploy correctly', function () {
@@ -128,49 +126,19 @@ describe('Position manager contract', function () {
           signers[0].address,
           Date.now() + 1000,
         ],
-        { from: signers[0].address, gasLimit: 1000000 }
+        { from: signers[0].address, gasLimit: 670000 }
       )
 
       const contractRes = await tx.wait()
-      /* console.log(contractRes)
-      console.log('TO', contractRes.to) */
+      console.log(contractRes)
+      console.log('TO', contractRes.to)
 
-      console.log('OWNER', await NonFungiblePositionManager.ownerOf(1))
+      console.log('OWNER', await NonFungiblePositionManager.ownerOf(2))
 
-      //console.log(await NonFungiblePositionManager.setApprovalForAll(contractRes.to, true))
-
-      //console.log(NonFungiblePositionManager.increaseLiquidity.toString());
-      // await NonFungiblePositionManager.increaseLiquidity(
-      //   [
-      //     2, // uint256 tokenId;
-      //     '0x' + (1e18).toString(16), // uint256 amount0Desired;
-      //     '0x' + (3e6).toString(16), // uint256 amount0Desired;
-      //     0, // uint256 amount0Min;
-      //     0, // uint256 amount1Min;
-      //     Date.now() + 1000, // uint256 deadline;
-      //   ],
-      //   { from: signers[0].address, gasLimit: 670000 },
-      // );
-
-      // console.log('token0 balance', await token0.balanceOf(poolI.address));
-      // console.log('token1 balance', await token1.balanceOf(poolI.address));
-
-      // const receipt = await tx.wait();
-      // const data = await receipt.events[receipt.events.length - 1].args;
-      // console.log(data);
-
-      // const approveRes = await PositionManagerInstance.setApprovalForAll(
-      //   PositionManagerInstance.address,
-      //   true,
-      // );
-      // //console.log(JSON.stringify(await approveRes.wait()));
-      const balanceOf = await PositionManagerInstance.balanceOf(signers[0].address)
-      console.log(balanceOf)
-
-      const balanceOf2 = await NonFungiblePositionManager.balanceOf(signers[0].address)
-      console.log(balanceOf2)
-
-      const res = await PositionManagerInstance.depositUniNft(signers[0].address, 1)
+      console.log(await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true))
+      const res = await PositionManagerInstance.depositUniNft(await NonFungiblePositionManager.ownerOf(2), 2)
+      console.log('NEW OWNER', await NonFungiblePositionManager.ownerOf(2))
+      expect(await PositionManagerInstance.address).to.equal(await NonFungiblePositionManager.ownerOf(2))
     })
   })
 })
