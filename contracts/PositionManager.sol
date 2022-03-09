@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Unlicense
+// SPDX-License-Identifier: MIT
 
 pragma solidity 0.7.6;
 pragma abicoder v2;
@@ -60,9 +60,10 @@ contract PositionManager is IVault, ERC721Holder {
         (,,,,,,,,,,tokensOwed0,tokensOwed1) = this.positions(tokenId);
     } */
 
-    function getPositionFee(uint256 tokenId) external view returns (uint256 tokensOwed0, uint256 tokensOwed1) {
-        (, , , , , , , , , , tokensOwed0, tokensOwed1) = nonfungiblePositionManager.positions(tokenId);
-    }
+    /* function getPositionFee(uint256 tokenId) external view returns(uint256 tokensOwed0, uint256 tokensOwed1) {
+        (,,,,,,,,,,tokensOwed0,tokensOwed1) = this.positions(tokenId);
+
+    } */
 
     /**
      * @notice close and burn uniswap position; tokenId need to be approved
