@@ -11,6 +11,7 @@ import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.s
 import '@uniswap/v3-periphery/contracts/NonfungiblePositionManager.sol';
 import 'hardhat/console.sol';
 import '../interfaces/IVault.sol';
+
 /**
  * @title   Position Manager
  * @notice  A vault that provides liquidity on Uniswap V3.
@@ -21,62 +22,56 @@ import '../interfaces/IVault.sol';
  */
 
 contract PositionManager is IVault, ERC721Holder {
+    //
+    INonfungiblePositionManager public immutable nonfungiblePositionManager;
 
-  //
-  INonfungiblePositionManager public immutable nonfungiblePositionManager;
+    event DepositUni(address indexed from, uint256 tokenId);
 
-  event DepositUni(address indexed from, uint256 tokenId);
+    address public owner;
 
-  address public owner;
+    /**
+     * @dev After deploying, strategy needs to be set via `setStrategy()`
+     */
+    constructor(address userAddress, INonfungiblePositionManager _nonfungiblePositionManager) {
+        owner = userAddress;
+        nonfungiblePositionManager = _nonfungiblePositionManager;
+    }
 
-  /**
-   * @dev After deploying, strategy needs to be set via `setStrategy()`
-   */
-  constructor(address userAddress, INonfungiblePositionManager _nonfungiblePositionManager) {
-    owner = userAddress;
-    nonfungiblePositionManager = _nonfungiblePositionManager;
-  }
+    // function approveNft(uint256 tokenId) external payable {
+    //   setApprovalForAll(msg.sender, true); //msg.sender or contract(address) ?
+    // }
 
-  // function approveNft(uint256 tokenId) external payable {
-  //   setApprovalForAll(msg.sender, true); //msg.sender or contract(address) ?
-  // }
+    /**
+     * @notice add uniswap position to the position manager
+     */
+    function depositUniNft(address from, uint256 tokenId) external override {
+        console.log('FROM', from);
+        console.log('TOKENID', tokenId);
+        console.log('CONTRACT ADDRESS', address(this));
+        //nonfungiblePositionManager.safeTransferFrom(from, address(this), tokenId, amount, '0x0');
+        nonfungiblePositionManager.safeTransferFrom(from, address(this), tokenId, '0x0');
+        //emit DepositUni(from, tokenId);
+    }
 
-  /**
-   * @notice add uniswap position to the position manager
-   */
-  function depositUniNft(
-    address from,
-    uint256 tokenId
-    ) external override {
-    console.log('FROM', from);
-    console.log('TOKENID', tokenId);
-    console.log('CONTRACT ADDRESS', address(this));
-    //nonfungiblePositionManager.safeTransferFrom(from, address(this), tokenId, amount, '0x0');
-    nonfungiblePositionManager.safeTransferFrom(from, address(this), tokenId, '0x0');
-    //emit DepositUni(from, tokenId);
-  }
-
-
-  /**
-   * @notice get balance token0 and token1 in a position
-   */
-  /* function getPositionBalance(uint256 tokenId) external view returns(uint128 tokensOwed0, uint128 tokensOwed1) {
+    /**
+     * @notice get balance token0 and token1 in a position
+     */
+    /* function getPositionBalance(uint256 tokenId) external view returns(uint128 tokensOwed0, uint128 tokensOwed1) {
         (,,,,,,,,,,tokensOwed0,tokensOwed1) = this.positions(tokenId);
     } */
 
-  /* function getPositionFee(uint256 tokenId) external view returns(uint256 tokensOwed0, uint256 tokensOwed1) {
-        (,,,,,,,,,,tokensOwed0,tokensOwed1) = this.positions(tokenId);
+    function getPositionFee(uint256 tokenId) external view returns (uint256 tokensOwed0, uint256 tokensOwed1) {
+        (, , , , , , , , , , tokensOwed0, tokensOwed1) = nonfungiblePositionManager.positions(tokenId);
+    }
 
-    } */
-
-  /**
-   * @notice close and burn uniswap position; tokenId need to be approved
-   */
-  /* function closeUniPosition(uint256 tokenId) external view {
+    /**
+     * @notice close and burn uniswap position; tokenId need to be approved
+     */
+    /* function closeUniPosition(uint256 tokenId) external view {
         this.burn(tokenId);
     } */
 
-  /* function collectPositionFee(uint256 tokenId) external view returns (uint256 amount0, uint256 amount1) {
+    /* function collectPositionFee(uint256 tokenId) external view returns (uint256 amount0, uint256 amount1) {
         INonfungiblePositionManager.CollectParams memory params = 
             INonfungiblePositionManager.CollectParams({
                 tokenId: tokenId,
@@ -88,7 +83,7 @@ contract PositionManager is IVault, ERC721Holder {
         (amount0, amount1) = this.collect(params);
     } */
 
-  /* function increasePositionLiquidity(
+    /* function increasePositionLiquidity(
         uint256 tokenId, 
         uint256 amount0Desired, 
         uint256 amount1Desired,
@@ -108,9 +103,9 @@ contract PositionManager is IVault, ERC721Holder {
         this.increaseLiquidity(params);
     } */
 
-  modifier onlyUser() {
-    require(msg.sender == owner, 'Only owner can call this function');
-    _;
-  }
+    modifier onlyUser() {
+        require(msg.sender == owner, 'Only owner can call this function');
+        _;
+    }
 }
 //NonfungiblePositionManager.Position memory position = _positions[tokenId];
