@@ -5,7 +5,6 @@ pragma solidity 0.7.6;
 interface IVault {
     function depositUniNft(
         address from,
-        uint256 tokenId,
-        uint256 amount
-    ) external;
+        uint256 tokenId
+        ) external;
 }
