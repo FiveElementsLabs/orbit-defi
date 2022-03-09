@@ -20,7 +20,7 @@ import '../interfaces/IVault.sol';
  * @notice  vault works for multiple positions
  */
 
-contract PositionManager is IVault, ERC721Holder, ERC721 {
+contract PositionManager is IVault, ERC721Holder {
 
   //
   INonfungiblePositionManager public immutable nonfungiblePositionManager;
@@ -32,7 +32,7 @@ contract PositionManager is IVault, ERC721Holder, ERC721 {
   /**
    * @dev After deploying, strategy needs to be set via `setStrategy()`
    */
-  constructor(address userAddress, INonfungiblePositionManager _nonfungiblePositionManager) ERC721("Five Elements", "FEL") {
+  constructor(address userAddress, INonfungiblePositionManager _nonfungiblePositionManager) {
     owner = userAddress;
     nonfungiblePositionManager = _nonfungiblePositionManager;
   }
@@ -52,7 +52,7 @@ contract PositionManager is IVault, ERC721Holder, ERC721 {
     console.log('TOKENID', tokenId);
     console.log('CONTRACT ADDRESS', address(this));
     //nonfungiblePositionManager.safeTransferFrom(from, address(this), tokenId, amount, '0x0');
-    NonFungiblePositionManager.safeTransferFrom(from, address(this), tokenId, '0x0');
+    nonfungiblePositionManager.safeTransferFrom(from, address(this), tokenId, '0x0');
     //emit DepositUni(from, tokenId);
   }
 
