@@ -54,6 +54,7 @@ describe('Position manager contract', function () {
     await token0
       .connect(signers[0])
       .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'));
+<<<<<<< Updated upstream
     await token1.approve(
       NonFungiblePositionManager.address,
       ethers.utils.parseEther('1000000000000'),
@@ -61,6 +62,11 @@ describe('Position manager contract', function () {
         from: signers[0].address,
       },
     );
+=======
+    await token1.approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'), {
+      from: signers[0].address,
+    });
+>>>>>>> Stashed changes
 
     poolI = pool;
 
@@ -73,10 +79,14 @@ describe('Position manager contract', function () {
     // Get the ContractFactory and Signers here.
     [owner] = await ethers.getSigners();
     const PositionManager = await ethers.getContractFactory('PositionManager');
+<<<<<<< Updated upstream
     PositionManagerInstance = await PositionManager.deploy(
       owner.address,
       NonFungiblePositionManager.address,
     );
+=======
+    PositionManagerInstance = await PositionManager.deploy(owner.address, NonFungiblePositionManager.address);
+>>>>>>> Stashed changes
     await PositionManagerInstance.deployed();
   });
 
@@ -99,7 +109,11 @@ describe('Position manager contract', function () {
           signers[0].address,
           Date.now() + 1000,
         ],
+<<<<<<< Updated upstream
         { from: signers[0].address, gasLimit: 670000 },
+=======
+        { from: signers[0].address, gasLimit: 670000 }
+>>>>>>> Stashed changes
       );
 
       const receipt = await tx.wait();
@@ -132,7 +146,11 @@ describe('Position manager contract', function () {
           signers[0].address,
           Date.now() + 1000,
         ],
+<<<<<<< Updated upstream
         { from: signers[0].address, gasLimit: 670000 },
+=======
+        { from: signers[0].address, gasLimit: 670000 }
+>>>>>>> Stashed changes
       );
 
       const contractRes = await tx.wait();
@@ -141,6 +159,7 @@ describe('Position manager contract', function () {
 
       console.log('OWNER', await NonFungiblePositionManager.ownerOf(2));
 
+<<<<<<< Updated upstream
       console.log(
         await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true),
       );
@@ -152,6 +171,12 @@ describe('Position manager contract', function () {
       expect(await PositionManagerInstance.address).to.equal(
         await NonFungiblePositionManager.ownerOf(2),
       );
+=======
+      console.log(await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true));
+      const res = await PositionManagerInstance.depositUniNft(await NonFungiblePositionManager.ownerOf(2), 2);
+      console.log('NEW OWNER', await NonFungiblePositionManager.ownerOf(2));
+      expect(await PositionManagerInstance.address).to.equal(await NonFungiblePositionManager.ownerOf(2));
+>>>>>>> Stashed changes
     });
   });
 });

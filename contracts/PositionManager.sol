@@ -3,12 +3,8 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import '@openzeppelin/contracts/token/ERC1155/ERC1155.sol';
-import '@openzeppelin/contracts/token/ERC721/ERC721.sol';
-import '@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol';
 import '@openzeppelin/contracts/token/ERC721/ERC721Holder.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
-import '@uniswap/v3-periphery/contracts/NonfungiblePositionManager.sol';
 import 'hardhat/console.sol';
 import '../interfaces/IVault.sol';
 
@@ -22,12 +18,11 @@ import '../interfaces/IVault.sol';
  */
 
 contract PositionManager is IVault, ERC721Holder {
-    //
-    INonfungiblePositionManager public immutable nonfungiblePositionManager;
-
     event DepositUni(address indexed from, uint256 tokenId);
 
-    address public owner;
+    address public immutable owner;
+
+    INonfungiblePositionManager public immutable nonfungiblePositionManager;
 
     /**
      * @dev After deploying, strategy needs to be set via `setStrategy()`
@@ -37,10 +32,6 @@ contract PositionManager is IVault, ERC721Holder {
         nonfungiblePositionManager = _nonfungiblePositionManager;
     }
 
-    // function approveNft(uint256 tokenId) external payable {
-    //   setApprovalForAll(msg.sender, true); //msg.sender or contract(address) ?
-    // }
-
     /**
      * @notice add uniswap position to the position manager
      */
@@ -48,7 +39,6 @@ contract PositionManager is IVault, ERC721Holder {
         console.log('FROM', from);
         console.log('TOKENID', tokenId);
         console.log('CONTRACT ADDRESS', address(this));
-        //nonfungiblePositionManager.safeTransferFrom(from, address(this), tokenId, amount, '0x0');
         nonfungiblePositionManager.safeTransferFrom(from, address(this), tokenId, '0x0');
         //emit DepositUni(from, tokenId);
     }
@@ -59,17 +49,50 @@ contract PositionManager is IVault, ERC721Holder {
     /* function getPositionBalance(uint256 tokenId) external view returns(uint128 tokensOwed0, uint128 tokensOwed1) {
         (,,,,,,,,,,tokensOwed0,tokensOwed1) = this.positions(tokenId);
     } */
-
-    /* function getPositionFee(uint256 tokenId) external view returns(uint256 tokensOwed0, uint256 tokensOwed1) {
-        (,,,,,,,,,,tokensOwed0,tokensOwed1) = this.positions(tokenId);
-
-    } */
+    /**
+     * @notice get fee of token0 and token1 in a position
+     */
+    function getPositionFee(uint256 tokenId) external view returns (uint128 tokensOwed0, uint128 tokensOwed1) {
+        (, , , , , , , , , , tokensOwed0, tokensOwed1) = nonfungiblePositionManager.positions(tokenId);
+    }
 
     /**
-     * @notice close and burn uniswap position; tokenId need to be approved
+     * @notice close and burn uniswap position; liquidity must be 0,
      */
-    /* function closeUniPosition(uint256 tokenId) external view {
-        this.burn(tokenId);
+    /*  function closeUniPosition(uint256 tokenId) external payable {
+        (, , , , , , , uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(tokenId);
+
+        INonfungiblePositionManager.CollectParams memory collectparams = INonfungiblePositionManager.CollectParams({
+            tokenId: tokenId,
+            recipient: msg.sender,
+            amount0Max: 1e18,
+            amount1Max: 3000e6
+        });
+        */
+
+        nonfungiblePositionManager.collect(
+           INonfungiblePositionManager.CollectParams({
+            tokenId: tokenId,
+            recipient: msg.sender,
+            amount0Max: 1e18,
+            amount1Max: 3000e6
+        })
+        );
+
+        /*INonfungiblePositionManager.DecreaseLiquidityParams memory decreaseliquidityparams = INonfungiblePositionManager
+            .DecreaseLiquidityParams({
+                tokenId: tokenId,
+                liquidity: liquidity,
+                amount0Min: 0,
+                amount1Min: 0,
+                deadline: block.timestamp + 1000
+            });
+
+        nonfungiblePositionManager.decreaseLiquidity(
+            INonfungiblePositionManager.DecreaseLiquidityParams(tokenId, liquidity, 0, 0, block.timestamp + 1000)
+        );
+
+        nonfungiblePositionManager.burn(tokenId);
     } */
 
     /* function collectPositionFee(uint256 tokenId) external view returns (uint256 amount0, uint256 amount1) {
