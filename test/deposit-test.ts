@@ -117,7 +117,7 @@ describe('Position manager contract', function () {
     });
 
     it('Should deposit nfts in smart vault and withdraw them', async function () {
-      for(let i=2; i<100; i++){
+      for(let i=2; i<10; i++){
         const tx = await NonFungiblePositionManager.mint(
           [
             //ERC721
