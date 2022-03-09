@@ -116,43 +116,55 @@ describe('Position manager contract', function () {
       expect(await PositionManagerInstance.owner()).to.equal(owner.address);
     });
 
-    it('Should deposit nft in smart vault', async function () {
-      const tx = await NonFungiblePositionManager.mint(
-        [
-          //ERC721
+    it('Should deposit nfts in smart vault and withdraw them', async function () {
+      for(let i=2; i<100; i++){
+        const tx = await NonFungiblePositionManager.mint(
+          [
+            //ERC721
 
-          token0.address,
-          token1.address,
-          3000,
-          -240060,
-          -239940,
-          '0x' + (1e15).toString(16),
-          '0x' + (3e3).toString(16),
-          0,
-          0,
-          signers[0].address,
-          Date.now() + 1000,
-        ],
-        { from: signers[0].address, gasLimit: 670000 },
-      );
+            token0.address,
+            token1.address,
+            3000,
+            -240000 - 60*i,
+            -240000 + 60*i,
+            '0x' + (1e15).toString(16),
+            '0x' + (3e3).toString(16),
+            0,
+            0,
+            signers[0].address,
+            Date.now() + 1000,
+          ],
+          { from: signers[0].address, gasLimit: 670000 }
+        )
 
-      const contractRes = await tx.wait();
-      console.log(contractRes);
-      console.log('TO', contractRes.to);
+        /* const contractRes = await tx.wait()
+        //console.log(contractRes)
+        console.log('TO', contractRes.to)
 
-      console.log('OWNER', await NonFungiblePositionManager.ownerOf(2));
+        console.log('OWNER', await NonFungiblePositionManager.ownerOf(2)) */
 
-      console.log(
-        await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true),
-      );
-      const res = await PositionManagerInstance.depositUniNft(
-        await NonFungiblePositionManager.ownerOf(2),
-        2,
-      );
-      console.log('NEW OWNER', await NonFungiblePositionManager.ownerOf(2));
-      expect(await PositionManagerInstance.address).to.equal(
-        await NonFungiblePositionManager.ownerOf(2),
-      );
-    });
-  });
-});
+        const rec = await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true)
+        const res = await PositionManagerInstance.depositUniNft(await NonFungiblePositionManager.ownerOf(i), i)
+        //console.log('NEW OWNER', await NonFungiblePositionManager.ownerOf(i))
+        expect(await PositionManagerInstance.address).to.equal(await NonFungiblePositionManager.ownerOf(i))
+      }
+
+      const res2 = await PositionManagerInstance.withdrawAllUniNft(signers[0].address)
+      console.log('NEW OWNER', await NonFungiblePositionManager.ownerOf(2))
+      for(let i=2; i<100; i++){
+        expect(await signers[0].address).to.equal(await NonFungiblePositionManager.ownerOf(i))
+      }
+    })
+
+    it('Should revert if token does not exist', async function () {
+      try {
+        await PositionManagerInstance.withdrawUniNft(signers[0].address,1000);
+      }
+      catch (error) {
+          expect(1).to.equal(1);
+      }
+    })
+  })
+
+  
+})

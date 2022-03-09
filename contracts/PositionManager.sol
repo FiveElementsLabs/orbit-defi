@@ -8,7 +8,7 @@ import '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import '@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol';
 import '@openzeppelin/contracts/token/ERC721/ERC721Holder.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
-import '@uniswap/v3-periphery/contracts/NonfungiblePositionManager.sol';
+//import '@uniswap/v3-periphery/contracts/NonfungiblePositionManager.sol';
 import 'hardhat/console.sol';
 import '../interfaces/IVault.sol';
 
@@ -26,8 +26,10 @@ contract PositionManager is IVault, ERC721Holder {
     INonfungiblePositionManager public immutable nonfungiblePositionManager;
 
     event DepositUni(address indexed from, uint256 tokenId);
+    event WithdrawUni(address to, uint256 tokenId);
 
     address public owner;
+    uint256[] private uniswapNFTs;
 
     /**
      * @dev After deploying, strategy needs to be set via `setStrategy()`
@@ -45,12 +47,39 @@ contract PositionManager is IVault, ERC721Holder {
      * @notice add uniswap position to the position manager
      */
     function depositUniNft(address from, uint256 tokenId) external override {
-        console.log('FROM', from);
-        console.log('TOKENID', tokenId);
-        console.log('CONTRACT ADDRESS', address(this));
-        //nonfungiblePositionManager.safeTransferFrom(from, address(this), tokenId, amount, '0x0');
         nonfungiblePositionManager.safeTransferFrom(from, address(this), tokenId, '0x0');
-        //emit DepositUni(from, tokenId);
+        uniswapNFTs.push(tokenId);
+        emit DepositUni(from, tokenId);
+    }
+
+    /**
+     * @notice withdraw uniswap position from the position manager
+     */
+    function withdrawUniNft(address to, uint256 tokenId) public { //internal? users should not know id
+        uint256 index = uniswapNFTs.length;
+        for(uint256 i=0; i<uniswapNFTs.length; i++){
+            if(uniswapNFTs[i]==tokenId){
+                index = i;
+                i = uniswapNFTs.length;
+            }
+        }
+        require(index<uniswapNFTs.length, 'token id not found!');
+        nonfungiblePositionManager.safeTransferFrom(address(this), to, tokenId, '0x0');
+        removeNFTFromList(index);
+        emit WithdrawUni(to, tokenId);
+    }
+
+    function removeNFTFromList(uint index) internal{
+        uniswapNFTs[index] = uniswapNFTs[uniswapNFTs.length - 1];
+        uniswapNFTs.pop();
+    }
+
+    //wrapper for withdraw of all univ3positions in manager
+    function withdrawAllUniNft(address to) external onlyUser {
+        require(uniswapNFTs.length>0, 'no NFT to withdraw');
+        while(uniswapNFTs.length>0){
+            this.withdrawUniNft(to, uniswapNFTs[0]);
+        }
     }
 
     /**
