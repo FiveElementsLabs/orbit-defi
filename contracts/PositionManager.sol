@@ -3,7 +3,7 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import '@openzeppelin/contracts/token/ERC1155/ERC1155.sol';
+import '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import '../interfaces/IVault.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import 'hardhat/console.sol';
@@ -17,7 +17,7 @@ import 'hardhat/console.sol';
  * @notice  vault works for multiple positions
  */
 
-contract PositionManager is IVault, ERC1155 {
+contract PositionManager is IVault, ERC721 {
   // Protocol fee to compensate keeper
   uint256 protocolfee = 1e6;
   // Array with list of UNI v3 positions
@@ -30,7 +30,7 @@ contract PositionManager is IVault, ERC1155 {
   /**
    * @dev After deploying, strategy needs to be set via `setStrategy()`
    */
-  constructor(address userAddress) ERC1155('www.google.com') {
+  constructor(address userAddress) ERC721('www.google.com', 'fel') {
     owner = userAddress;
   }
 
@@ -46,12 +46,11 @@ contract PositionManager is IVault, ERC1155 {
     uint256 tokenId,
     uint256 amount
   ) external override {
-    //function safeTransferFrom(address _from, address _to, uint256 _id, uint256 _value, bytes calldata _data) external;
     console.log('FROM', from);
-    console.log('AMOUNT', amount);
+    console.log('TOKENID', tokenId);
     console.log('CONTRACT ADDRESS', address(this));
-    safeTransferFrom(from, address(this), tokenId, amount, '0x0');
-    emit DepositUni(from, tokenId);
+    safeTransferFrom(from, address(this), tokenId);
+    //emit DepositUni(from, tokenId);
   }
 
   /**
