@@ -3,7 +3,7 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import '@openzeppelin/contracts/token/ERC721/ERC721.sol';
+import '@openzeppelin/contracts/token/ERC1155/ERC1155.sol';
 import '../interfaces/IVault.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import 'hardhat/console.sol';
@@ -17,7 +17,7 @@ import 'hardhat/console.sol';
  * @notice  vault works for multiple positions
  */
 
-contract PositionManager is IVault, ERC721 {
+contract PositionManager is IVault, ERC1155 {
   // Protocol fee to compensate keeper
   uint256 protocolfee = 1e6;
   // Array with list of UNI v3 positions
@@ -30,13 +30,13 @@ contract PositionManager is IVault, ERC721 {
   /**
    * @dev After deploying, strategy needs to be set via `setStrategy()`
    */
-  constructor(address userAddress) ERC721('www.google.com', 'fel') {
+  constructor(address userAddress) ERC1155('www.google.com') {
     owner = userAddress;
   }
 
-  /* function approveNft (uint256 tokenId) external payable {
-        approve(msg.sender, tokenId);  //msg.sender or contract(address) ?
-    } */
+  // function approveNft(uint256 tokenId) external payable {
+  //   setApprovalForAll(msg.sender, true); //msg.sender or contract(address) ?
+  // }
 
   /**
    * @notice add uniswap position to the position manager
@@ -49,7 +49,7 @@ contract PositionManager is IVault, ERC721 {
     console.log('FROM', from);
     console.log('TOKENID', tokenId);
     console.log('CONTRACT ADDRESS', address(this));
-    safeTransferFrom(from, address(this), tokenId);
+    safeTransferFrom(from, address(this), tokenId, amount, '0x0');
     //emit DepositUni(from, tokenId);
   }
 
