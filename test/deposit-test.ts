@@ -151,7 +151,7 @@ describe('Position manager contract', function () {
 
       const res2 = await PositionManagerInstance.withdrawAllUniNft(signers[0].address)
       console.log('NEW OWNER', await NonFungiblePositionManager.ownerOf(2))
-      for(let i=2; i<100; i++){
+      for(let i=2; i<10; i++){
         expect(await signers[0].address).to.equal(await NonFungiblePositionManager.ownerOf(i))
       }
     })
