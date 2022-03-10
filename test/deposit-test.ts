@@ -62,6 +62,38 @@ describe('Position manager contract', function () {
     poolI = pool;
 
     const res = await token1.allowance(NonFungiblePositionManager.address, signers[0].address);
+
+    // Pool has some liquidity
+    const liquidityProvider = await signers[1];
+    await token0.connect(liquidityProvider).mint(liquidityProvider.address, ethers.utils.parseEther('1000000000000'));
+    await token1.connect(liquidityProvider).mint(liquidityProvider.address, ethers.utils.parseEther('1000000000000'));
+    await token0
+      .connect(liquidityProvider)
+      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'));
+
+    await token1
+      .connect(liquidityProvider)
+      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'), {
+        from: liquidityProvider.address,
+      });
+
+    let tx = await NonFungiblePositionManager.connect(liquidityProvider).mint(
+      [
+        token0.address,
+        token1.address,
+        3000,
+        -240060,
+        -239940,
+        '0x' + (3e6).toString(16),
+        '0x' + (1e18).toString(16),
+        0,
+        0,
+        liquidityProvider.address,
+        Date.now() + 1000,
+      ],
+
+      { gasLimit: 670000 }
+    );
   });
 
   // `beforeEach` will run before each test, re-deploying the contract every
@@ -100,8 +132,9 @@ describe('Position manager contract', function () {
       );
 
       const receipt = await tx.wait();
+      console.log(receipt.events);
       const data = receipt.events[receipt.events.length - 1].args;
-      expect(data.tokenId).to.equal(1);
+      expect(data.tokenId).to.equal(2);
     });
   });
 
@@ -131,9 +164,12 @@ describe('Position manager contract', function () {
         { from: signers[0].address, gasLimit: 670000 }
       );
 
+      const receipt = await tx.wait();
+      const data = receipt.events[receipt.events.length - 1].args;
+      const tokenId = data.tokenId;
       await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true);
-      await PositionManagerInstance.depositUniNft(await NonFungiblePositionManager.ownerOf(2), 2);
-      expect(await PositionManagerInstance.address).to.equal(await NonFungiblePositionManager.ownerOf(2));
+      await PositionManagerInstance.depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), tokenId);
+      expect(await PositionManagerInstance.address).to.equal(await NonFungiblePositionManager.ownerOf(tokenId));
     });
 
     it('Should close and burn a uniPosition', async function () {
@@ -155,13 +191,14 @@ describe('Position manager contract', function () {
 
         { from: signers[0].address, gasLimit: 670000 }
       );
+      const receipt = await tx.wait();
+      const data = receipt.events[receipt.events.length - 1].args;
+      const tokenId = data.tokenId;
 
       await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true);
-      await PositionManagerInstance.depositUniNft(await NonFungiblePositionManager.ownerOf(3), 3);
-      console.log('NEW OWNER', await NonFungiblePositionManager.balanceOf(PositionManagerInstance.address));
+      await PositionManagerInstance.depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), tokenId);
 
-      const res = await PositionManagerInstance.closeUniPosition(3);
-      console.log('owner of', await NonFungiblePositionManager.balanceOf(PositionManagerInstance.address));
+      const res = await PositionManagerInstance.closeUniPosition(tokenId);
     });
   });
 });
