@@ -19,6 +19,7 @@ import '../interfaces/IVault.sol';
 
 contract PositionManager is IVault, ERC721Holder {
     event DepositUni(address indexed from, uint256 tokenId);
+    event WithdrawUni(address to, uint256 tokenId);
 
     address public immutable owner;
     uint256[] private uniswapNFTs;
@@ -59,6 +60,40 @@ contract PositionManager is IVault, ERC721Holder {
      */
     function depositUniNft(address from, uint256 tokenId) external override {
         nonfungiblePositionManager.safeTransferFrom(from, address(this), tokenId, '0x0');
+        uniswapNFTs.push(tokenId);
+        emit DepositUni(from, tokenId);
+    }
+
+    /**
+     * @notice withdraw uniswap position from the position manager
+     */
+    function withdrawUniNft(address to, uint256 tokenId) public {
+        //internal? users should not know id
+        uint256 index = uniswapNFTs.length;
+        for (uint256 i = 0; i < uniswapNFTs.length; i++) {
+            if (uniswapNFTs[i] == tokenId) {
+                index = i;
+                i = uniswapNFTs.length;
+            }
+        }
+        require(index < uniswapNFTs.length, 'token id not found!');
+        nonfungiblePositionManager.safeTransferFrom(address(this), to, tokenId, '0x0');
+        removeNFTFromList(index);
+        emit WithdrawUni(to, tokenId);
+    }
+
+    //remove awareness of nft at index index
+    function removeNFTFromList(uint256 index) internal {
+        uniswapNFTs[index] = uniswapNFTs[uniswapNFTs.length - 1];
+        uniswapNFTs.pop();
+    }
+
+    //wrapper for withdraw of all univ3positions in manager
+    function withdrawAllUniNft(address to) external onlyUser {
+        require(uniswapNFTs.length > 0, 'no NFT to withdraw');
+        while (uniswapNFTs.length > 0) {
+            this.withdrawUniNft(to, uniswapNFTs[0]);
+        }
     }
 
     /**
