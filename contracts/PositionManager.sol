@@ -21,6 +21,28 @@ contract PositionManager is IVault, ERC721Holder {
     event DepositUni(address indexed from, uint256 tokenId);
 
     address public immutable owner;
+    uint256[] private uniswapNFTs;
+
+    // details about the uniswap position
+    struct Position {
+        // the nonce for permits
+        uint96 nonce;
+        // the address that is approved for spending this token
+        address operator;
+        // the ID of the pool with which this token is connected
+        uint80 poolId;
+        // the tick range of the position
+        int24 tickLower;
+        int24 tickUpper;
+        // the liquidity of the position
+        uint128 liquidity;
+        // the fee growth of the aggregate position as of the last action on the individual position
+        uint256 feeGrowthInside0LastX128;
+        uint256 feeGrowthInside1LastX128;
+        // how many uncollected tokens are owed to the position, as of the last computation
+        uint128 tokensOwed0;
+        uint128 tokensOwed1;
+    }
 
     INonfungiblePositionManager public immutable nonfungiblePositionManager;
 
@@ -36,11 +58,7 @@ contract PositionManager is IVault, ERC721Holder {
      * @notice add uniswap position to the position manager
      */
     function depositUniNft(address from, uint256 tokenId) external override {
-        console.log('FROM', from);
-        console.log('TOKENID', tokenId);
-        console.log('CONTRACT ADDRESS', address(this));
         nonfungiblePositionManager.safeTransferFrom(from, address(this), tokenId, '0x0');
-        //emit DepositUni(from, tokenId);
     }
 
     /**
@@ -59,27 +77,11 @@ contract PositionManager is IVault, ERC721Holder {
     /**
      * @notice close and burn uniswap position; liquidity must be 0,
      */
-    /*  function closeUniPosition(uint256 tokenId) external payable {
-        (, , , , , , , uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(tokenId);
+    function closeUniPosition(uint256 tokenId) external payable {
+        (, , , , , , , uint128 liquidity, , , uint128 tokensOwed0, uint128 tokensOwed1) = nonfungiblePositionManager
+            .positions(tokenId);
 
-        INonfungiblePositionManager.CollectParams memory collectparams = INonfungiblePositionManager.CollectParams({
-            tokenId: tokenId,
-            recipient: msg.sender,
-            amount0Max: 1e18,
-            amount1Max: 3000e6
-        });
-        */
-
-        nonfungiblePositionManager.collect(
-           INonfungiblePositionManager.CollectParams({
-            tokenId: tokenId,
-            recipient: msg.sender,
-            amount0Max: 1e18,
-            amount1Max: 3000e6
-        })
-        );
-
-        /*INonfungiblePositionManager.DecreaseLiquidityParams memory decreaseliquidityparams = INonfungiblePositionManager
+        INonfungiblePositionManager.DecreaseLiquidityParams memory decreaseliquidityparams = INonfungiblePositionManager
             .DecreaseLiquidityParams({
                 tokenId: tokenId,
                 liquidity: liquidity,
@@ -87,20 +89,24 @@ contract PositionManager is IVault, ERC721Holder {
                 amount1Min: 0,
                 deadline: block.timestamp + 1000
             });
+        nonfungiblePositionManager.decreaseLiquidity(decreaseliquidityparams);
 
-        nonfungiblePositionManager.decreaseLiquidity(
-            INonfungiblePositionManager.DecreaseLiquidityParams(tokenId, liquidity, 0, 0, block.timestamp + 1000)
-        );
+        INonfungiblePositionManager.CollectParams memory collectparams = INonfungiblePositionManager.CollectParams({
+            tokenId: tokenId,
+            recipient: owner,
+            amount0Max: 1e18,
+            amount1Max: 3000e6
+        });
+        nonfungiblePositionManager.collect(collectparams);
+
+        (, , , , , , , uint128 liquidity2, , , uint128 tokensOwed02, ) = nonfungiblePositionManager.positions(tokenId);
 
         nonfungiblePositionManager.burn(tokenId);
-    } */
+    }
 
     /**
      * @notice close and burn uniswap position; tokenId need to be approved
      */
-    /* function closeUniPosition(uint256 tokenId) external view {
-        this.burn(tokenId);
-    } */
 
     /* function collectPositionFee(uint256 tokenId) external view returns (uint256 amount0, uint256 amount1) {
         INonfungiblePositionManager.CollectParams memory params = 
@@ -139,4 +145,3 @@ contract PositionManager is IVault, ERC721Holder {
         _;
     }
 }
-//NonfungiblePositionManager.Position memory position = _positions[tokenId];

@@ -102,8 +102,6 @@ describe('Position manager contract', function () {
       const receipt = await tx.wait();
       const data = receipt.events[receipt.events.length - 1].args;
       expect(data.tokenId).to.equal(1);
-
-      console.log('MINT #1', await NonFungiblePositionManager.balanceOf(owner.address));
     });
   });
 
@@ -133,16 +131,37 @@ describe('Position manager contract', function () {
         { from: signers[0].address, gasLimit: 670000 }
       );
 
-      const contractRes = await tx.wait();
-      console.log(contractRes);
-      console.log('TO', contractRes.to);
-
-      console.log('OWNER', await NonFungiblePositionManager.ownerOf(2));
-
-      console.log(await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true));
-      const res = await PositionManagerInstance.depositUniNft(await NonFungiblePositionManager.ownerOf(2), 2);
-      console.log('NEW OWNER', await NonFungiblePositionManager.ownerOf(2));
+      await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true);
+      await PositionManagerInstance.depositUniNft(await NonFungiblePositionManager.ownerOf(2), 2);
       expect(await PositionManagerInstance.address).to.equal(await NonFungiblePositionManager.ownerOf(2));
+    });
+
+    it('Should close and burn a uniPosition', async function () {
+      const tx = await NonFungiblePositionManager.mint(
+        //ERC721
+        [
+          token0.address,
+          token1.address,
+          3000,
+          -240060,
+          -239940,
+          '0x' + (1e15).toString(16),
+          '0x' + (3e3).toString(16),
+          0,
+          0,
+          signers[0].address,
+          Date.now() + 1000,
+        ],
+
+        { from: signers[0].address, gasLimit: 670000 }
+      );
+
+      await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true);
+      await PositionManagerInstance.depositUniNft(await NonFungiblePositionManager.ownerOf(3), 3);
+      console.log('NEW OWNER', await NonFungiblePositionManager.balanceOf(PositionManagerInstance.address));
+
+      const res = await PositionManagerInstance.closeUniPosition(3);
+      console.log('owner of', await NonFungiblePositionManager.balanceOf(PositionManagerInstance.address));
     });
   });
 });
