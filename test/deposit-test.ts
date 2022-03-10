@@ -33,6 +33,7 @@ describe('Position manager contract', function () {
   let NonFungiblePositionManager: Contract;
   let token0: Contract, token1: Contract;
   let poolI: any;
+  let pool: any;
   let router: Contract;
 
   before(async function () {
@@ -109,6 +110,8 @@ describe('Position manager contract', function () {
     router = await routerFixture();
     await token0.connect(trader).approve(router.address, ethers.utils.parseEther('1000000000000'));
     await token1.connect(trader).approve(router.address, ethers.utils.parseEther('1000000000000'));
+    await token0.connect(trader).approve(pool.address, ethers.utils.parseEther('1000000000000'));
+    await token1.connect(trader).approve(pool.address, ethers.utils.parseEther('1000000000000'));
   });
 
   // `beforeEach` will run before each test, re-deploying the contract every
@@ -241,12 +244,29 @@ describe('Position manager contract', function () {
       await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true);
       await PositionManagerInstance.depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), tokenId);
 
-      const res = await PositionManagerInstance.closeUniPosition(tokenId);
+      let position = await NonFungiblePositionManager.positions(tokenId);
+      console.log(position);
 
+      //const res = await PositionManagerInstance.closeUniPosition(tokenId);
       const trader = signers[2];
-      const swap = await router.connect(trader).swap(poolI.address, false, 2e2, { from: trader.address });
+      const swap = await router.connect(trader).swap(poolI.address, true, -1e15);
       const swapReceipt = await swap.wait();
-      console.log(swapReceipt.events);
+      /*
+       function swap(
+        address recipient,
+        bool zeroForOne,
+        int256 amountSpecified,
+        uint160 sqrtPriceLimitX96,
+        bytes data
+      ) external override noDelegateCall returns (int256 amount0, int256 amount1)
+      */
+      const { tick, sqrtPriceLimitX96 } = await poolI.slot0();
+      console.log(sqrtPriceLimitX96);
+      const swapPool = await poolI.connect(trader).swap(trader, true, sqrtPriceLimitX96.div(2), 1e15, '0x');
+      const swapPoolReceipt = await swap.wait();
+
+      let positionAfter = await NonFungiblePositionManager.positions(tokenId);
+      console.log(positionAfter);
     });
   });
 });
