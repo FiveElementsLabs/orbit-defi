@@ -1,4 +1,5 @@
 import { task } from 'hardhat/config';
+import 'hardhat-gas-reporter';
 import '@nomiclabs/hardhat-waffle';
 import '@typechain/hardhat';
 import '@nomiclabs/hardhat-ethers';
@@ -9,9 +10,9 @@ task('accounts', 'Prints the list of accounts', async (args, hre) => {
   const accounts = await hre.ethers.getSigners();
 
   for (const account of accounts) {
-    console.log(account.address)
+    console.log(account.address);
   }
-})
+});
 
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
@@ -20,6 +21,11 @@ task('accounts', 'Prints the list of accounts', async (args, hre) => {
  * @type import('hardhat/config').HardhatUserConfig
  */
 export default {
+  gasReporter: {
+    enabled: true,
+    currency: 'EUR',
+    gasPrice: 35,
+  },
   solidity: {
     compilers: [
       {
@@ -62,4 +68,4 @@ export default {
       timeout: 1800000,
     },
   },
-}
+};
