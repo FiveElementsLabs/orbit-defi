@@ -212,6 +212,32 @@ describe('Position manager contract', function () {
     });
   });
 
+  describe('Mint and deposit function', function () {
+    it('Should mint and deposit an uniV3 NFT', async function () {
+      await token0.approve(PositionManagerInstance.address, ethers.utils.parseEther('1000000000000'), {
+        from: signers[0].address,
+      });
+
+      await token1.approve(PositionManagerInstance.address, ethers.utils.parseEther('1000000000000'), {
+        from: signers[0].address,
+      });
+
+      const tx = await PositionManagerInstance.mintAndDeposit(
+        token0.address,
+        token1.address,
+        3000,
+        -240000 - 60,
+        -240000 + 60,
+        '0x' + (1e13).toString(16),
+        '0x' + (3e3).toString(16),
+        0,
+        0
+      );
+
+      const receipt = await tx.wait();
+      const tokenId = await receipt.events[receipt.events.length - 1].args.tokenId;
+    });
+  });
   describe('PositionManager - increasePositionLiquidity', function () {
     it('Should increase the liquidity in the NFT', async function () {
       const tx = await NonFungiblePositionManager.mint(
@@ -235,13 +261,13 @@ describe('Position manager contract', function () {
       await PositionManagerInstance.depositUniNft(await NonFungiblePositionManager.ownerOf(1), 1);
       const liquidityBefore = await poolI.liquidity();
 
-       await token0
+      await token0
         .connect(signers[0])
         .approve(PositionManagerInstance.address, ethers.utils.parseEther('100000000000000'));
 
       await token1.approve(PositionManagerInstance.address, ethers.utils.parseEther('100000000000000'), {
         from: signers[0].address,
-      }); 
+      });
 
       const res = await PositionManagerInstance.increasePositionLiquidity(1, 1e10, 1e6);
       const liquidityAfter = await poolI.liquidity();
