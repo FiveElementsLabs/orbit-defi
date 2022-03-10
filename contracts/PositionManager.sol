@@ -113,28 +113,30 @@ contract PositionManager is IVault, ERC721Holder {
         uint256 amount0Desired,
         uint256 amount1Desired,
         uint256 amount0Min,
-        uint256 amount1Min,
-        uint256 deadline
+        uint256 amount1Min
     ) public {
         require(amount0Desired > 0 || amount1Desired > 0, 'can mint only nonzero amount');
         IERC20 token0 = IERC20(token0Address);
         IERC20 token1 = IERC20(token1Address);
+        console.log('sono arrivato qui');
         token0.transferFrom(msg.sender, address(this), amount0Desired);
+        console.log('ho depositato 0');
         token1.transferFrom(msg.sender, address(this), amount1Desired);
+        console.log('ho depositato 1');
 
-        INonfungiblePositionManager.MintParams memory mintParams = INonfungiblePositionManager.MintParams(
-            token0Address, // token0,
-            token1Address, // token1,
-            fee, // fee,
-            tickLower, // tickLower,
-            tickUpper, // tickUpper,
-            amount0Desired, // amount0Desired,
-            amount1Desired, //amount1Desired,
-            amount0Min, // amount0Min,
-            amount1Min, // amount1Min,
-            address(this), // recipient
-            deadline //deadline
-        );
+        INonfungiblePositionManager.MintParams memory mintParams = INonfungiblePositionManager.MintParams({
+            token0: token0Address, // token0,
+            token1: token1Address, // token1,
+            fee: fee, // fee,
+            tickLower: tickLower, // tickLower,
+            tickUpper: tickUpper, // tickUpper,
+            amount0Desired: amount0Desired, // amount0Desired,
+            amount1Desired: amount1Desired, //amount1Desired,
+            amount0Min: amount0Min, // amount0Min,
+            amount1Min: amount1Min, // amount1Min,
+            recipient: address(this), // recipient
+            deadline: block.timestamp + 1000 //deadline
+        });
         (
             uint256 tokenId,
             uint128 liquidity,
@@ -147,9 +149,11 @@ contract PositionManager is IVault, ERC721Holder {
         console.log('AMOUNT 1 DEPOSITED', amount1Deposited);
         if (amount0Desired > amount0Deposited) {
             token0.transfer(msg.sender, amount0Desired - amount0Deposited);
+            console.log('RETURN TO THE USER TOKEN 0', amount1Deposited);
         }
         if (amount1Desired > amount1Deposited) {
             token1.transfer(msg.sender, amount1Desired - amount1Deposited);
+            console.log('RETURN TO THE USER TOKEN 1', amount1Deposited);
         }
         //can be optimized by calculating amount that will be deposited before transferring them to positionManager
         emit DepositUni(msg.sender, tokenId);

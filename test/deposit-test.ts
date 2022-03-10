@@ -214,21 +214,29 @@ describe('Position manager contract', function () {
 
   describe('Mint and deposit function', function () {
     it('Should mint and deposit an uniV3 NFT', async function () {
+      await token0.approve(PositionManagerInstance.address, ethers.utils.parseEther('1000000000000'), {
+        from: signers[0].address,
+      });
+
+      await token1.approve(PositionManagerInstance.address, ethers.utils.parseEther('1000000000000'), {
+        from: signers[0].address,
+      });
+  
+
       const tx = await PositionManagerInstance.mintAndDeposit(
         token0.address,
         token1.address,
         3000,
         -240000 - 60,
         -240000 + 60,
-        '0x' + (1e15).toString(16),
+        '0x' + (1e13).toString(16),
         '0x' + (3e3).toString(16),
         0,
-        0,
-        Date.now() + 1000
+        0
       );
 
       const receipt = await tx.wait();
-      const tokenId = receipt.events[receipt.events.length - 1].args.tokenId;
+      const tokenId = await receipt.events[receipt.events.length - 1].args.tokenId;
     });
   });
 });
