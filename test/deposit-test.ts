@@ -162,6 +162,4 @@ describe('Position manager contract', function () {
       }
     })
   })
-
-  
 })
