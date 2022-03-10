@@ -4,6 +4,7 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import '@openzeppelin/contracts/token/ERC721/ERC721Holder.sol';
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import 'hardhat/console.sol';
 import '../interfaces/IVault.sol';
@@ -94,6 +95,64 @@ contract PositionManager is IVault, ERC721Holder {
         while (uniswapNFTs.length > 0) {
             this.withdrawUniNft(to, uniswapNFTs[0]);
         }
+    }
+
+    /**
+     * @notice mint a univ3 position and deposit in manager
+     */
+    /*  function mint(
+    struct INonfungiblePositionManager.MintParams params
+  ) external returns (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1) */
+
+    function mintAndDeposit(
+        address token0Address,
+        address token1Address,
+        uint24 fee,
+        int24 tickLower,
+        int24 tickUpper,
+        uint256 amount0Desired,
+        uint256 amount1Desired,
+        uint256 amount0Min,
+        uint256 amount1Min,
+        uint256 deadline
+    ) public {
+        require(amount0Desired > 0 || amount1Desired > 0, 'can mint only nonzero amount');
+        IERC20 token0 = IERC20(token0Address);
+        IERC20 token1 = IERC20(token1Address);
+        token0.transferFrom(msg.sender, address(this), amount0Desired);
+        token1.transferFrom(msg.sender, address(this), amount1Desired);
+
+        INonfungiblePositionManager.MintParams memory mintParams = INonfungiblePositionManager.MintParams(
+            token0Address, // token0,
+            token1Address, // token1,
+            fee, // fee,
+            tickLower, // tickLower,
+            tickUpper, // tickUpper,
+            amount0Desired, // amount0Desired,
+            amount1Desired, //amount1Desired,
+            amount0Min, // amount0Min,
+            amount1Min, // amount1Min,
+            address(this), // recipient
+            deadline //deadline
+        );
+        (
+            uint256 tokenId,
+            uint128 liquidity,
+            uint256 amount0Deposited,
+            uint256 amount1Deposited
+        ) = nonfungiblePositionManager.mint(mintParams);
+        uniswapNFTs.push(tokenId);
+        console.log('Minted NFT with ID:', tokenId);
+        console.log('AMOUNT 0 DEPOSITED', amount0Deposited);
+        console.log('AMOUNT 1 DEPOSITED', amount1Deposited);
+        if (amount0Desired > amount0Deposited) {
+            token0.transfer(msg.sender, amount0Desired - amount0Deposited);
+        }
+        if (amount1Desired > amount1Deposited) {
+            token1.transfer(msg.sender, amount1Desired - amount1Deposited);
+        }
+        //can be optimized by calculating amount that will be deposited before transferring them to positionManager
+        emit DepositUni(msg.sender, tokenId);
     }
 
     /**

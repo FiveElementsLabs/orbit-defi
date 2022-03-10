@@ -211,4 +211,24 @@ describe('Position manager contract', function () {
       console.log('owner of', await NonFungiblePositionManager.balanceOf(PositionManagerInstance.address));
     });
   });
+
+  describe('Mint and deposit function', function () {
+    it('Should mint and deposit an uniV3 NFT', async function () {
+      const tx = await PositionManagerInstance.mintAndDeposit(
+        token0.address,
+        token1.address,
+        3000,
+        -240000 - 60,
+        -240000 + 60,
+        '0x' + (1e15).toString(16),
+        '0x' + (3e3).toString(16),
+        0,
+        0,
+        Date.now() + 1000
+      );
+
+      const receipt = await tx.wait();
+      const tokenId = receipt.events[receipt.events.length - 1].args.tokenId;
+    });
+  });
 });
