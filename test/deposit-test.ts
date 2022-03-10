@@ -221,7 +221,6 @@ describe('Position manager contract', function () {
       await token1.approve(PositionManagerInstance.address, ethers.utils.parseEther('1000000000000'), {
         from: signers[0].address,
       });
-  
 
       const tx = await PositionManagerInstance.mintAndDeposit(
         token0.address,
@@ -237,6 +236,42 @@ describe('Position manager contract', function () {
 
       const receipt = await tx.wait();
       const tokenId = await receipt.events[receipt.events.length - 1].args.tokenId;
+    });
+  });
+  describe('PositionManager - increasePositionLiquidity', function () {
+    it('Should increase the liquidity in the NFT', async function () {
+      const tx = await NonFungiblePositionManager.mint(
+        [
+          token0.address,
+          token1.address,
+          3000,
+          -240060,
+          -239940,
+          '0x' + (3e6).toString(16),
+          '0x' + (1e18).toString(16),
+          0,
+          0,
+          signers[0].address,
+          Date.now() + 1000,
+        ],
+
+        { from: signers[0].address, gasLimit: 670000 }
+      );
+      await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true);
+      await PositionManagerInstance.depositUniNft(await NonFungiblePositionManager.ownerOf(1), 1);
+      const liquidityBefore = await poolI.liquidity();
+
+      await token0
+        .connect(signers[0])
+        .approve(PositionManagerInstance.address, ethers.utils.parseEther('100000000000000'));
+
+      await token1.approve(PositionManagerInstance.address, ethers.utils.parseEther('100000000000000'), {
+        from: signers[0].address,
+      });
+
+      const res = await PositionManagerInstance.increasePositionLiquidity(1, 1e10, 1e6);
+      const liquidityAfter = await poolI.liquidity();
+      expect(liquidityAfter).to.be.gt(liquidityBefore);
     });
   });
 });
