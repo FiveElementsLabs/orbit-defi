@@ -1,11 +1,10 @@
 import { expect } from 'chai';
 import '@nomiclabs/hardhat-ethers';
-import { NonfungiblePositionManager, PositionManager } from '../typechain';
+import { NonfungiblePositionManager, PositionManager, IUniswapV3Pool, TestRouter } from '../typechain';
 import { BigNumber, Contract, Wallet } from 'ethers';
 import { ethers, waffle } from 'hardhat';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
-import { IUniswapV3Pool } from '../typechain';
-import { tokensFixture, poolFixture } from './shared/fixtures';
+import { tokensFixture, poolFixture, routerFixture } from './shared/fixtures';
 import { sign } from 'crypto';
 import { time } from 'console';
 
@@ -34,6 +33,7 @@ describe('Position manager contract', function () {
   let NonFungiblePositionManager: Contract;
   let token0: Contract, token1: Contract;
   let poolI: any;
+  let router: Contract;
 
   before(async function () {
     // Initializing pool states
@@ -48,6 +48,7 @@ describe('Position manager contract', function () {
     await token1.mint(user.address, ethers.utils.parseEther('1000000000000'));
     let startTick = -240000;
     const price = Math.pow(1.0001, startTick);
+    console.log(price);
     await pool.initialize('0x' + (Math.sqrt(price) * Math.pow(2, 96)).toString(16));
     await pool.increaseObservationCardinalityNext(100);
     const { sqrtPriceX96, tick } = await pool.slot0();
@@ -65,15 +66,19 @@ describe('Position manager contract', function () {
 
     // Pool has some liquidity
     const liquidityProvider = await signers[1];
-    await token0.connect(liquidityProvider).mint(liquidityProvider.address, ethers.utils.parseEther('1000000000000'));
-    await token1.connect(liquidityProvider).mint(liquidityProvider.address, ethers.utils.parseEther('1000000000000'));
     await token0
       .connect(liquidityProvider)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'));
+      .mint(liquidityProvider.address, ethers.utils.parseEther('1000000000000000000000000'));
+    await token1
+      .connect(liquidityProvider)
+      .mint(liquidityProvider.address, ethers.utils.parseEther('1000000000000000000000000'));
+    await token0
+      .connect(liquidityProvider)
+      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000000000000000'));
 
     await token1
       .connect(liquidityProvider)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'), {
+      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000000000000000'), {
         from: liquidityProvider.address,
       });
 
@@ -82,10 +87,10 @@ describe('Position manager contract', function () {
         token0.address,
         token1.address,
         3000,
-        -240060,
-        -239940,
-        '0x' + (3e6).toString(16),
-        '0x' + (1e18).toString(16),
+        -240000 - 60 * 1000,
+        -240000 + 60 * 1000,
+        '0x' + (3e14).toString(16),
+        '0x' + (1e26).toString(16),
         0,
         0,
         liquidityProvider.address,
@@ -94,6 +99,16 @@ describe('Position manager contract', function () {
 
       { gasLimit: 670000 }
     );
+
+    // Trader has some tokens
+    const trader = await signers[2];
+    await token0.connect(trader).mint(trader.address, ethers.utils.parseEther('1000000000000'));
+    await token1.connect(trader).mint(trader.address, ethers.utils.parseEther('1000000000000'));
+    console.log('balance 0 ', await token0.balanceOf(trader.address));
+    console.log('balance 1 ', await token1.balanceOf(trader.address));
+    router = await routerFixture();
+    await token0.connect(trader).approve(router.address, ethers.utils.parseEther('1000000000000'));
+    await token1.connect(trader).approve(router.address, ethers.utils.parseEther('1000000000000'));
   });
 
   // `beforeEach` will run before each test, re-deploying the contract every
@@ -132,7 +147,6 @@ describe('Position manager contract', function () {
       );
 
       const receipt = await tx.wait();
-      console.log(receipt.events);
       const data = receipt.events[receipt.events.length - 1].args;
       expect(data.tokenId).to.equal(2);
     });
@@ -199,6 +213,40 @@ describe('Position manager contract', function () {
       await PositionManagerInstance.depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), tokenId);
 
       const res = await PositionManagerInstance.closeUniPosition(tokenId);
+    });
+
+    it('Should close and burn a uniPosition with swap fees', async function () {
+      const tx = await NonFungiblePositionManager.mint(
+        //ERC721
+        [
+          token0.address,
+          token1.address,
+          3000,
+          -240060,
+          -239940,
+          '0x' + (1e15).toString(16),
+          '0x' + (3e3).toString(16),
+          0,
+          0,
+          signers[0].address,
+          Date.now() + 1000,
+        ],
+
+        { from: signers[0].address, gasLimit: 670000 }
+      );
+      const receipt = await tx.wait();
+      const data = receipt.events[receipt.events.length - 1].args;
+      const tokenId = data.tokenId;
+
+      await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true);
+      await PositionManagerInstance.depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), tokenId);
+
+      const res = await PositionManagerInstance.closeUniPosition(tokenId);
+
+      const trader = signers[2];
+      const swap = await router.connect(trader).swap(poolI.address, false, 2e2, { from: trader.address });
+      const swapReceipt = await swap.wait();
+      console.log(swapReceipt.events);
     });
   });
 });
