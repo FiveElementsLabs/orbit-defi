@@ -4,6 +4,7 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import '@openzeppelin/contracts/token/ERC721/ERC721Holder.sol';
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import 'hardhat/console.sol';
 import '../interfaces/IVault.sol';
@@ -78,8 +79,7 @@ contract PositionManager is IVault, ERC721Holder {
      * @notice close and burn uniswap position; liquidity must be 0,
      */
     function closeUniPosition(uint256 tokenId) external payable {
-        (, , , , , , , uint128 liquidity, , , uint128 tokensOwed0, uint128 tokensOwed1) = nonfungiblePositionManager
-            .positions(tokenId);
+        (, , , , , , , uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(tokenId);
 
         INonfungiblePositionManager.DecreaseLiquidityParams memory decreaseliquidityparams = INonfungiblePositionManager
             .DecreaseLiquidityParams({
@@ -98,8 +98,6 @@ contract PositionManager is IVault, ERC721Holder {
             amount1Max: 2**128 - 1
         });
         nonfungiblePositionManager.collect(collectparams);
-
-        (, , , , , , , uint128 liquidity2, , , uint128 tokensOwed02, ) = nonfungiblePositionManager.positions(tokenId);
 
         nonfungiblePositionManager.burn(tokenId);
     }
@@ -120,25 +118,48 @@ contract PositionManager is IVault, ERC721Holder {
         (amount0, amount1) = this.collect(params);
     } */
 
-    /* function increasePositionLiquidity(
-        uint256 tokenId, 
-        uint256 amount0Desired, 
-        uint256 amount1Desired,
-        uint256 amount0Min,
-        uint256 amount1Min,
-        uint256 deadline
-        ) external payable returns (uint256 amount0Desired, uint256 amount1Desired) {
-        INonfungiblePositionManager.IncreaseLiquidityParams memory params =
-            INonfungiblePositionManager.IncreaseLiquidityParams({
+    function increasePositionLiquidity(
+        uint256 tokenId,
+        uint256 amount0Desired,
+        uint256 amount1Desired
+    ) external payable returns (uint256 amount0, uint256 amount1) {
+        require(amount0Desired > 0 && amount1Desired > 0, 'send some token to increase liquidity');
+
+        (IERC20 token0, IERC20 token1) = _getTokenAddress(tokenId);
+
+        if (token0.allowance(address(this), address(nonfungiblePositionManager)) == 0) _approveToken0(token0);
+        if (token1.allowance(address(this), address(nonfungiblePositionManager)) == 0) _approveToken1(token1);
+
+        token0.transferFrom(msg.sender, address(this), amount0Desired);
+        token1.transferFrom(msg.sender, address(this), amount1Desired);
+
+        INonfungiblePositionManager.IncreaseLiquidityParams memory params = INonfungiblePositionManager
+            .IncreaseLiquidityParams({
                 tokenId: tokenId,
                 amount0Desired: amount0Desired,
                 amount1Desired: amount1Desired,
-                amount0Min: amount0Min,
-                amount1Min: amount1Min,
-                deadline: deadline
+                amount0Min: 0,
+                amount1Min: 0,
+                deadline: block.timestamp + 1000
             });
-        this.increaseLiquidity(params);
-    } */
+        (, amount0, amount1) = nonfungiblePositionManager.increaseLiquidity(params);
+    }
+
+    function _approveToken0(IERC20 token0) private {
+        token0.approve(address(nonfungiblePositionManager), 2**256 - 1);
+    }
+
+    function _approveToken1(IERC20 token1) private {
+        token1.approve(address(nonfungiblePositionManager), 2**256 - 1);
+    }
+
+    function _getTokenAddress(uint256 tokenId) private view returns (IERC20 token0, IERC20 token1) {
+        (, , address token0address, address token1address, , , , , , , , ) = nonfungiblePositionManager.positions(
+            tokenId
+        );
+        token0 = IERC20(token0address);
+        token1 = IERC20(token1address);
+    }
 
     modifier onlyUser() {
         require(msg.sender == owner, 'Only owner can call this function');
