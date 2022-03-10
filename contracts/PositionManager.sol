@@ -94,8 +94,8 @@ contract PositionManager is IVault, ERC721Holder {
         INonfungiblePositionManager.CollectParams memory collectparams = INonfungiblePositionManager.CollectParams({
             tokenId: tokenId,
             recipient: owner,
-            amount0Max: 1e18,
-            amount1Max: 3000e6
+            amount0Max: 2**128 - 1,
+            amount1Max: 2**128 - 1
         });
         nonfungiblePositionManager.collect(collectparams);
 
