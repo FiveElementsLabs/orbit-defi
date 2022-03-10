@@ -6,6 +6,9 @@ pragma abicoder v2;
 import '@openzeppelin/contracts/token/ERC721/ERC721Holder.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
+import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
+import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
+import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import 'hardhat/console.sol';
 import '../interfaces/IVault.sol';
 
@@ -47,13 +50,19 @@ contract PositionManager is IVault, ERC721Holder {
     }
 
     INonfungiblePositionManager public immutable nonfungiblePositionManager;
+    IUniswapV3Pool public immutable pool;
 
     /**
      * @dev After deploying, strategy needs to be set via `setStrategy()`
      */
-    constructor(address userAddress, INonfungiblePositionManager _nonfungiblePositionManager) {
+    constructor(
+        address userAddress,
+        INonfungiblePositionManager _nonfungiblePositionManager,
+        IUniswapV3Pool _pool
+    ) {
         owner = userAddress;
         nonfungiblePositionManager = _nonfungiblePositionManager;
+        pool = _pool;
     }
 
     /**
@@ -138,14 +147,10 @@ contract PositionManager is IVault, ERC721Holder {
             recipient: address(this), // recipient
             deadline: block.timestamp + 1000 //deadline
         });
-        (
-            uint256 tokenId,
-            uint128 liquidity,
-            uint256 amount0Deposited,
-            uint256 amount1Deposited
-        ) = nonfungiblePositionManager.mint(mintParams);
+        (uint256 tokenId, , uint256 amount0Deposited, uint256 amount1Deposited) = nonfungiblePositionManager.mint(
+            mintParams
+        );
         uniswapNFTs.push(tokenId);
-
 
         if (amount0Desired > amount0Deposited) {
             token0.transfer(msg.sender, amount0Desired - amount0Deposited);
@@ -160,9 +165,21 @@ contract PositionManager is IVault, ERC721Holder {
     /**
      * @notice get balance token0 and token1 in a position
      */
-    /* function getPositionBalance(uint256 tokenId) external view returns(uint128 tokensOwed0, uint128 tokensOwed1) {
-        (,,,,,,,,,,tokensOwed0,tokensOwed1) = this.positions(tokenId);
-    } */
+    function getPositionBalance(uint256 tokenId) external view returns (uint256, uint256) {
+        (, , , , , int24 tickLower, int24 tickUpper, uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(
+            tokenId
+        );
+
+        (uint160 sqrtRatioX96, , , , , , ) = pool.slot0();
+        return
+            LiquidityAmounts.getAmountsForLiquidity(
+                sqrtRatioX96,
+                TickMath.getSqrtRatioAtTick(tickLower),
+                TickMath.getSqrtRatioAtTick(tickUpper),
+                liquidity
+            );
+    }
+
     /**
      * @notice get fee of token0 and token1 in a position
      */
@@ -242,12 +259,12 @@ contract PositionManager is IVault, ERC721Holder {
 
     function _approveToken0(IERC20 token0) private {
         if (token0.allowance(address(this), address(nonfungiblePositionManager)) == 0)
-        token0.approve(address(nonfungiblePositionManager), 2**256 - 1);
+            token0.approve(address(nonfungiblePositionManager), 2**256 - 1);
     }
 
     function _approveToken1(IERC20 token1) private {
         if (token1.allowance(address(this), address(nonfungiblePositionManager)) == 0)
-        token1.approve(address(nonfungiblePositionManager), 2**256 - 1);
+            token1.approve(address(nonfungiblePositionManager), 2**256 - 1);
     }
 
     function _getTokenAddress(uint256 tokenId) private view returns (IERC20 token0, IERC20 token1) {
