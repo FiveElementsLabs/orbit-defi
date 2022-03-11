@@ -49,7 +49,6 @@ describe('Position manager contract', function () {
     await token1.mint(user.address, ethers.utils.parseEther('1000000000000'));
     let startTick = -240000;
     const price = Math.pow(1.0001, startTick);
-    console.log(price);
     await pool.initialize('0x' + (Math.sqrt(price) * Math.pow(2, 96)).toString(16));
     await pool.increaseObservationCardinalityNext(100);
     const { sqrtPriceX96, tick } = await pool.slot0();
@@ -69,17 +68,17 @@ describe('Position manager contract', function () {
     const liquidityProvider = await signers[1];
     await token0
       .connect(liquidityProvider)
-      .mint(liquidityProvider.address, ethers.utils.parseEther('1000000000000000000000000'));
+      .mint(liquidityProvider.address, ethers.utils.parseEther('10000000000000000000000000000'));
     await token1
       .connect(liquidityProvider)
-      .mint(liquidityProvider.address, ethers.utils.parseEther('1000000000000000000000000'));
+      .mint(liquidityProvider.address, ethers.utils.parseEther('10000000000000000000000000000'));
     await token0
       .connect(liquidityProvider)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000000000000000'));
+      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('10000000000000000000000000000'));
 
     await token1
       .connect(liquidityProvider)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000000000000000'), {
+      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('10000000000000000000000000000'), {
         from: liquidityProvider.address,
       });
 
@@ -90,8 +89,8 @@ describe('Position manager contract', function () {
         3000,
         -240000 - 60 * 1000,
         -240000 + 60 * 1000,
-        '0x' + (3e14).toString(16),
-        '0x' + (1e26).toString(16),
+        '0x' + (1e30).toString(16),
+        '0x' + (1e30).toString(16),
         0,
         0,
         liquidityProvider.address,
@@ -105,8 +104,6 @@ describe('Position manager contract', function () {
     const trader = await signers[2];
     await token0.connect(trader).mint(trader.address, ethers.utils.parseEther('1000000000000'));
     await token1.connect(trader).mint(trader.address, ethers.utils.parseEther('1000000000000'));
-    console.log('balance 0 ', await token0.balanceOf(trader.address));
-    console.log('balance 1 ', await token1.balanceOf(trader.address));
     router = await routerFixture();
     await token0.connect(trader).approve(router.address, ethers.utils.parseEther('1000000000000'));
     await token1.connect(trader).approve(router.address, ethers.utils.parseEther('1000000000000'));
@@ -225,10 +222,10 @@ describe('Position manager contract', function () {
           token0.address,
           token1.address,
           3000,
-          -240060,
-          -239940,
-          '0x' + (1e15).toString(16),
-          '0x' + (3e3).toString(16),
+          -240000 - 60 * 100,
+          -239940 + 60 * 100,
+          '0x' + (1e18).toString(16),
+          '0x' + (1e18).toString(16),
           0,
           0,
           signers[0].address,
@@ -249,8 +246,24 @@ describe('Position manager contract', function () {
 
       //const res = await PositionManagerInstance.closeUniPosition(tokenId);
       const trader = signers[2];
-      const swap = await router.connect(trader).swap(poolI.address, true, -1e15);
-      const swapReceipt = await swap.wait();
+      let tick;
+      let sqrtPriceX96;
+      ({ tick, sqrtPriceX96 } = await poolI.slot0());
+      console.log(tick);
+      let isEven;
+      let sign;
+      for (let i = 0; i < 100; i++) {
+        // @ts-ignore
+        isEven = (i) => i % 2 === 0;
+        sign = isEven(i) ? 1 : -1;
+        await router.connect(trader).swap(poolI.address, true, sign * 1e8);
+        ({ tick, sqrtPriceX96 } = await poolI.slot0());
+        console.log(tick);
+      }
+      //const swap = ;
+      //const swapReceipt = await swap.wait();
+      //console.log(await swapReceipt.events[0].getTransactionReceipt());
+
       /*
        function swap(
         address recipient,
@@ -259,11 +272,18 @@ describe('Position manager contract', function () {
         uint160 sqrtPriceLimitX96,
         bytes data
       ) external override noDelegateCall returns (int256 amount0, int256 amount1)
-      */
-      const { tick, sqrtPriceLimitX96 } = await poolI.slot0();
-      console.log(sqrtPriceLimitX96);
-      const swapPool = await poolI.connect(trader).swap(trader, true, sqrtPriceLimitX96.div(2), 1e15, '0x');
-      const swapPoolReceipt = await swap.wait();
+      
+      const { tick, sqrtPriceX96 } = await poolI.slot0();
+      console.log(sqrtPriceX96);
+      const sqrtPriceLimitX96 = sqrtPriceX96.mul(2);
+      const abiCoder = new ethers.utils.AbiCoder();
+      const swapPool = await poolI
+        .connect(trader)
+        .swap(trader.address, false, 1e5, sqrtPriceLimitX96, await abiCoder.encode(['uint'], [0]), {
+          from: trader.address,
+          gasLimit: 670000,
+        });
+      const swapPoolReceipt = await swap.wait();*/
 
       let positionAfter = await NonFungiblePositionManager.positions(tokenId);
       console.log(positionAfter);
