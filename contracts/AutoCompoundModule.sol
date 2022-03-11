@@ -3,50 +3,45 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-// import IPositionManager.sol
+import './interfaces/IPositionManager.sol'; //interface for PositionManager to be done
 
 contract AutoCompoundModule {
-    uint256 uncollectedFeesThreshold = 0;
+    uint256 uncollectedFeesThreshold; //used to decide if fees should be collected
 
-    event FeesCollected(address from, address token, uint256 amount);
-    event FeesReinvested(address from);
-
-    function checkForUncollectedFees(address positionManagerAddress) public returns (bool) {
-        IPositionManager positionManagerInstance = IPositionManager(
-            positionManagerAddress,
-            nonFungiblePositionManagerAddress
-        );
-
-        return positionManagerInstance.getUncollectedFees() > 0;
+    constructor(uint256 threshold) {
+        uncollectedFeesThreshold = threshold;
     }
 
-    function collectFees(address positionManagerAddress)
+    function checkForUncollectedFees(IPositionManager positionManager, uint256 tokenId)
         public
-        returns (
-            address,
-            address,
-            uint256,
-            uint256
-        )
+        returns (uint128, uint128)
     {
-        IPositionManager positionManagerInstance = IPositionManager(
-            positionManagerAddress,
-            nonFungiblePositionManagerAddress
-        );
+        return positionManager.getPositionFee(tokenId);
+    }
 
-        return positionManagerInstance.collectFees();
+    function collectFees(IPositionManager positionManager, uint256 tokenId) public returns (address[], uint256[]) {
+        (tokens, amounts) = positionManager.collectFees(tokenId);
+        return (tokens, amounts);
     }
 
     function reinvestFees(
+        IPositionManager positionManager,
         uint256 tokenId,
         uint256 amount0,
         uint256 amount1
     ) {
-        IPositionManager positionManagerInstance = IPositionManager(
-            ownerOf(tokenId),
-            nonFungiblePositionManagerAddress
-        );
 
-        positionManagerInstance.addLiquidity();
+        positionManager.increasePositionLiquidity(tokenId, amount0, amount1);
+    }
+
+    function checkAndCompound(IPositionManager positionManager) public{
+        tokenIds = positionManager.getUniswapNFTs();
+        for(i=0; i<tokenIds.length(); i++){
+            (uint128 token0Fees, uint128 token1Fees) = checkForUncollectedFees(positionManager.address, tokenIds[i]);
+            if(min(token0Fees,token1Fees)>uncollectedFeesThreshold){
+                collectFees(positionManager.address, tokenIds[i]);
+                reinvestFees(positionManager.address, tokenIds[i], token0Fees, token1Fees);
+            }
+        }
     }
 }
