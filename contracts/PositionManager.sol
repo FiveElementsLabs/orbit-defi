@@ -4,7 +4,11 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import '@openzeppelin/contracts/token/ERC721/ERC721Holder.sol';
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
+import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
+import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
+import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import 'hardhat/console.sol';
 import '../interfaces/IVault.sol';
 
@@ -19,6 +23,7 @@ import '../interfaces/IVault.sol';
 
 contract PositionManager is IVault, ERC721Holder {
     event DepositUni(address indexed from, uint256 tokenId);
+    event WithdrawUni(address to, uint256 tokenId);
 
     address public immutable owner;
     uint256[] private uniswapNFTs;
@@ -45,13 +50,19 @@ contract PositionManager is IVault, ERC721Holder {
     }
 
     INonfungiblePositionManager public immutable nonfungiblePositionManager;
+    IUniswapV3Pool public immutable pool;
 
     /**
      * @dev After deploying, strategy needs to be set via `setStrategy()`
      */
-    constructor(address userAddress, INonfungiblePositionManager _nonfungiblePositionManager) {
+    constructor(
+        address userAddress,
+        INonfungiblePositionManager _nonfungiblePositionManager,
+        IUniswapV3Pool _pool
+    ) {
         owner = userAddress;
         nonfungiblePositionManager = _nonfungiblePositionManager;
+        pool = _pool;
     }
 
     /**
@@ -59,14 +70,116 @@ contract PositionManager is IVault, ERC721Holder {
      */
     function depositUniNft(address from, uint256 tokenId) external override {
         nonfungiblePositionManager.safeTransferFrom(from, address(this), tokenId, '0x0');
+        uniswapNFTs.push(tokenId);
+        emit DepositUni(from, tokenId);
+    }
+
+    /**
+     * @notice withdraw uniswap position from the position manager
+     */
+    function withdrawUniNft(address to, uint256 tokenId) public {
+        //internal? users should not know id
+        uint256 index = uniswapNFTs.length;
+        for (uint256 i = 0; i < uniswapNFTs.length; i++) {
+            if (uniswapNFTs[i] == tokenId) {
+                index = i;
+                i = uniswapNFTs.length;
+            }
+        }
+        require(index < uniswapNFTs.length, 'token id not found!');
+        nonfungiblePositionManager.safeTransferFrom(address(this), to, tokenId, '0x0');
+        removeNFTFromList(index);
+        emit WithdrawUni(to, tokenId);
+    }
+
+    //remove awareness of nft at index index
+    function removeNFTFromList(uint256 index) internal {
+        uniswapNFTs[index] = uniswapNFTs[uniswapNFTs.length - 1];
+        uniswapNFTs.pop();
+    }
+
+    //wrapper for withdraw of all univ3positions in manager
+    function withdrawAllUniNft(address to) external onlyUser {
+        require(uniswapNFTs.length > 0, 'no NFT to withdraw');
+        while (uniswapNFTs.length > 0) {
+            this.withdrawUniNft(to, uniswapNFTs[0]);
+        }
+    }
+
+    /**
+     * @notice mint a univ3 position and deposit in manager
+     */
+    /*  function mint(
+    struct INonfungiblePositionManager.MintParams params
+  ) external returns (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1) */
+
+    function mintAndDeposit(
+        address token0Address,
+        address token1Address,
+        uint24 fee,
+        int24 tickLower,
+        int24 tickUpper,
+        uint256 amount0Desired,
+        uint256 amount1Desired,
+        uint256 amount0Min,
+        uint256 amount1Min
+    ) public {
+        require(amount0Desired > 0 || amount1Desired > 0, 'can mint only nonzero amount');
+        IERC20 token0 = IERC20(token0Address);
+        IERC20 token1 = IERC20(token1Address);
+
+        token0.transferFrom(msg.sender, address(this), amount0Desired);
+        token1.transferFrom(msg.sender, address(this), amount1Desired);
+
+        _approveToken0(token0);
+        _approveToken1(token1);
+
+        INonfungiblePositionManager.MintParams memory mintParams = INonfungiblePositionManager.MintParams({
+            token0: token0Address, // token0,
+            token1: token1Address, // token1,
+            fee: fee, // fee,
+            tickLower: tickLower, // tickLower,
+            tickUpper: tickUpper, // tickUpper,
+            amount0Desired: amount0Desired, // amount0Desired,
+            amount1Desired: amount1Desired, //amount1Desired,
+            amount0Min: amount0Min, // amount0Min,
+            amount1Min: amount1Min, // amount1Min,
+            recipient: address(this), // recipient
+            deadline: block.timestamp + 1000 //deadline
+        });
+        (uint256 tokenId, , uint256 amount0Deposited, uint256 amount1Deposited) = nonfungiblePositionManager.mint(
+            mintParams
+        );
+        uniswapNFTs.push(tokenId);
+
+        if (amount0Desired > amount0Deposited) {
+            token0.transfer(msg.sender, amount0Desired - amount0Deposited);
+        }
+        if (amount1Desired > amount1Deposited) {
+            token1.transfer(msg.sender, amount1Desired - amount1Deposited);
+        }
+        //can be optimized by calculating amount that will be deposited before transferring them to positionManager
+        emit DepositUni(msg.sender, tokenId);
     }
 
     /**
      * @notice get balance token0 and token1 in a position
      */
-    /* function getPositionBalance(uint256 tokenId) external view returns(uint128 tokensOwed0, uint128 tokensOwed1) {
-        (,,,,,,,,,,tokensOwed0,tokensOwed1) = this.positions(tokenId);
-    } */
+    function getPositionBalance(uint256 tokenId) external view returns (uint256, uint256) {
+        (, , , , , int24 tickLower, int24 tickUpper, uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(
+            tokenId
+        );
+
+        (uint160 sqrtRatioX96, , , , , , ) = pool.slot0();
+        return
+            LiquidityAmounts.getAmountsForLiquidity(
+                sqrtRatioX96,
+                TickMath.getSqrtRatioAtTick(tickLower),
+                TickMath.getSqrtRatioAtTick(tickUpper),
+                liquidity
+            );
+    }
+
     /**
      * @notice get fee of token0 and token1 in a position
      */
@@ -78,8 +191,7 @@ contract PositionManager is IVault, ERC721Holder {
      * @notice close and burn uniswap position; liquidity must be 0,
      */
     function closeUniPosition(uint256 tokenId) external payable {
-        (, , , , , , , uint128 liquidity, , , uint128 tokensOwed0, uint128 tokensOwed1) = nonfungiblePositionManager
-            .positions(tokenId);
+        (, , , , , , , uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(tokenId);
 
         INonfungiblePositionManager.DecreaseLiquidityParams memory decreaseliquidityparams = INonfungiblePositionManager
             .DecreaseLiquidityParams({
@@ -98,8 +210,6 @@ contract PositionManager is IVault, ERC721Holder {
             amount1Max: 2**128 - 1
         });
         nonfungiblePositionManager.collect(collectparams);
-
-        (, , , , , , , uint128 liquidity2, , , uint128 tokensOwed02, ) = nonfungiblePositionManager.positions(tokenId);
 
         nonfungiblePositionManager.burn(tokenId);
     }
@@ -120,25 +230,50 @@ contract PositionManager is IVault, ERC721Holder {
         (amount0, amount1) = this.collect(params);
     } */
 
-    /* function increasePositionLiquidity(
-        uint256 tokenId, 
-        uint256 amount0Desired, 
-        uint256 amount1Desired,
-        uint256 amount0Min,
-        uint256 amount1Min,
-        uint256 deadline
-        ) external payable returns (uint256 amount0Desired, uint256 amount1Desired) {
-        INonfungiblePositionManager.IncreaseLiquidityParams memory params =
-            INonfungiblePositionManager.IncreaseLiquidityParams({
+    function increasePositionLiquidity(
+        uint256 tokenId,
+        uint256 amount0Desired,
+        uint256 amount1Desired
+    ) external payable returns (uint256 amount0, uint256 amount1) {
+        require(amount0Desired > 0 && amount1Desired > 0, 'send some token to increase liquidity');
+
+        (IERC20 token0, IERC20 token1) = _getTokenAddress(tokenId);
+
+        _approveToken0(token0);
+        _approveToken1(token1);
+
+        token0.transferFrom(msg.sender, address(this), amount0Desired);
+        token1.transferFrom(msg.sender, address(this), amount1Desired);
+
+        INonfungiblePositionManager.IncreaseLiquidityParams memory params = INonfungiblePositionManager
+            .IncreaseLiquidityParams({
                 tokenId: tokenId,
                 amount0Desired: amount0Desired,
                 amount1Desired: amount1Desired,
-                amount0Min: amount0Min,
-                amount1Min: amount1Min,
-                deadline: deadline
+                amount0Min: 0,
+                amount1Min: 0,
+                deadline: block.timestamp + 1000
             });
-        this.increaseLiquidity(params);
-    } */
+        (, amount0, amount1) = nonfungiblePositionManager.increaseLiquidity(params);
+    }
+
+    function _approveToken0(IERC20 token0) private {
+        if (token0.allowance(address(this), address(nonfungiblePositionManager)) == 0)
+            token0.approve(address(nonfungiblePositionManager), 2**256 - 1);
+    }
+
+    function _approveToken1(IERC20 token1) private {
+        if (token1.allowance(address(this), address(nonfungiblePositionManager)) == 0)
+            token1.approve(address(nonfungiblePositionManager), 2**256 - 1);
+    }
+
+    function _getTokenAddress(uint256 tokenId) private view returns (IERC20 token0, IERC20 token1) {
+        (, , address token0address, address token1address, , , , , , , , ) = nonfungiblePositionManager.positions(
+            tokenId
+        );
+        token0 = IERC20(token0address);
+        token1 = IERC20(token1address);
+    }
 
     modifier onlyUser() {
         require(msg.sender == owner, 'Only owner can call this function');
