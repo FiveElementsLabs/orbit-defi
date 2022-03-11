@@ -116,48 +116,47 @@ describe('Position manager contract', function () {
     });
 
     it('Should deposit nfts in smart vault and withdraw them', async function () {
-      let tokenIds = [];
-      for (let i = 2; i < 10; i++) {
-        const tx = await NonFungiblePositionManager.mint(
-          [
-            //ERC721
+      const tx = await NonFungiblePositionManager.mint(
+        [
+          //ERC721
 
-            token0.address,
-            token1.address,
-            3000,
-            -240000 - 60 * i,
-            -240000 + 60 * i,
-            '0x' + (1e15).toString(16),
-            '0x' + (3e3).toString(16),
-            0,
-            0,
-            signers[0].address,
-            Date.now() + 1000,
-          ],
-          { from: signers[0].address, gasLimit: 670000 }
-        );
+          token0.address,
+          token1.address,
+          3000,
+          -240000 - 60,
+          -240000 + 60,
+          '0x' + (1e15).toString(16),
+          '0x' + (3e3).toString(16),
+          0,
+          0,
+          signers[0].address,
+          Date.now() + 1000,
+        ],
+        { from: signers[0].address, gasLimit: 670000 }
+      );
 
-        const receipt = await tx.wait();
-        const data = receipt.events[receipt.events.length - 1].args;
-        tokenIds.push(data.tokenId);
+      const receipt = await tx.wait();
+      const data = receipt.events[receipt.events.length - 1].args;
 
-        const rec = await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true);
-        const res = await PositionManagerInstance.depositUniNft(
-          await NonFungiblePositionManager.ownerOf(data.tokenId),
-          data.tokenId
-        );
-        expect(await PositionManagerInstance.address).to.equal(await NonFungiblePositionManager.ownerOf(data.tokenId));
-      }
+      const rec = await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true);
+      const res = await PositionManagerInstance.connect(owner).depositUniNft(
+        await NonFungiblePositionManager.ownerOf(data.tokenId),
+        data.tokenId,
+        { from: owner.address }
+      );
+      expect(await PositionManagerInstance.address).to.equal(
+        await NonFungiblePositionManager.connect(signers[0]).ownerOf(data.tokenId)
+      );
+      const res2 = await PositionManagerInstance.connect(signers[0]).withdrawAllUniNft(signers[0].address, {
+        from: await PositionManagerInstance.owner(),
+      });
 
-      const res2 = await PositionManagerInstance.withdrawAllUniNft(signers[0].address);
-      for (let i = 0; i < tokenIds.length; i++) {
-        expect(await signers[0].address).to.equal(await NonFungiblePositionManager.ownerOf(tokenIds[i]));
-      }
+      expect(await signers[0].address).to.equal(await NonFungiblePositionManager.ownerOf(data.tokenId));
     });
 
     it('Should revert if token does not exist', async function () {
       try {
-        await PositionManagerInstance.withdrawUniNft(signers[0].address, 1000);
+        await PositionManagerInstance.connect(signers[0]).withdrawUniNft(signers[0].address, 1000);
       } catch (error) {
         expect(1).to.equal(1);
       }
@@ -181,10 +180,15 @@ describe('Position manager contract', function () {
 
         { from: signers[0].address, gasLimit: 670000 }
       );
+      const receipt = await tx.wait();
+      const tokenId = await receipt.events[receipt.events.length - 1].args.tokenId;
 
       await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true);
-      await PositionManagerInstance.depositUniNft(await NonFungiblePositionManager.ownerOf(2), 2);
-      expect(await PositionManagerInstance.address).to.equal(await NonFungiblePositionManager.ownerOf(2));
+      await PositionManagerInstance.connect(signers[0]).depositUniNft(
+        await NonFungiblePositionManager.ownerOf(tokenId),
+        tokenId
+      );
+      expect(await PositionManagerInstance.address).to.equal(await NonFungiblePositionManager.ownerOf(tokenId));
     });
 
     it('Should close and burn a uniPosition', async function () {
@@ -207,11 +211,14 @@ describe('Position manager contract', function () {
         { from: signers[0].address, gasLimit: 670000 }
       );
 
+      const receipt = await tx.wait();
+      const tokenId = await receipt.events[receipt.events.length - 1].args.tokenId;
+
       await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true);
-      await PositionManagerInstance.depositUniNft(await NonFungiblePositionManager.ownerOf(3), 3);
+      await PositionManagerInstance.depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), tokenId);
       console.log('NEW OWNER', await NonFungiblePositionManager.balanceOf(PositionManagerInstance.address));
 
-      const res = await PositionManagerInstance.closeUniPosition(3);
+      const res = await PositionManagerInstance.closeUniPosition(tokenId);
       console.log('owner of', await NonFungiblePositionManager.balanceOf(PositionManagerInstance.address));
     });
   });
@@ -301,7 +308,7 @@ describe('Position manager contract', function () {
       );
       const receipt = await tx.wait();
       await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true);
-      await PositionManagerInstance.depositUniNft(
+      await PositionManagerInstance.connect(signers[0]).depositUniNft(
         await NonFungiblePositionManager.ownerOf(receipt.events[receipt.events.length - 1].args.tokenId),
         receipt.events[receipt.events.length - 1].args.tokenId
       );
@@ -309,6 +316,160 @@ describe('Position manager contract', function () {
       const txres = await PositionManagerInstance.getPositionBalance(
         receipt.events[receipt.events.length - 1].args.tokenId
       );
+    });
+  });
+  describe('PositionManager - OnlyUser', function () {
+    it('Deposit should called only by user', async function () {
+      const tx = await NonFungiblePositionManager.mint(
+        [
+          token0.address,
+          token1.address,
+          3000,
+          -240060,
+          -239940,
+          '0x' + (30e6).toString(16),
+          '0x' + (1e17).toString(16),
+          0,
+          0,
+          signers[0].address,
+          Date.now() + 1000,
+        ],
+
+        { from: signers[0].address, gasLimit: 670000 }
+      );
+
+      const receipt = await tx.wait();
+
+      await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true);
+      await expect(
+        PositionManagerInstance.connect(signers[1]).depositUniNft(
+          await NonFungiblePositionManager.ownerOf(receipt.events[receipt.events.length - 1].args.tokenId),
+          receipt.events[receipt.events.length - 1].args.tokenId
+        )
+      ).to.be.reverted;
+    });
+    it('Withdraw should called only by user', async function () {
+      const tx = await NonFungiblePositionManager.mint(
+        [
+          token0.address,
+          token1.address,
+          3000,
+          -240060,
+          -239940,
+          '0x' + (30e6).toString(16),
+          '0x' + (1e17).toString(16),
+          0,
+          0,
+          signers[0].address,
+          Date.now() + 1000,
+        ],
+
+        { from: signers[0].address, gasLimit: 670000 }
+      );
+
+      const receipt = await tx.wait();
+
+      await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true);
+
+      await PositionManagerInstance.depositUniNft(
+        await NonFungiblePositionManager.connect(signers[0]).ownerOf(
+          receipt.events[receipt.events.length - 1].args.tokenId
+        ),
+        receipt.events[receipt.events.length - 1].args.tokenId
+      );
+
+      await expect(
+        PositionManagerInstance.connect(signers[1]).withdrawUniNft(
+          signers[0].address,
+          receipt.events[receipt.events.length - 1].args.tokenId
+        )
+      ).to.be.reverted;
+    });
+    it('Should mint and deposit an uniV3 NFT', async function () {
+      await token0.approve(PositionManagerInstance.address, ethers.utils.parseEther('1000000000000'), {
+        from: signers[0].address,
+      });
+
+      await token1.approve(PositionManagerInstance.address, ethers.utils.parseEther('1000000000000'), {
+        from: signers[0].address,
+      });
+
+      await expect(
+        PositionManagerInstance.connect(signers[1]).mintAndDeposit(
+          token0.address,
+          token1.address,
+          3000,
+          -240000 - 60,
+          -240000 + 60,
+          '0x' + (1e13).toString(16),
+          '0x' + (3e3).toString(16),
+          0,
+          0
+        )
+      ).to.be.reverted;
+    });
+    it('Should increase the liquidity in the NFT', async function () {
+      const tx = await NonFungiblePositionManager.mint(
+        [
+          token0.address,
+          token1.address,
+          3000,
+          -240060,
+          -239940,
+          '0x' + (3e6).toString(16),
+          '0x' + (1e18).toString(16),
+          0,
+          0,
+          signers[0].address,
+          Date.now() + 1000,
+        ],
+
+        { from: signers[0].address, gasLimit: 670000 }
+      );
+      const receipt = await tx.wait();
+      const tokenId = receipt.events[receipt.events.length - 1].args.tokenId;
+
+      await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true);
+      await PositionManagerInstance.depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), tokenId);
+
+      await token0
+        .connect(signers[0])
+        .approve(PositionManagerInstance.address, ethers.utils.parseEther('100000000000000'));
+
+      await token1.approve(PositionManagerInstance.address, ethers.utils.parseEther('100000000000000'), {
+        from: signers[0].address,
+      });
+
+      await expect(PositionManagerInstance.connect(signers[1]).increasePositionLiquidity(tokenId, 1e10, 1e6)).to.be
+        .reverted;
+    });
+    it('Should close and burn a uniPosition', async function () {
+      const tx = await NonFungiblePositionManager.mint(
+        //ERC721
+        [
+          token0.address,
+          token1.address,
+          3000,
+          -240060,
+          -239940,
+          '0x' + (1e15).toString(16),
+          '0x' + (3e3).toString(16),
+          0,
+          0,
+          signers[0].address,
+          Date.now() + 1000,
+        ],
+
+        { from: signers[0].address, gasLimit: 670000 }
+      );
+
+      const receipt = await tx.wait();
+      const tokenId = await receipt.events[receipt.events.length - 1].args.tokenId;
+
+      await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true);
+      await PositionManagerInstance.depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), tokenId);
+
+      await expect(PositionManagerInstance.connect(signers[1]).closeUniPosition(tokenId)).to.be.reverted;
     });
   });
 });
