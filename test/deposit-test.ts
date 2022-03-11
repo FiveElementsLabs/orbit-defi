@@ -1,12 +1,9 @@
 import { expect } from 'chai';
 import '@nomiclabs/hardhat-ethers';
-import { BigNumber, Contract, Wallet } from 'ethers';
-import { ethers, waffle } from 'hardhat';
+import { Contract } from 'ethers';
+import { ethers } from 'hardhat';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
-import { IUniswapV3Pool } from '../typechain';
 import { tokensFixture, poolFixture } from './shared/fixtures';
-import { sign } from 'crypto';
-import { time } from 'console';
 
 // `describe` is a Mocha function that allows you to organize your tests. It's
 // not actually needed, but having your tests organized makes debugging them
@@ -28,7 +25,6 @@ describe('Position manager contract', function () {
   // @ts-ignore
   let PositionManagerInstance: Contract;
   let owner: any;
-  let user: SignerWithAddress;
   let signers: any;
   let NonFungiblePositionManager: Contract;
   let token0: Contract, token1: Contract;
