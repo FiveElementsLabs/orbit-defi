@@ -3,7 +3,7 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import './interfaces/IPositionManager.sol'; //interface for PositionManager to be done
+/* import './interfaces/IPositionManager.sol'; //interface for PositionManager to be done
 
 contract AutoCompoundModule {
     uint256 uncollectedFeesThreshold; //used to decide if fees should be collected
@@ -44,4 +44,4 @@ contract AutoCompoundModule {
             }
         }
     }
-}
+} */

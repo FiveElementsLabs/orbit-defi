@@ -52,9 +52,6 @@ contract PositionManager is IVault, ERC721Holder {
     INonfungiblePositionManager public immutable nonfungiblePositionManager;
     IUniswapV3Pool public immutable pool;
 
-    /**
-     * @dev After deploying, strategy needs to be set via `setStrategy()`
-     */
     constructor(
         address userAddress,
         INonfungiblePositionManager _nonfungiblePositionManager,
@@ -66,18 +63,18 @@ contract PositionManager is IVault, ERC721Holder {
     }
 
     /**
-     * @notice add uniswap position to the position manager
+     * @notice add uniswap position NFT to the position manager
      */
-    function depositUniNft(address from, uint256 tokenId) external override {
+    function depositUniNft(address from, uint256 tokenId) external override onlyUser {
         nonfungiblePositionManager.safeTransferFrom(from, address(this), tokenId, '0x0');
         uniswapNFTs.push(tokenId);
         emit DepositUni(from, tokenId);
     }
 
     /**
-     * @notice withdraw uniswap position from the position manager
+     * @notice withdraw uniswap position NFT from the position manager
      */
-    function withdrawUniNft(address to, uint256 tokenId) public {
+    function withdrawUniNft(address to, uint256 tokenId) public onlyUser {
         //internal? users should not know id
         uint256 index = uniswapNFTs.length;
         for (uint256 i = 0; i < uniswapNFTs.length; i++) {
@@ -102,17 +99,13 @@ contract PositionManager is IVault, ERC721Holder {
     function withdrawAllUniNft(address to) external onlyUser {
         require(uniswapNFTs.length > 0, 'no NFT to withdraw');
         while (uniswapNFTs.length > 0) {
-            this.withdrawUniNft(to, uniswapNFTs[0]);
+            withdrawUniNft(to, uniswapNFTs[0]);
         }
     }
 
     /**
      * @notice mint a univ3 position and deposit in manager
      */
-    /*  function mint(
-    struct INonfungiblePositionManager.MintParams params
-  ) external returns (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1) */
-
     function mintAndDeposit(
         address token0Address,
         address token1Address,
@@ -123,7 +116,7 @@ contract PositionManager is IVault, ERC721Holder {
         uint256 amount1Desired,
         uint256 amount0Min,
         uint256 amount1Min
-    ) public {
+    ) external onlyUser {
         require(amount0Desired > 0 || amount1Desired > 0, 'can mint only nonzero amount');
         IERC20 token0 = IERC20(token0Address);
         IERC20 token1 = IERC20(token1Address);
@@ -190,7 +183,7 @@ contract PositionManager is IVault, ERC721Holder {
     /**
      * @notice close and burn uniswap position; liquidity must be 0,
      */
-    function closeUniPosition(uint256 tokenId) external payable {
+    function closeUniPosition(uint256 tokenId) external payable onlyUser {
         (, , , , , , , uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(tokenId);
 
         INonfungiblePositionManager.DecreaseLiquidityParams memory decreaseliquidityparams = INonfungiblePositionManager
@@ -234,8 +227,8 @@ contract PositionManager is IVault, ERC721Holder {
         uint256 tokenId,
         uint256 amount0Desired,
         uint256 amount1Desired
-    ) external payable returns (uint256 amount0, uint256 amount1) {
-        require(amount0Desired > 0 && amount1Desired > 0, 'send some token to increase liquidity');
+    ) external payable onlyUser returns (uint256 amount0, uint256 amount1) {
+        require(amount0Desired > 0 || amount1Desired > 0, 'send some token to increase liquidity');
 
         (IERC20 token0, IERC20 token1) = _getTokenAddress(tokenId);
 
