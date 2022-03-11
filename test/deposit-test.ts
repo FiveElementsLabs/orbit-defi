@@ -68,18 +68,29 @@ describe('Position manager contract', function () {
     await token0
       .connect(user)
       .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'));
-    await token1.approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'), {
-      from: user.address,
-    });
+    await token1.approve(
+      NonFungiblePositionManager.address,
+      ethers.utils.parseEther('1000000000000'),
+      {
+        from: user.address,
+      },
+    );
 
     await token0
       .connect(liquidityProvider)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('10000000000000000000000000000'));
+      .approve(
+        NonFungiblePositionManager.address,
+        ethers.utils.parseEther('10000000000000000000000000000'),
+      );
     await token1
       .connect(liquidityProvider)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('10000000000000000000000000000'), {
-        from: liquidityProvider.address,
-      });
+      .approve(
+        NonFungiblePositionManager.address,
+        ethers.utils.parseEther('10000000000000000000000000000'),
+        {
+          from: liquidityProvider.address,
+        },
+      );
 
     // give pool some liquidity
     let tx = await NonFungiblePositionManager.connect(liquidityProvider).mint(
@@ -96,7 +107,7 @@ describe('Position manager contract', function () {
         liquidityProvider.address,
         Date.now() + 1000,
       ],
-      { gasLimit: 670000 }
+      { gasLimit: 670000 },
     );
 
     const LPReceipt = await tx.wait();
@@ -175,7 +186,7 @@ describe('Position manager contract', function () {
           user.address,
           Date.now() + 1000,
         ],
-        { from: user.address, gasLimit: 670000 }
+        { from: user.address, gasLimit: 670000 },
       );
 
       const receipt = await tx.wait();
@@ -185,10 +196,10 @@ describe('Position manager contract', function () {
       await PositionManagerInstance.connect(user).depositUniNft(
         await NonFungiblePositionManager.ownerOf(data.tokenId),
         data.tokenId,
-        { from: user.address }
+        { from: user.address },
       );
       expect(await PositionManagerInstance.address).to.equal(
-        await NonFungiblePositionManager.connect(user).ownerOf(data.tokenId)
+        await NonFungiblePositionManager.connect(user).ownerOf(data.tokenId),
       );
       await PositionManagerInstance.connect(user).withdrawAllUniNft(user.address, {
         from: await PositionManagerInstance.owner(),
@@ -228,7 +239,10 @@ describe('Position manager contract', function () {
       const tokenId = receipt.events[receipt.events.length - 1].args.tokenId;
 
       await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true);
-      await PositionManagerInstance.depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), tokenId);
+      await PositionManagerInstance.depositUniNft(
+        await NonFungiblePositionManager.ownerOf(tokenId),
+        tokenId,
+      );
 
       await PositionManagerInstance.closeUniPosition(tokenId);
     });
@@ -250,14 +264,17 @@ describe('Position manager contract', function () {
           Date.now() + 1000,
         ],
 
-        { from: user.address, gasLimit: 670000 }
+        { from: user.address, gasLimit: 670000 },
       );
 
       const receipt = await tx.wait();
       const tokenId = await receipt.events[receipt.events.length - 1].args.tokenId;
 
       await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true);
-      await PositionManagerInstance.depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), tokenId);
+      await PositionManagerInstance.depositUniNft(
+        await NonFungiblePositionManager.ownerOf(tokenId),
+        tokenId,
+      );
 
       //const res = await PositionManagerInstance.closeUniPosition(tokenId);
       const trader = signers[2];
@@ -280,12 +297,20 @@ describe('Position manager contract', function () {
     });
 
     it('Should mint and deposit an uniV3 NFT', async function () {
-      await token0.approve(PositionManagerInstance.address, ethers.utils.parseEther('1000000000000'), {
-        from: signers[0].address,
-      });
-      await token1.approve(PositionManagerInstance.address, ethers.utils.parseEther('1000000000000'), {
-        from: signers[0].address,
-      });
+      await token0.approve(
+        PositionManagerInstance.address,
+        ethers.utils.parseEther('1000000000000'),
+        {
+          from: signers[0].address,
+        },
+      );
+      await token1.approve(
+        PositionManagerInstance.address,
+        ethers.utils.parseEther('1000000000000'),
+        {
+          from: signers[0].address,
+        },
+      );
 
       const tx = await PositionManagerInstance.mintAndDeposit(
         token0.address,
@@ -321,14 +346,17 @@ describe('Position manager contract', function () {
           Date.now() + 1000,
         ],
 
-        { from: user.address, gasLimit: 670000 }
+        { from: user.address, gasLimit: 670000 },
       );
 
       const receipt = await tx.wait();
       const tokenId = await receipt.events[receipt.events.length - 1].args.tokenId;
 
       await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true);
-      await PositionManagerInstance.depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), tokenId);
+      await PositionManagerInstance.depositUniNft(
+        await NonFungiblePositionManager.ownerOf(tokenId),
+        tokenId,
+      );
       const liquidityBefore = await poolI.liquidity();
 
       await token0
@@ -368,7 +396,7 @@ describe('Position manager contract', function () {
           Date.now() + 1000,
         ],
 
-        { from: user.address, gasLimit: 670000 }
+        { from: user.address, gasLimit: 670000 },
       );
       const receipt = await tx.wait();
       await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true);
@@ -402,7 +430,7 @@ describe('Position manager contract', function () {
           Date.now() + 1000,
         ],
 
-        { from: user.address, gasLimit: 670000 }
+        { from: user.address, gasLimit: 670000 },
       );
 
       const receipt = await tx.wait();
@@ -434,7 +462,7 @@ describe('Position manager contract', function () {
           Date.now() + 1000,
         ],
 
-        { from: user.address, gasLimit: 670000 }
+        { from: user.address, gasLimit: 670000 },
       );
 
       const receipt = await tx.wait();
@@ -442,8 +470,10 @@ describe('Position manager contract', function () {
       await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true);
 
       await PositionManagerInstance.depositUniNft(
-        await NonFungiblePositionManager.connect(user).ownerOf(receipt.events[receipt.events.length - 1].args.tokenId),
-        receipt.events[receipt.events.length - 1].args.tokenId
+        await NonFungiblePositionManager.connect(user).ownerOf(
+          receipt.events[receipt.events.length - 1].args.tokenId,
+        ),
+        receipt.events[receipt.events.length - 1].args.tokenId,
       );
 
       await expect(
@@ -455,13 +485,21 @@ describe('Position manager contract', function () {
     });
 
     it('mint and deposit an uniV3 NFT', async function () {
-      await token0.approve(PositionManagerInstance.address, ethers.utils.parseEther('1000000000000'), {
-        from: user.address,
-      });
+      await token0.approve(
+        PositionManagerInstance.address,
+        ethers.utils.parseEther('1000000000000'),
+        {
+          from: user.address,
+        },
+      );
 
-      await token1.approve(PositionManagerInstance.address, ethers.utils.parseEther('1000000000000'), {
-        from: user.address,
-      });
+      await token1.approve(
+        PositionManagerInstance.address,
+        ethers.utils.parseEther('1000000000000'),
+        {
+          from: user.address,
+        },
+      );
 
       await expect(
         PositionManagerInstance.connect(signers[1]).mintAndDeposit(
@@ -494,7 +532,7 @@ describe('Position manager contract', function () {
           Date.now() + 1000,
         ],
 
-        { from: user.address, gasLimit: 670000 }
+        { from: user.address, gasLimit: 670000 },
       );
       const receipt = await tx.wait();
       const tokenId = receipt.events[receipt.events.length - 1].args.tokenId;
@@ -505,11 +543,17 @@ describe('Position manager contract', function () {
         tokenId,
       );
 
-      await token0.connect(user).approve(PositionManagerInstance.address, ethers.utils.parseEther('100000000000000'));
+      await token0
+        .connect(user)
+        .approve(PositionManagerInstance.address, ethers.utils.parseEther('100000000000000'));
 
-      await token1.approve(PositionManagerInstance.address, ethers.utils.parseEther('100000000000000'), {
-        from: user.address,
-      });
+      await token1.approve(
+        PositionManagerInstance.address,
+        ethers.utils.parseEther('100000000000000'),
+        {
+          from: user.address,
+        },
+      );
 
       await expect(
         PositionManagerInstance.connect(signers[1]).increasePositionLiquidity(tokenId, 1e10, 1e6),
@@ -533,7 +577,7 @@ describe('Position manager contract', function () {
           Date.now() + 1000,
         ],
 
-        { from: user.address, gasLimit: 670000 }
+        { from: user.address, gasLimit: 670000 },
       );
 
       const receipt = await tx.wait();
