@@ -7,6 +7,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { tokensFixture, poolFixture, routerFixture } from './shared/fixtures';
 import { sign } from 'crypto';
 import { time } from 'console';
+import internal from 'assert';
 
 // `describe` is a Mocha function that allows you to organize your tests. It's
 // not actually needed, but having your tests organized makes debugging them
@@ -35,6 +36,7 @@ describe('Position manager contract', function () {
   let poolI: any;
   let pool: any;
   let router: Contract;
+  let LPtokenId: any;
 
   before(async function () {
     // Initializing pool states
@@ -99,6 +101,10 @@ describe('Position manager contract', function () {
 
       { gasLimit: 670000 }
     );
+
+    const receipt = await tx.wait();
+    const data = receipt.events[receipt.events.length - 1].args;
+    LPtokenId = data.tokenId;
 
     // Trader has some tokens
     const trader = await signers[2];
@@ -224,8 +230,8 @@ describe('Position manager contract', function () {
           3000,
           -240000 - 60 * 100,
           -239940 + 60 * 100,
-          '0x' + (1e18).toString(16),
-          '0x' + (1e18).toString(16),
+          '0x' + (1e20).toString(16),
+          '0x' + (1e20).toString(16),
           0,
           0,
           signers[0].address,
@@ -234,15 +240,13 @@ describe('Position manager contract', function () {
 
         { from: signers[0].address, gasLimit: 670000 }
       );
+
       const receipt = await tx.wait();
       const data = receipt.events[receipt.events.length - 1].args;
       const tokenId = data.tokenId;
 
       await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true);
       await PositionManagerInstance.depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), tokenId);
-
-      let position = await NonFungiblePositionManager.positions(tokenId);
-      console.log(position);
 
       //const res = await PositionManagerInstance.closeUniPosition(tokenId);
       const trader = signers[2];
@@ -252,41 +256,21 @@ describe('Position manager contract', function () {
       console.log(tick);
       let isEven;
       let sign;
-      for (let i = 0; i < 100; i++) {
+
+      // Do some trades to accrue fees
+      for (let i = 0; i < 20; i++) {
         // @ts-ignore
-        isEven = (i) => i % 2 === 0;
-        sign = isEven(i) ? 1 : -1;
-        await router.connect(trader).swap(poolI.address, true, sign * 1e8);
+        sign = i % 2 == 0;
+        await router.connect(trader).swap(poolI.address, sign, 1e15);
         ({ tick, sqrtPriceX96 } = await poolI.slot0());
-        console.log(tick);
       }
-      //const swap = ;
-      //const swapReceipt = await swap.wait();
-      //console.log(await swapReceipt.events[0].getTransactionReceipt());
 
-      /*
-       function swap(
-        address recipient,
-        bool zeroForOne,
-        int256 amountSpecified,
-        uint160 sqrtPriceLimitX96,
-        bytes data
-      ) external override noDelegateCall returns (int256 amount0, int256 amount1)
-      
-      const { tick, sqrtPriceX96 } = await poolI.slot0();
-      console.log(sqrtPriceX96);
-      const sqrtPriceLimitX96 = sqrtPriceX96.mul(2);
-      const abiCoder = new ethers.utils.AbiCoder();
-      const swapPool = await poolI
-        .connect(trader)
-        .swap(trader.address, false, 1e5, sqrtPriceLimitX96, await abiCoder.encode(['uint'], [0]), {
-          from: trader.address,
-          gasLimit: 670000,
-        });
-      const swapPoolReceipt = await swap.wait();*/
+      // Fees are updated at every interaction with the position
+      // ex. IncreaseLiquidity, DecreaseLiquidity
+      // so here have to use PositionManager.function to account for fees
 
-      let positionAfter = await NonFungiblePositionManager.positions(tokenId);
-      console.log(positionAfter);
+      let position = await NonFungiblePositionManager.positions(tokenId);
+      console.log(position);
     });
   });
 });
