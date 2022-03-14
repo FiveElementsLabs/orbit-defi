@@ -36,13 +36,9 @@ describe('Position manager contract', function () {
       .connect(signers[0])
       .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'));
 
-    await token1.approve(
-      NonFungiblePositionManager.address,
-      ethers.utils.parseEther('1000000000000'),
-      {
-        from: signers[0].address,
-      },
-    );
+    await token1.approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'), {
+      from: signers[0].address,
+    });
   });
 
   describe('PositionManagerFactory - create', function () {
@@ -54,17 +50,10 @@ describe('Position manager contract', function () {
 
       [owner] = await ethers.getSigners();
 
-      await PositionManagerFactoryInstance.create(
-        owner.address,
-        NonFungiblePositionManager.address,
-        poolI.address,
-      );
+      await PositionManagerFactoryInstance.create(owner.address, NonFungiblePositionManager.address, poolI.address);
 
       const deployedContract = await PositionManagerFactoryInstance.positionManagers(0);
-      const PositionManagerInstance = await ethers.getContractAt(
-        PositionManagerContract.abi,
-        deployedContract,
-      );
+      const PositionManagerInstance = await ethers.getContractAt(PositionManagerContract.abi, deployedContract);
 
       expect(PositionManagerInstance).to.exist;
     });
