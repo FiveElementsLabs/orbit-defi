@@ -4,31 +4,29 @@ pragma solidity 0.7.6;
 
 import './PositionManager.sol';
 
-contract PositionManagerDelegate {
-    address owner;
-    PositionManager manager;
-
-    constructor(PositionManager _manager, address _owner) {
-        owner = _owner;
-        manager = _manager;
-    }
-}
-
 contract PositionManagerFactory {
-    PositionManagerDelegate[] public positionManagers;
+    PositionManager[] public positionManagers;
+    event PositionManagerCreated(
+        address indexed contractAddress,
+        address userAddress,
+        address nonfungiblePositionManager,
+        address pool
+    );
 
     function create(
         address userAddress,
         INonfungiblePositionManager _nonfungiblePositionManager,
         IUniswapV3Pool _pool
-    ) public {
+    ) public returns (PositionManager[] memory) {
         PositionManager manager = new PositionManager(userAddress, _nonfungiblePositionManager, _pool);
-        PositionManagerDelegate delegate = new PositionManagerDelegate(manager, address(this));
-        positionManagers.push(delegate);
-    }
+        positionManagers.push(manager);
+        emit PositionManagerCreated(
+            address(manager),
+            userAddress,
+            address(_nonfungiblePositionManager),
+            address(_pool)
+        );
 
-    //This is not needed
-    function get() public view returns (PositionManagerDelegate[] memory) {
         return positionManagers;
     }
 }

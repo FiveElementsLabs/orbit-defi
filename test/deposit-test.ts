@@ -3,6 +3,8 @@ import '@nomiclabs/hardhat-ethers';
 import { Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import { tokensFixture, poolFixture, routerFixture } from './shared/fixtures';
+const PositionManagerContract = require('../artifacts/contracts/PositionManager.sol/PositionManager.json');
+
 //import { sign } from 'crypto';
 //import { time } from 'console';
 //import internal from 'assert';
@@ -26,8 +28,8 @@ describe('Position manager contract', function () {
   // `before` and `beforeEach` callbacks.
   // @ts-ignore
   let PositionManagerInstance: Contract;
+  let PositionManagerFactoryInstance: Contract;
   let AutoCompoundInstance: Contract;
-  let owner: any;
   let user: any;
   let signers: any;
   let NonFungiblePositionManager: Contract;
@@ -111,21 +113,16 @@ describe('Position manager contract', function () {
     await token1.connect(trader).approve(router.address, ethers.utils.parseEther('1000000000000'));
     await token0.connect(trader).approve(pool.address, ethers.utils.parseEther('1000000000000'));
     await token1.connect(trader).approve(pool.address, ethers.utils.parseEther('1000000000000'));
-  });
 
-  // `beforeEach` will run before each test, re-deploying the contract every
-  // time. It receives a callback, which can be async.
-  beforeEach(async function () {
-    // Get the ContractFactory and deploy.
-    const PositionManager = await ethers.getContractFactory('PositionManager');
+    //Get the Contract factory and deploy the PositionManagerFactory
+    const PositionManagerFactory = await ethers.getContractFactory('PositionManagerFactory');
+    PositionManagerFactoryInstance = await PositionManagerFactory.deploy();
+    await PositionManagerFactoryInstance.deployed();
 
-    PositionManagerInstance = await PositionManager.deploy(
-      user.address,
-      NonFungiblePositionManager.address,
-      poolI.address
-    );
+    await PositionManagerFactoryInstance.create(user.address, NonFungiblePositionManager.address, poolI.address);
 
-    await PositionManagerInstance.deployed();
+    const contractsDeployed = await PositionManagerFactoryInstance.positionManagers(0);
+    PositionManagerInstance = await ethers.getContractAt(PositionManagerContract.abi, contractsDeployed);
 
     const AutoCompound = await ethers.getContractFactory('AutoCompoundModule');
 

@@ -4,6 +4,8 @@ import { Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import { tokensFixture, poolFixture } from './shared/fixtures';
 
+const PositionManagerContract = require('../artifacts/contracts/PositionManager.sol/PositionManager.json');
+
 describe('Position manager contract', function () {
   let PositionManagerInstance: Contract;
   let PositionManagerFactoryInstance: Contract;
@@ -21,6 +23,7 @@ describe('Position manager contract', function () {
     token1 = token1Fixture;
     const { pool, NonfungiblePositionManager } = await poolFixture(token0, token1);
     NonFungiblePositionManager = NonfungiblePositionManager;
+    poolI = pool;
     signers = await ethers.getSigners();
     const user = signers[0];
     await token0.mint(user.address, ethers.utils.parseEther('1000000000000'));
@@ -36,10 +39,6 @@ describe('Position manager contract', function () {
     await token1.approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'), {
       from: signers[0].address,
     });
-
-    poolI = pool;
-
-    const res = await token1.allowance(NonFungiblePositionManager.address, signers[0].address);
   });
 
   describe('PositionManagerFactory - create', function () {
@@ -51,15 +50,12 @@ describe('Position manager contract', function () {
 
       [owner] = await ethers.getSigners();
 
-      const res = await PositionManagerFactoryInstance.create(
-        owner.address,
-        NonFungiblePositionManager.address,
-        poolI.address
-      );
+      await PositionManagerFactoryInstance.create(owner.address, NonFungiblePositionManager.address, poolI.address);
 
-      const contractsDeployed = await PositionManagerFactoryInstance.get();
+      const deployedContract = await PositionManagerFactoryInstance.positionManagers(0);
+      const PositionManagerInstance = await ethers.getContractAt(PositionManagerContract.abi, deployedContract);
 
-      expect(contractsDeployed.length).to.equal(1);
+      expect(PositionManagerInstance).to.exist;
     });
   });
 });
