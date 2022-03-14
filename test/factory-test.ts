@@ -33,21 +33,17 @@ describe('Position manager contract', function () {
       .connect(signers[0])
       .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'));
 
-    await token1.approve(
-      NonFungiblePositionManager.address,
-      ethers.utils.parseEther('1000000000000'),
-      {
-        from: signers[0].address,
-      },
-    );
+    await token1.approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'), {
+      from: signers[0].address,
+    });
 
     poolI = pool;
 
     const res = await token1.allowance(NonFungiblePositionManager.address, signers[0].address);
   });
 
-  describe('Deploy factory and create position manager', function () {
-    it('should return 0', async function () {
+  describe('PositionManagerFactory - create', function () {
+    it('Should create a new position manager instance', async function () {
       const PositionManagerFactory = await ethers.getContractFactory('PositionManagerFactory');
 
       PositionManagerFactoryInstance = await PositionManagerFactory.deploy();
@@ -58,7 +54,7 @@ describe('Position manager contract', function () {
       const res = await PositionManagerFactoryInstance.create(
         owner.address,
         NonFungiblePositionManager.address,
-        poolI.address,
+        poolI.address
       );
 
       const contractsDeployed = await PositionManagerFactoryInstance.get();
