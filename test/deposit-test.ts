@@ -113,7 +113,9 @@ describe('Position manager contract', function () {
     await token1.connect(trader).approve(router.address, ethers.utils.parseEther('1000000000000'));
     await token0.connect(trader).approve(pool.address, ethers.utils.parseEther('1000000000000'));
     await token1.connect(trader).approve(pool.address, ethers.utils.parseEther('1000000000000'));
+  });
 
+  beforeEach(async function () {
     //Get the Contract factory and deploy the PositionManagerFactory
     const PositionManagerFactory = await ethers.getContractFactory('PositionManagerFactory');
     PositionManagerFactoryInstance = await PositionManagerFactory.deploy();

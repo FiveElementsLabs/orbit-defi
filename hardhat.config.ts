@@ -8,7 +8,7 @@ import '@nomiclabs/hardhat-ethers';
  */
 export default {
   gasReporter: {
-    enabled: false,
+    enabled: true,
     currency: 'EUR',
     gasPrice: 35,
   },
