@@ -586,8 +586,6 @@ describe('Position manager contract', function () {
       );
       const receipt = await tx.wait();
       const receipt2 = await tx2.wait();
-      console.log(receipt2.events[receipt2.events.length - 1].args.tokenId);
-      console.log(receipt.events[receipt.events.length - 1].args.tokenId);
 
       await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true);
       await PositionManagerInstance.depositUniNft(
@@ -642,8 +640,6 @@ describe('Position manager contract', function () {
       );
       const receipt = await tx.wait();
       const receipt2 = await tx2.wait();
-      console.log(receipt2.events[receipt2.events.length - 1].args.tokenId);
-      console.log(receipt.events[receipt.events.length - 1].args.tokenId);
 
       await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true);
       await PositionManagerInstance.depositUniNft(
@@ -680,7 +676,6 @@ describe('Position manager contract', function () {
         receipt.events[receipt.events.length - 1].args.tokenId
       );
 
-      console.log(positionAfterTrade);
       expect(positionAfterTrade.tokensOwed0).to.gt(0);
       expect(positionAfterTrade.tokensOwed1).to.gt(0);
 
