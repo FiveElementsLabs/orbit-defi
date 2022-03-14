@@ -240,7 +240,7 @@ contract PositionManager is IVault, ERC721Holder {
         uint256 amount0Desired,
         uint256 amount1Desired
     ) external payable override onlyUser returns (uint256 amount0, uint256 amount1) {
-        require(amount0Desired > 0 && amount1Desired > 0, 'send some token to increase liquidity');
+        require(amount0Desired > 0 || amount1Desired > 0, 'send some token to increase liquidity');
 
         (IERC20 token0, IERC20 token1) = _getTokenAddress(tokenId);
 
