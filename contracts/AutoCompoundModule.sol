@@ -42,9 +42,15 @@ contract AutoCompoundModule {
         return allFeeVault;
     }
 
-    function collectFees(IVault positionManager, uint256 tokenId) public returns (uint256, uint256) {
-        (uint256 amount0, uint256 amount1) = positionManager.collectPositionFee(tokenId);
-        return (amount0, amount1);
+    function collectFees(IVault positionManager) public {
+        VaultFee[] memory allFee = checkForAllUncollectedFees(positionManager);
+
+        for (uint32 i = 0; i < allFee.length; i++) {
+            bool checkFee = _feeNeedToBeReinvested(positionManager, allFee[i]);
+            if (checkFee) {
+                positionManager.collectPositionFee(allFee[i].tokenId);
+            }
+        }
     }
 
     function reinvestFees(
@@ -56,19 +62,8 @@ contract AutoCompoundModule {
         positionManager.increasePositionLiquidity(tokenId, amount0, amount1);
     }
 
-    /* function checkAndCompound(IVault positionManager) public{
-        uint256[] memory tokenIds = positionManager.getUniswapNFTs();
-        for(uint32 i=0; i<tokenIds.length(); i++){
-            (uint128 token0Fees, uint128 token1Fees) = checkForAllUncollectedFees(positionManager.address, tokenIds[i]);
-            if(Math.min(token0Fees,token1Fees)>uncollectedFeesThreshold){
-                collectFees(positionManager.address, tokenIds[i]);
-                reinvestFees(positionManager.address, tokenIds[i], token0Fees, token1Fees);
-            }
-        }
-    } */
-
-    function _feeNeedToBeReinvested(IVault positionManager, VaultFee calldata feeXToken) private view returns (bool) {
+    function _feeNeedToBeReinvested(IVault positionManager, VaultFee memory feeXToken) private view returns (bool) {
         (uint256 token0, uint256 token1) = positionManager.getPositionBalance(feeXToken.tokenId);
-        return Math.max(token0.div(feeXToken.feeToken0), token1.div(feeXToken.feeToken1)) < 33;
+        return Math.min(token0.div(feeXToken.feeToken0), token1.div(feeXToken.feeToken1)) < 33;
     }
 }
