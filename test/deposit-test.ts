@@ -28,6 +28,7 @@ describe('Position manager contract', function () {
   // `before` and `beforeEach` callbacks.
   // @ts-ignore
   let PositionManagerInstance: Contract;
+  let AutoCompoundInstance: Contract;
   let owner: any;
   let user: SignerWithAddress;
   let signers: any;
@@ -78,6 +79,10 @@ describe('Position manager contract', function () {
     );
 
     await PositionManagerInstance.deployed();
+
+    const AutoCompound = await ethers.getContractFactory('AutoCompoundModule');
+
+    AutoCompoundInstance = await AutoCompound.deploy(33);
   });
 
   describe('NonfungiblePositionToken deployed correctly', function () {
@@ -309,6 +314,95 @@ describe('Position manager contract', function () {
       const txres = await PositionManagerInstance.getPositionBalance(
         receipt.events[receipt.events.length - 1].args.tokenId
       );
+    });
+  });
+  describe('AutoCompoundModule - checkForAllUncollectedFees', function () {
+    it('should return the amount of token', async function () {
+      const token0Dep = 3000e6;
+      const token1Dep = 1e20;
+      const tx = await NonFungiblePositionManager.mint(
+        [
+          token0.address,
+          token1.address,
+          3000,
+          -240060,
+          -239940,
+          '0x' + token0Dep.toString(16),
+          '0x' + token1Dep.toString(16),
+          0,
+          0,
+          signers[0].address,
+          Date.now() + 1000,
+        ],
+
+        { from: signers[0].address, gasLimit: 670000 }
+      );
+      await NonFungiblePositionManager.mint(
+        [
+          token0.address,
+          token1.address,
+          3000,
+          -240060,
+          -239940,
+          '0x' + token0Dep.toString(16),
+          '0x' + token1Dep.toString(16),
+          0,
+          0,
+          signers[0].address,
+          Date.now() + 1000,
+        ],
+
+        { from: signers[0].address, gasLimit: 670000 }
+      );
+      await NonFungiblePositionManager.mint(
+        [
+          token0.address,
+          token1.address,
+          3000,
+          -240060,
+          -239940,
+          '0x' + token0Dep.toString(16),
+          '0x' + token1Dep.toString(16),
+          0,
+          0,
+          signers[0].address,
+          Date.now() + 1000,
+        ],
+
+        { from: signers[0].address, gasLimit: 670000 }
+      );
+      await NonFungiblePositionManager.mint(
+        [
+          token0.address,
+          token1.address,
+          3000,
+          -240060,
+          -239940,
+          '0x' + token0Dep.toString(16),
+          '0x' + token1Dep.toString(16),
+          0,
+          0,
+          signers[0].address,
+          Date.now() + 1000,
+        ],
+
+        { from: signers[0].address, gasLimit: 670000 }
+      );
+      const receipt = await tx.wait();
+      
+      await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true);
+      await PositionManagerInstance.depositUniNft(
+        await NonFungiblePositionManager.ownerOf(receipt.events[receipt.events.length - 1].args.tokenId),
+        receipt.events[receipt.events.length - 1].args.tokenId
+      );
+      await PositionManagerInstance.depositUniNft(
+        await NonFungiblePositionManager.ownerOf(receipt.events[receipt.events.length - 1].args.tokenId + 1),
+        receipt.events[receipt.events.length - 1].args.tokenId + 1
+      );
+
+      const res = await AutoCompoundInstance.checkForAllUncollectedFees(PositionManagerInstance.address);
+
+      console.log(res);
     });
   });
 });

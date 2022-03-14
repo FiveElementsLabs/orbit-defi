@@ -99,7 +99,7 @@ contract PositionManager is IVault, ERC721Holder {
     }
 
     //wrapper for withdraw of all univ3positions in manager
-    function withdrawAllUniNft(address to) external onlyUser {
+    function withdrawAllUniNft(address to) external override onlyUser {
         require(uniswapNFTs.length > 0, 'no NFT to withdraw');
         while (uniswapNFTs.length > 0) {
             this.withdrawUniNft(to, uniswapNFTs[0]);
@@ -165,7 +165,7 @@ contract PositionManager is IVault, ERC721Holder {
     /**
      * @notice get balance token0 and token1 in a position
      */
-    function getPositionBalance(uint256 tokenId) external view returns (uint256, uint256) {
+    function getPositionBalance(uint256 tokenId) external view override returns (uint256, uint256) {
         (, , , , , int24 tickLower, int24 tickUpper, uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(
             tokenId
         );
@@ -183,14 +183,14 @@ contract PositionManager is IVault, ERC721Holder {
     /**
      * @notice get fee of token0 and token1 in a position
      */
-    function getPositionFee(uint256 tokenId) external view returns (uint128 tokensOwed0, uint128 tokensOwed1) {
+    function getPositionFee(uint256 tokenId) external view override returns (uint128 tokensOwed0, uint128 tokensOwed1) {
         (, , , , , , , , , , tokensOwed0, tokensOwed1) = nonfungiblePositionManager.positions(tokenId);
     }
 
     /**
      * @notice close and burn uniswap position; liquidity must be 0,
      */
-    function closeUniPosition(uint256 tokenId) external payable {
+    function closeUniPosition(uint256 tokenId) external payable override {
         (, , , , , , , uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(tokenId);
 
         INonfungiblePositionManager.DecreaseLiquidityParams memory decreaseliquidityparams = INonfungiblePositionManager
@@ -218,23 +218,22 @@ contract PositionManager is IVault, ERC721Holder {
      * @notice close and burn uniswap position; tokenId need to be approved
      */
 
-    /* function collectPositionFee(uint256 tokenId) external view returns (uint256 amount0, uint256 amount1) {
-        INonfungiblePositionManager.CollectParams memory params = 
-            INonfungiblePositionManager.CollectParams({
-                tokenId: tokenId,
-                recipient: owner,
-                amount0Max: 0,
-                amount1Max: 1
-            });
+    function collectPositionFee(uint256 tokenId) external override returns (uint256 amount0, uint256 amount1) {
+        INonfungiblePositionManager.CollectParams memory params = INonfungiblePositionManager.CollectParams({
+            tokenId: tokenId,
+            recipient: owner,
+            amount0Max: 0,
+            amount1Max: 1
+        });
 
-        (amount0, amount1) = this.collect(params);
-    } */
+        (amount0, amount1) = nonfungiblePositionManager.collect(params);
+    }
 
     function increasePositionLiquidity(
         uint256 tokenId,
         uint256 amount0Desired,
         uint256 amount1Desired
-    ) external payable returns (uint256 amount0, uint256 amount1) {
+    ) external payable override returns (uint256 amount0, uint256 amount1) {
         require(amount0Desired > 0 && amount1Desired > 0, 'send some token to increase liquidity');
 
         (IERC20 token0, IERC20 token1) = _getTokenAddress(tokenId);
@@ -255,6 +254,11 @@ contract PositionManager is IVault, ERC721Holder {
                 deadline: block.timestamp + 1000
             });
         (, amount0, amount1) = nonfungiblePositionManager.increaseLiquidity(params);
+    }
+
+    function _getAllUniPosition() external view override returns (uint256[] memory) {
+        uint256[] memory uniswapNFTsMemory = uniswapNFTs;
+        return uniswapNFTsMemory;
     }
 
     function _approveToken0(IERC20 token0) private {
