@@ -4,9 +4,9 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import '../interfaces/IVault.sol'; //interface for PositionManager to be done
+import 'hardhat/console.sol';
 import '@openzeppelin/contracts/math/Math.sol';
 import '@openzeppelin/contracts/math/SafeMath.sol';
-import 'hardhat/console.sol';
 
 contract AutoCompoundModule {
     using SafeMath for uint256;

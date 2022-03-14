@@ -371,7 +371,7 @@ describe('Position manager contract', function () {
 
         { from: signers[0].address, gasLimit: 670000 }
       );
-      await NonFungiblePositionManager.mint(
+      const tx2 = await NonFungiblePositionManager.mint(
         [
           token0.address,
           token1.address,
@@ -389,16 +389,20 @@ describe('Position manager contract', function () {
         { from: signers[0].address, gasLimit: 670000 }
       );
       const receipt = await tx.wait();
-      
+      const receipt2 = await tx2.wait();
+
       await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true);
       await PositionManagerInstance.depositUniNft(
         await NonFungiblePositionManager.ownerOf(receipt.events[receipt.events.length - 1].args.tokenId),
         receipt.events[receipt.events.length - 1].args.tokenId
       );
+      console.log(receipt2.events[receipt2.events.length - 1].args.tokenId);
       await PositionManagerInstance.depositUniNft(
-        await NonFungiblePositionManager.ownerOf(receipt.events[receipt.events.length - 1].args.tokenId + 1),
-        receipt.events[receipt.events.length - 1].args.tokenId + 1
+        await NonFungiblePositionManager.ownerOf(receipt2.events[receipt2.events.length - 1].args.tokenId),
+        receipt2.events[receipt2.events.length - 1].args.tokenId
       );
+
+      console.log(PositionManagerInstance.address);
 
       const res = await AutoCompoundInstance.checkForAllUncollectedFees(PositionManagerInstance.address);
 
