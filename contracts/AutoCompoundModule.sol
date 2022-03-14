@@ -25,6 +25,10 @@ contract AutoCompoundModule {
 
     function checkForAllUncollectedFees(IVault positionManager) public view returns (VaultFee[] memory) {
         uint256[] memory allTokenId = positionManager._getAllUniPosition();
+        for (uint256 i = 0; i < allTokenId.length; i++) {
+            console.log(allTokenId[i]);
+        }
+
         uint256 size = allTokenId.length;
         VaultFee[] memory allFeeVault = new VaultFee[](size);
         uint128 feeToken0;
