@@ -29,9 +29,4 @@ contract PositionManagerFactory {
 
         return positionManagers;
     }
-
-    //This is not needed
-    function get() public view returns (PositionManager[] memory) {
-        return positionManagers;
-    }
 }

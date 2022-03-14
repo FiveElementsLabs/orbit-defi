@@ -2,12 +2,12 @@
 
 pragma solidity 0.7.6;
 
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 
-import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import "@uniswap/v3-core/contracts/interfaces/callback/IUniswapV3MintCallback.sol";
-import "@uniswap/v3-core/contracts/interfaces/callback/IUniswapV3SwapCallback.sol";
-import "@uniswap/v3-core/contracts/libraries/TickMath.sol";
+import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
+import '@uniswap/v3-core/contracts/interfaces/callback/IUniswapV3MintCallback.sol';
+import '@uniswap/v3-core/contracts/interfaces/callback/IUniswapV3SwapCallback.sol';
+import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 
 /**
  * @title  TestRouter
@@ -24,22 +24,9 @@ contract TestRouter is IUniswapV3MintCallback, IUniswapV3SwapCallback {
         uint128 amount
     ) external returns (uint256, uint256) {
         int24 tickSpacing = pool.tickSpacing();
-        require(
-            tickLower % tickSpacing == 0,
-            "tickLower must be a multiple of tickSpacing"
-        );
-        require(
-            tickUpper % tickSpacing == 0,
-            "tickUpper must be a multiple of tickSpacing"
-        );
-        return
-            pool.mint(
-                msg.sender,
-                tickLower,
-                tickUpper,
-                amount,
-                abi.encode(msg.sender)
-            );
+        require(tickLower % tickSpacing == 0, 'tickLower must be a multiple of tickSpacing');
+        require(tickUpper % tickSpacing == 0, 'tickUpper must be a multiple of tickSpacing');
+        return pool.mint(msg.sender, tickLower, tickUpper, amount, abi.encode(msg.sender));
     }
 
     function swap(
@@ -52,9 +39,7 @@ contract TestRouter is IUniswapV3MintCallback, IUniswapV3SwapCallback {
                 msg.sender,
                 zeroForOne,
                 amountSpecified,
-                zeroForOne
-                    ? TickMath.MIN_SQRT_RATIO + 1
-                    : TickMath.MAX_SQRT_RATIO - 1,
+                zeroForOne ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1,
                 abi.encode(msg.sender)
             );
     }
