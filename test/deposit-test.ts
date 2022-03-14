@@ -29,6 +29,7 @@ describe('Position manager contract', function () {
   // @ts-ignore
   let PositionManagerInstance: Contract;
   let PositionManagerFactoryInstance: Contract;
+  let AutoCompoundInstance: Contract;
   let user: any;
   let signers: any;
   let NonFungiblePositionManager: Contract;
@@ -137,25 +138,16 @@ describe('Position manager contract', function () {
       poolI.address,
     );
 
-
     const contractsDeployed = await PositionManagerFactoryInstance.positionManagers(0);
-    PositionManagerInstance = await ethers.getContractAt(PositionManagerContract.abi, contractsDeployed);
-
-    // Get the ContractFactory and deploy.
-    const PositionManager = await ethers.getContractFactory('PositionManager');
-
-    PositionManagerInstance = await PositionManager.deploy(
-      user.address,
-      NonFungiblePositionManager.address,
-      poolI.address,
+    PositionManagerInstance = await ethers.getContractAt(
+      PositionManagerContract.abi,
+      contractsDeployed,
     );
 
-    await PositionManagerInstance.deployed();
-  });
+    const AutoCompound = await ethers.getContractFactory('AutoCompoundModule');
 
-  // `beforeEach` will run before each test, re-deploying the contract every
-  // time. It receives a callback, which can be async.
-  beforeEach(async function () {});
+    AutoCompoundInstance = await AutoCompound.deploy(33);
+  });
 
   describe('NonfungiblePositionToken deployed correctly', function () {
     it('Should correctly initialize constructor', async function () {
@@ -316,7 +308,7 @@ describe('Position manager contract', function () {
       expect(position.tokensOwed0).to.gt(0);
       expect(position.tokensOwed1).to.gt(0);
 
-      const collectTx = await PositionManagerInstance.collectPositionFees(tokenId);
+      const collectTx = await PositionManagerInstance.collectPositionFee(tokenId);
       position = await NonFungiblePositionManager.positions(tokenId);
       expect(position.tokensOwed0).to.equal(0);
       expect(position.tokensOwed1).to.equal(0);
@@ -617,6 +609,163 @@ describe('Position manager contract', function () {
 
       await expect(PositionManagerInstance.connect(signers[1]).closeUniPosition(tokenId)).to.be
         .reverted;
+    });
+  });
+
+  describe('AutoCompoundModule - checkForAllUncollectedFees', function () {
+    it('should return the amount of fees', async function () {
+      const token0Dep = 3000e6;
+      const token1Dep = 1e20;
+      const tx = await NonFungiblePositionManager.mint(
+        [
+          token0.address,
+          token1.address,
+          3000,
+          -240060,
+          -239940,
+          '0x' + token0Dep.toString(16),
+          '0x' + token1Dep.toString(16),
+          0,
+          0,
+          signers[0].address,
+          Date.now() + 1000,
+        ],
+
+        { from: signers[0].address, gasLimit: 670000 },
+      );
+      const tx2 = await NonFungiblePositionManager.mint(
+        [
+          token0.address,
+          token1.address,
+          3000,
+          -240060,
+          -239940,
+          '0x' + token0Dep.toString(16),
+          '0x' + token1Dep.toString(16),
+          0,
+          0,
+          signers[0].address,
+          Date.now() + 1000,
+        ],
+
+        { from: signers[0].address, gasLimit: 670000 },
+      );
+      const receipt = await tx.wait();
+      const receipt2 = await tx2.wait();
+
+      await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true);
+      await PositionManagerInstance.depositUniNft(
+        await NonFungiblePositionManager.ownerOf(
+          receipt.events[receipt.events.length - 1].args.tokenId,
+        ),
+        receipt.events[receipt.events.length - 1].args.tokenId,
+      );
+      await PositionManagerInstance.depositUniNft(
+        await NonFungiblePositionManager.ownerOf(
+          receipt2.events[receipt2.events.length - 1].args.tokenId,
+        ),
+        receipt2.events[receipt2.events.length - 1].args.tokenId,
+      );
+
+      const res = await AutoCompoundInstance.checkForAllUncollectedFees(
+        PositionManagerInstance.address,
+      );
+    });
+  });
+  describe('AutoCompoundModule - collectFees', function () {
+    it('should collect all the fees to be reinvested', async function () {
+      const token0Dep = 1e20;
+      const token1Dep = 1e20;
+      const tx = await NonFungiblePositionManager.mint(
+        [
+          token0.address,
+          token1.address,
+          3000,
+          -240060,
+          -239940,
+          '0x' + token0Dep.toString(16),
+          '0x' + token1Dep.toString(16),
+          0,
+          0,
+          signers[0].address,
+          Date.now() + 1000,
+        ],
+
+        { from: signers[0].address, gasLimit: 670000 },
+      );
+      const tx2 = await NonFungiblePositionManager.mint(
+        [
+          token0.address,
+          token1.address,
+          3000,
+          -240060,
+          -239940,
+          '0x' + token0Dep.toString(16),
+          '0x' + token1Dep.toString(16),
+          0,
+          0,
+          signers[0].address,
+          Date.now() + 1000,
+        ],
+
+        { from: signers[0].address, gasLimit: 670000 },
+      );
+      const receipt = await tx.wait();
+      const receipt2 = await tx2.wait();
+
+      await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true);
+      await PositionManagerInstance.depositUniNft(
+        await NonFungiblePositionManager.ownerOf(
+          receipt.events[receipt.events.length - 1].args.tokenId,
+        ),
+        receipt.events[receipt.events.length - 1].args.tokenId,
+      );
+      await PositionManagerInstance.depositUniNft(
+        await NonFungiblePositionManager.ownerOf(
+          receipt2.events[receipt2.events.length - 1].args.tokenId,
+        ),
+        receipt2.events[receipt2.events.length - 1].args.tokenId,
+      );
+
+      let positionBeforeTrade = await NonFungiblePositionManager.positions(
+        receipt.events[receipt.events.length - 1].args.tokenId,
+      );
+      expect(positionBeforeTrade.tokensOwed0).to.be.equal(0);
+      expect(positionBeforeTrade.tokensOwed1).to.be.equal(0);
+
+      const trader = signers[2];
+      //let { tick, sqrtPriceX96 } = await poolI.slot0();
+      let sign;
+
+      // Do some trades to accrue fees
+      for (let i = 0; i < 20; i++) {
+        // @ts-ignore
+        sign = i % 2 == 0;
+        await router.connect(trader).swap(poolI.address, sign, '0x' + (1e18).toString(16));
+        //({ tick, sqrtPriceX96 } = await poolI.slot0());
+      }
+
+      await PositionManagerInstance.updateUncollectedFees(
+        receipt.events[receipt.events.length - 1].args.tokenId,
+      );
+      await PositionManagerInstance.updateUncollectedFees(
+        receipt2.events[receipt2.events.length - 1].args.tokenId,
+      );
+
+      let positionAfterTrade = await NonFungiblePositionManager.positions(
+        receipt.events[receipt.events.length - 1].args.tokenId,
+      );
+
+      expect(positionAfterTrade.tokensOwed0).to.gt(0);
+      expect(positionAfterTrade.tokensOwed1).to.gt(0);
+
+      await AutoCompoundInstance.collectFees(PositionManagerInstance.address);
+
+      let position = await NonFungiblePositionManager.positions(
+        receipt.events[receipt.events.length - 1].args.tokenId,
+      );
+      expect(position.tokensOwed0).to.be.equal(0);
+      expect(position.tokensOwed1).to.be.equal(0);
     });
   });
 });
