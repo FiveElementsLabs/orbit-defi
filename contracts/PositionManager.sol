@@ -208,20 +208,33 @@ contract PositionManager is IVault, ERC721Holder {
     }
 
     /**
-     * @notice close and burn uniswap position; tokenId need to be approved
+     * @notice for fees to be updated need to interact with NFT
      */
+    function updateUncollectedFees(uint256 tokenId) public returns(uint128 tokensOwed0, uint128 tokensOwed1){
+        INonfungiblePositionManager.DecreaseLiquidityParams memory params = INonfungiblePositionManager
+            .DecreaseLiquidityParams({
+                tokenId: tokenId,
+                liquidity: 1,
+                amount0Min: 0,
+                amount1Min: 0,
+                deadline: block.timestamp + 1000
+            });
+        nonfungiblePositionManager.decreaseLiquidity(params);
+        (,,,,,,,,,,tokensOwed0,tokensOwed1) = nonfungiblePositionManager.positions(tokenId);
+    }
 
-    /* function collectPositionFee(uint256 tokenId) external view returns (uint256 amount0, uint256 amount1) {
+    function collectPositionFees(uint256 tokenId) external returns (uint256 amount0, uint256 amount1) {
+        (uint128 feesToken0, uint128 feesToken1) = updateUncollectedFees(tokenId);
         INonfungiblePositionManager.CollectParams memory params = 
             INonfungiblePositionManager.CollectParams({
                 tokenId: tokenId,
                 recipient: owner,
-                amount0Max: 0,
-                amount1Max: 1
+                amount0Max: feesToken0,
+                amount1Max: feesToken1
             });
 
-        (amount0, amount1) = this.collect(params);
-    } */
+        (amount0, amount1) = nonfungiblePositionManager.collect(params);
+    }
 
     function increasePositionLiquidity(
         uint256 tokenId,

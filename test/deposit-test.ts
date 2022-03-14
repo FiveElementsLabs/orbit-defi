@@ -247,7 +247,7 @@ describe('Position manager contract', function () {
       await PositionManagerInstance.closeUniPosition(tokenId);
     });
 
-    it('Should close and burn a uniPosition with swap fees', async function () {
+    it('Should check swap fees accrued by position and collect them', async function () {
       const tx = await NonFungiblePositionManager.mint(
         //ERC721
         [
@@ -274,7 +274,7 @@ describe('Position manager contract', function () {
       await PositionManagerInstance.depositUniNft(
         await NonFungiblePositionManager.ownerOf(tokenId),
         tokenId,
-      );
+      ); 
 
       //const res = await PositionManagerInstance.closeUniPosition(tokenId);
       const trader = signers[2];
@@ -292,8 +292,16 @@ describe('Position manager contract', function () {
       // Fees are updated at every interaction with the position
       // ex. IncreaseLiquidity, DecreaseLiquidity
       // so here have to use PositionManager.function to account for fees
+      const updateTx = await PositionManagerInstance.updateUncollectedFees(tokenId);
 
       let position = await NonFungiblePositionManager.positions(tokenId);
+      expect(position.tokensOwed0).to.gt(0);
+      expect(position.tokensOwed1).to.gt(0);
+
+      const collectTx = await PositionManagerInstance.collectPositionFees(tokenId);
+      position = await NonFungiblePositionManager.positions(tokenId);
+      expect(position.tokensOwed0).to.equal(0);
+      expect(position.tokensOwed1).to.equal(0);
     });
 
     it('Should mint and deposit an uniV3 NFT', async function () {
