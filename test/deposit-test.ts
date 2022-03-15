@@ -787,4 +787,11 @@ describe('Position manager contract', function () {
       expect(liquidityAfter.liquidity.eq(liquidityBefore.liquidity));
     });
   });
+  describe.only('TokenId', function () {
+    it('Should return the correct pool address', async function () {
+      const retValue = await PositionManagerInstance.getPoolFromTokenId(LPtokenId);
+      const poolAdd = await poolI.address;
+      expect(retValue == poolAdd);
+    });
+  });
 });
