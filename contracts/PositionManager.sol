@@ -65,10 +65,12 @@ contract PositionManager is IVault, ERC721Holder {
     /**
      * @notice add uniswap position NFT to the position manager
      */
-    function depositUniNft(address from, uint256 tokenId) external override onlyUser {
-        nonfungiblePositionManager.safeTransferFrom(from, address(this), tokenId, '0x0');
-        uniswapNFTs.push(tokenId);
-        emit DepositUni(from, tokenId);
+    function depositUniNft(address from, uint256[] calldata tokenIds) external override onlyUser {
+        for (uint32 i = 0; i < tokenIds.length; i++) {
+            nonfungiblePositionManager.safeTransferFrom(from, address(this), tokenIds[i], '0x0');
+            uniswapNFTs.push(tokenIds[i]);
+            emit DepositUni(from, tokenIds[i]);
+        }
     }
 
     /**
