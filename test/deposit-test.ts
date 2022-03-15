@@ -3,6 +3,8 @@ import '@nomiclabs/hardhat-ethers';
 import { Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import { tokensFixture, poolFixture, routerFixture } from './shared/fixtures';
+import { isAddress } from 'ethers/lib/utils';
+import { time } from 'console';
 const PositionManagerContract = require('../artifacts/contracts/PositionManager.sol/PositionManager.json');
 
 //import { sign } from 'crypto';
@@ -687,5 +689,41 @@ describe('Position manager contract', function () {
     });
   });
 
-  describe('Position Manager - mintAndDepositBatch', function () {});
+  describe('Position Manager - mintAndDepositBatch', function () {
+    it('Should mint and deposit multiple positions with one call', async function () {
+      await token0.connect(user).approve(PositionManagerInstance.address, ethers.utils.parseEther('1000000000000'));
+      await token1.connect(user).approve(PositionManagerInstance.address, ethers.utils.parseEther('1000000000000'));
+
+      let mintParams = [
+        [
+          token0.address, // token0,
+          token1.address, // token1,
+          3000, // fee,
+          -240600, // tickLower,
+          -239400, // tickUpper,
+          '0x' + (1e10).toString(16), // amount0Desired,
+          '0x' + (1e10).toString(16), //amount1Desired,
+          0, // amount0Min,
+          0, // amount1Min,
+          PositionManagerInstance.address, // recipient
+          Date.now() + 1000, //deadline
+        ],
+        [
+          token0.address, // token0,
+          token1.address, // token1,
+          3000, // fee,
+          -241200, // tickLower,
+          -239700, // tickUpper,
+          '0x' + (1e10).toString(16), // amount0Desired,
+          '0x' + (1e10).toString(16), //amount1Desired,
+          0, // amount0Min,
+          0, // amount1Min,
+          PositionManagerInstance.address, // recipient
+          Date.now() + 1000, //deadline
+        ],
+      ];
+      const tx = await PositionManagerInstance.mintAndDepositBatch(mintParams, [false, false]);
+      console.log(await NonFungiblePositionManager.balanceOf(PositionManagerInstance.address));
+    });
+  });
 });
