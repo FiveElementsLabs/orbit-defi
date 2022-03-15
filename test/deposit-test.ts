@@ -5,10 +5,6 @@ import { ethers } from 'hardhat';
 import { tokensFixture, poolFixture, routerFixture } from './shared/fixtures';
 const PositionManagerContract = require('../artifacts/contracts/PositionManager.sol/PositionManager.json');
 
-//import { sign } from 'crypto';
-//import { time } from 'console';
-//import internal from 'assert';
-
 // `describe` is a Mocha function that allows you to organize your tests. It's
 // not actually needed, but having your tests organized makes debugging them
 // easier. All Mocha functions are available in the global scope.
