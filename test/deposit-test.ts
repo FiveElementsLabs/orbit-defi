@@ -301,20 +301,26 @@ describe('Position manager contract', function () {
       });
 
       const tx = await PositionManagerInstance.mintAndDeposit(
-        token0.address,
-        token1.address,
-        3000,
-        -240000 - 60,
-        -240000 + 60,
-        '0x' + (1e13).toString(16),
-        '0x' + (3e3).toString(16),
-        0,
-        0,
-        false
+        [
+          [
+            token0.address,
+            token1.address,
+            3000,
+            -240000 - 60,
+            -240000 + 60,
+            '0x' + (1e13).toString(16),
+            '0x' + (3e3).toString(16),
+            0,
+            0,
+            PositionManagerInstance.address,
+            Date.now(),
+          ],
+        ],
+        [false]
       );
 
-      const receipt = await tx.wait();
-      const tokenId = await receipt.events[receipt.events.length - 1].args.tokenId;
+      const tokenIds = await PositionManagerInstance._getAllUniPosition();
+      const tokenId = tokenIds[tokenIds.length - 1];
     });
   });
 
@@ -471,15 +477,22 @@ describe('Position manager contract', function () {
 
       await expect(
         PositionManagerInstance.connect(signers[1]).mintAndDeposit(
-          token0.address,
-          token1.address,
-          3000,
-          -240000 - 60,
-          -240000 + 60,
-          '0x' + (1e13).toString(16),
-          '0x' + (3e3).toString(16),
-          0,
-          0
+          [
+            [
+              token0.address,
+              token1.address,
+              3000,
+              -240000 - 60,
+              -240000 + 60,
+              '0x' + (1e13).toString(16),
+              '0x' + (3e3).toString(16),
+              0,
+              0,
+              PositionManagerInstance.address,
+              Date.now() + 1000,
+            ],
+          ],
+          [false]
         )
       ).to.be.reverted;
     });
@@ -722,8 +735,8 @@ describe('Position manager contract', function () {
           Date.now() + 1000, //deadline
         ],
       ];
-      const tx = await PositionManagerInstance.mintAndDepositBatch(mintParams, [false, false]);
-      console.log(await NonFungiblePositionManager.balanceOf(PositionManagerInstance.address));
+      const tx = await PositionManagerInstance.mintAndDeposit(mintParams, [false, false]);
+      expect(await NonFungiblePositionManager.balanceOf(PositionManagerInstance.address)).to.equal(2);
     });
   });
 });
