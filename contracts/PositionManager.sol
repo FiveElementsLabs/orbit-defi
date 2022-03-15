@@ -262,6 +262,39 @@ contract PositionManager is IVault, ERC721Holder {
         (, amount0, amount1) = nonfungiblePositionManager.increaseLiquidity(params);
     }
 
+    function decreasePositionLiquidity(
+        uint256 tokenId,
+        uint256 amount0Desired,
+        uint256 amount1Desired
+    ) external payable onlyUser {
+        (IERC20 token0, IERC20 token1) = _getTokenAddress(tokenId);
+
+        (, , , , , int24 tickLower, int24 tickUpper, uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(
+            tokenId
+        );
+        (uint160 sqrtRatioX96, , , , , , ) = pool.slot0();
+
+        uint128 liquidityToDecrease = LiquidityAmounts.getLiquidityForAmounts(
+            sqrtRatioX96,
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
+            amount0Desired,
+            amount1Desired
+        );
+
+        require(liquidityToDecrease < liquidity, 'cannot decrease more liquidity than the owned');
+
+        INonfungiblePositionManager.DecreaseLiquidityParams memory decreaseliquidityparams = INonfungiblePositionManager
+            .DecreaseLiquidityParams({
+                tokenId: tokenId,
+                liquidity: liquidityToDecrease,
+                amount0Min: 0,
+                amount1Min: 0,
+                deadline: block.timestamp + 1000
+            });
+        nonfungiblePositionManager.decreaseLiquidity(decreaseliquidityparams);
+    }
+
     function _getAllUniPosition() external view override returns (uint256[] memory) {
         uint256[] memory uniswapNFTsMemory = uniswapNFTs;
         return uniswapNFTsMemory;
