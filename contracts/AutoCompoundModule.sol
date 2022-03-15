@@ -52,8 +52,8 @@ contract AutoCompoundModule {
         IERC20 token0 = IERC20(token0Address);
         IERC20 token1 = IERC20(token1Address);
 
-        _approveToken0(token0, positionManager);
-        _approveToken1(token1, positionManager);
+        _approveToken(token0, positionManager);
+        _approveToken(token1, positionManager);
 
         for (uint32 i = 0; i < allFee.length; i++) {
             checkFee = _feeNeedToBeReinvested(positionManager, allFee[i]);
@@ -84,13 +84,8 @@ contract AutoCompoundModule {
         return Math.min(token0.div(feeXToken.feeToken0), token1.div(feeXToken.feeToken1)) < 33;
     }
 
-    function _approveToken0(IERC20 token0, IVault positionManager) private {
-        if (token0.allowance(address(this), address(positionManager)) == 0)
-            token0.approve(address(positionManager), 2**256 - 1);
-    }
-
-    function _approveToken1(IERC20 token1, IVault positionManager) private {
-        if (token1.allowance(address(this), address(positionManager)) == 0)
-            token1.approve(address(positionManager), 2**256 - 1);
+    function _approveToken(IERC20 token, IVault positionManager) private {
+        if (token.allowance(address(this), address(positionManager)) == 0)
+            token.approve(address(positionManager), 2**256 - 1);
     }
 }

@@ -267,8 +267,7 @@ contract PositionManager is IVault, ERC721Holder {
 
         if (amount0 < amount0Desired) token0.transfer(owner, amount0Desired - amount0);
         if (amount1 < amount1Desired) token1.transfer(owner, amount1Desired - amount1);
-
-+    }
+    }
 
     function _getAllUniPosition() external view override returns (uint256[] memory) {
         uint256[] memory uniswapNFTsMemory = uniswapNFTs;
