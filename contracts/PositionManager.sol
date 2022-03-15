@@ -223,11 +223,15 @@ contract PositionManager is IVault, ERC721Holder {
         (, , , , , , , , , , tokensOwed0, tokensOwed1) = nonfungiblePositionManager.positions(tokenId);
     }
 
-    function collectPositionFee(uint256 tokenId) external override returns (uint256 amount0, uint256 amount1) {
+    function collectPositionFee(uint256 tokenId, address recipient)
+        external
+        override
+        returns (uint256 amount0, uint256 amount1)
+    {
         (uint128 feesToken0, uint128 feesToken1) = updateUncollectedFees(tokenId);
         INonfungiblePositionManager.CollectParams memory params = INonfungiblePositionManager.CollectParams({
             tokenId: tokenId,
-            recipient: owner,
+            recipient: recipient,
             amount0Max: feesToken0,
             amount1Max: feesToken1
         });
@@ -239,7 +243,7 @@ contract PositionManager is IVault, ERC721Holder {
         uint256 tokenId,
         uint256 amount0Desired,
         uint256 amount1Desired
-    ) external payable override onlyUser returns (uint256 amount0, uint256 amount1) {
+    ) external payable override returns (uint256 amount0, uint256 amount1) {
         require(amount0Desired > 0 || amount1Desired > 0, 'send some token to increase liquidity');
 
         (IERC20 token0, IERC20 token1) = _getTokenAddress(tokenId);
@@ -260,6 +264,9 @@ contract PositionManager is IVault, ERC721Holder {
                 deadline: block.timestamp + 1000
             });
         (, amount0, amount1) = nonfungiblePositionManager.increaseLiquidity(params);
+
+        if (amount0 < amount0Desired) token0.transfer(owner, amount0Desired - amount0);
+        if (amount1 < amount1Desired) token1.transfer(owner, amount1Desired - amount1);
     }
 
     function _getAllUniPosition() external view override returns (uint256[] memory) {
