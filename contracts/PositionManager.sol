@@ -262,6 +262,8 @@ contract PositionManager is IVault, ERC721Holder {
         (, amount0, amount1) = nonfungiblePositionManager.increaseLiquidity(params);
     }
 
+    //decrease liquidity and return the amount of token withdrawed in tokensOwed0 and tokensOwed1 - the fees
+
     function decreasePositionLiquidity(
         uint256 tokenId,
         uint256 amount0Desired,
