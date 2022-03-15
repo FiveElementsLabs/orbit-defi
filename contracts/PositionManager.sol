@@ -284,7 +284,7 @@ contract PositionManager is IVault, ERC721Holder {
             amount1Desired
         );
 
-        require(liquidityToDecrease < liquidity, 'cannot decrease more liquidity than the owned');
+        require(liquidityToDecrease <= liquidity, 'cannot decrease more liquidity than the owned');
 
         INonfungiblePositionManager.DecreaseLiquidityParams memory decreaseliquidityparams = INonfungiblePositionManager
             .DecreaseLiquidityParams({
