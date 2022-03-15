@@ -307,7 +307,8 @@ describe('Position manager contract', function () {
         '0x' + (1e13).toString(16),
         '0x' + (3e3).toString(16),
         0,
-        0
+        0,
+        false
       );
 
       const receipt = await tx.wait();
@@ -685,4 +686,6 @@ describe('Position manager contract', function () {
       expect(position.tokensOwed1).to.be.equal(0);
     });
   });
+
+  describe('Position Manager - mintAndDepositBatch', function () {});
 });

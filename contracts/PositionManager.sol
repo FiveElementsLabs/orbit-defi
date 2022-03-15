@@ -115,14 +115,18 @@ contract PositionManager is IVault, ERC721Holder {
         uint256 amount0Desired,
         uint256 amount1Desired,
         uint256 amount0Min,
-        uint256 amount1Min
-    ) external onlyUser {
+        uint256 amount1Min,
+        bool _usingPositionManagerBalance
+    ) public {
+        //TODO: can be optimized by calculating amount that will be deposited before transferring them to positionManager
         require(amount0Desired > 0 || amount1Desired > 0, 'can mint only nonzero amount');
         IERC20 token0 = IERC20(token0Address);
         IERC20 token1 = IERC20(token1Address);
 
-        token0.transferFrom(msg.sender, address(this), amount0Desired);
-        token1.transferFrom(msg.sender, address(this), amount1Desired);
+        if (!_usingPositionManagerBalance) {
+            token0.transferFrom(msg.sender, address(this), amount0Desired);
+            token1.transferFrom(msg.sender, address(this), amount1Desired);
+        }
 
         _approveToken0(token0);
         _approveToken1(token1);
@@ -145,14 +149,50 @@ contract PositionManager is IVault, ERC721Holder {
         );
         uniswapNFTs.push(tokenId);
 
-        if (amount0Desired > amount0Deposited) {
+        if (amount0Desired > amount0Deposited && !_usingPositionManagerBalance) {
             token0.transfer(msg.sender, amount0Desired - amount0Deposited);
         }
-        if (amount1Desired > amount1Deposited) {
+        if (amount1Desired > amount1Deposited && !_usingPositionManagerBalance) {
             token1.transfer(msg.sender, amount1Desired - amount1Deposited);
         }
-        //can be optimized by calculating amount that will be deposited before transferring them to positionManager
         emit DepositUni(msg.sender, tokenId);
+    }
+
+    function mintAndDepositBatch(
+        INonfungiblePositionManager.MintParams[] memory mintParams,
+        bool[] memory _usingPositionManagerBalance
+    ) public {
+        //TODO: can be optimized by calculating amount that will be deposited before transferring them to positionManager
+        //require(amount0Desired > 0 || amount1Desired > 0, 'can mint only nonzero amount');
+        require(
+            mintParams.length == _usingPositionManagerBalance.length,
+            'mint params and bool array should be the same length'
+        );
+        for (uint256 i = 0; i < mintParams.length; i++) {
+            IERC20 token0 = IERC20(mintParams[i].token0);
+            IERC20 token1 = IERC20(mintParams[i].token1);
+
+            if (!_usingPositionManagerBalance[i]) {
+                token0.transferFrom(msg.sender, address(this), mintParams[i].amount0Desired);
+                token1.transferFrom(msg.sender, address(this), mintParams[i].amount1Desired);
+            }
+
+            _approveToken0(token0);
+            _approveToken1(token1);
+
+            (uint256 tokenId, , uint256 amount0Deposited, uint256 amount1Deposited) = nonfungiblePositionManager.mint(
+                mintParams[i]
+            );
+            uniswapNFTs.push(tokenId);
+            emit DepositUni(msg.sender, tokenId);
+
+            if (mintParams[i].amount0Desired > amount0Deposited && !_usingPositionManagerBalance[i]) {
+                token0.transfer(msg.sender, mintParams[i].amount0Desired - amount0Deposited);
+            }
+            if (mintParams[i].amount1Desired > amount1Deposited && !_usingPositionManagerBalance[i]) {
+                token1.transfer(msg.sender, mintParams[i].amount1Desired - amount1Deposited);
+            }
+        }
     }
 
     /**
