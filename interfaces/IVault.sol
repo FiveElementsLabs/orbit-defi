@@ -3,7 +3,7 @@
 pragma solidity 0.7.6;
 
 interface IVault {
-    function depositUniNft(address from, uint256 tokenId) external;
+    function depositUniNft(address from, uint256[] calldata tokenId) external;
 
     function withdrawAllUniNft(address to) external;
 
@@ -21,5 +21,5 @@ interface IVault {
 
     function _getAllUniPosition() external view returns (uint256[] memory);
 
-    function collectPositionFee(uint256 tokenId) external returns (uint256 amount0, uint256 amount1);
+    function collectPositionFee(uint256 tokenId, address recipient) external returns (uint256 amount0, uint256 amount1);
 }
