@@ -284,7 +284,7 @@ describe('Position manager contract', function () {
       expect(position.tokensOwed0).to.gt(0);
       expect(position.tokensOwed1).to.gt(0);
 
-      const collectTx = await PositionManagerInstance.collectPositionFee(tokenId);
+      const collectTx = await PositionManagerInstance.collectPositionFee(tokenId, signers[0].address);
       position = await NonFungiblePositionManager.positions(tokenId);
       expect(position.tokensOwed0).to.equal(0);
       expect(position.tokensOwed1).to.equal(0);
@@ -678,9 +678,11 @@ describe('Position manager contract', function () {
       expect(positionAfterTrade.tokensOwed0).to.gt(0);
       expect(positionAfterTrade.tokensOwed1).to.gt(0);
 
-      await AutoCompoundInstance.collectFees(PositionManagerInstance.address);
+      await AutoCompoundInstance.collectFees(PositionManagerInstance.address, token0.address, token1.address);
 
       let position = await NonFungiblePositionManager.positions(receipt.events[receipt.events.length - 1].args.tokenId);
+
+      expect(position.liquidity).to.be.gt(positionAfterTrade.liquidity);
       expect(position.tokensOwed0).to.be.equal(0);
       expect(position.tokensOwed1).to.be.equal(0);
     });

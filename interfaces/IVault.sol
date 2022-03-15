@@ -21,5 +21,5 @@ interface IVault {
 
     function _getAllUniPosition() external view returns (uint256[] memory);
 
-    function collectPositionFee(uint256 tokenId) external returns (uint256 amount0, uint256 amount1);
+    function collectPositionFee(uint256 tokenId, address recipient) external returns (uint256 amount0, uint256 amount1);
 }
