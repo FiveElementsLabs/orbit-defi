@@ -7,6 +7,7 @@ import '../interfaces/IVault.sol'; //interface for PositionManager to be done
 import 'hardhat/console.sol';
 import '@openzeppelin/contracts/math/Math.sol';
 import '@openzeppelin/contracts/math/SafeMath.sol';
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 contract AutoCompoundModule {
     using SafeMath for uint256;
@@ -25,9 +26,6 @@ contract AutoCompoundModule {
 
     function checkForAllUncollectedFees(IVault positionManager) public view returns (VaultFee[] memory) {
         uint256[] memory allTokenId = positionManager._getAllUniPosition();
-        for (uint256 i = 0; i < allTokenId.length; i++) {
-            console.log(allTokenId[i]);
-        }
 
         uint256 size = allTokenId.length;
         VaultFee[] memory allFeeVault = new VaultFee[](size);
@@ -42,13 +40,32 @@ contract AutoCompoundModule {
         return allFeeVault;
     }
 
-    function collectFees(IVault positionManager) public {
+    function collectFees(
+        IVault positionManager,
+        address token0Address,
+        address token1Address
+    ) public {
         VaultFee[] memory allFee = checkForAllUncollectedFees(positionManager);
+        uint256 amount0;
+        uint256 amount1;
+        bool checkFee;
+        IERC20 token0 = IERC20(token0Address);
+        IERC20 token1 = IERC20(token1Address);
+
+        _approveToken(token0, positionManager);
+        _approveToken(token1, positionManager);
 
         for (uint32 i = 0; i < allFee.length; i++) {
-            bool checkFee = _feeNeedToBeReinvested(positionManager, allFee[i]);
+            checkFee = _feeNeedToBeReinvested(positionManager, allFee[i]);
             if (checkFee) {
-                positionManager.collectPositionFee(allFee[i].tokenId);
+                (amount0, amount1) = positionManager.collectPositionFee(allFee[i].tokenId, address(this));
+
+                (uint256 amount0Ret, uint256 amount1Ret) = positionManager.increasePositionLiquidity(
+                    allFee[i].tokenId,
+                    amount0,
+                    amount1
+                );
+                //swap ??
             }
         }
     }
@@ -65,5 +82,10 @@ contract AutoCompoundModule {
     function _feeNeedToBeReinvested(IVault positionManager, VaultFee memory feeXToken) private view returns (bool) {
         (uint256 token0, uint256 token1) = positionManager.getPositionBalance(feeXToken.tokenId);
         return Math.min(token0.div(feeXToken.feeToken0), token1.div(feeXToken.feeToken1)) < 33;
+    }
+
+    function _approveToken(IERC20 token, IVault positionManager) private {
+        if (token.allowance(address(this), address(positionManager)) == 0)
+            token.approve(address(positionManager), 2**256 - 1);
     }
 }
