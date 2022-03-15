@@ -172,37 +172,13 @@ contract PositionManager is IVault, ERC721Holder {
     /**
      * @notice close and burn uniswap position; liquidity must be 0,
      */
-    function closeUniPosition(uint256 tokenId) external payable override onlyUser {
-        (, , , , , , , uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(tokenId);
-
-        INonfungiblePositionManager.DecreaseLiquidityParams memory decreaseliquidityparams = INonfungiblePositionManager
-            .DecreaseLiquidityParams({
-                tokenId: tokenId,
-                liquidity: liquidity,
-                amount0Min: 0,
-                amount1Min: 0,
-                deadline: block.timestamp + 1000
-            });
-        nonfungiblePositionManager.decreaseLiquidity(decreaseliquidityparams);
-
-        INonfungiblePositionManager.CollectParams memory collectparams = INonfungiblePositionManager.CollectParams({
-            tokenId: tokenId,
-            recipient: owner,
-            amount0Max: 2**128 - 1,
-            amount1Max: 2**128 - 1
-        });
-        nonfungiblePositionManager.collect(collectparams);
-
-        nonfungiblePositionManager.burn(tokenId);
-    }
-
-    function closeMultipleUniPosition(uint256[] memory tokenIds) external payable override onlyUser {
+    function closeUniPositions(uint256[] memory tokenIds) external payable override onlyUser {
         for (uint256 i = 0; i < tokenIds.length; i++) {
-            (, , , , , , , uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(tokenId);
+            (, , , , , , , uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(tokenIds[i]);
 
             INonfungiblePositionManager.DecreaseLiquidityParams
                 memory decreaseliquidityparams = INonfungiblePositionManager.DecreaseLiquidityParams({
-                    tokenId: tokenId,
+                    tokenId: tokenIds[i],
                     liquidity: liquidity,
                     amount0Min: 0,
                     amount1Min: 0,
@@ -211,14 +187,16 @@ contract PositionManager is IVault, ERC721Holder {
             nonfungiblePositionManager.decreaseLiquidity(decreaseliquidityparams);
 
             INonfungiblePositionManager.CollectParams memory collectparams = INonfungiblePositionManager.CollectParams({
-                tokenId: tokenId,
+                tokenId: tokenIds[i],
                 recipient: owner,
                 amount0Max: 2**128 - 1,
                 amount1Max: 2**128 - 1
             });
             nonfungiblePositionManager.collect(collectparams);
 
-            nonfungiblePositionManager.burn(tokenId);
+            nonfungiblePositionManager.burn(tokenIds[i]);
+            //this function should remove NFTs from list!!!
+            //return tokens to the user?
         }
     }
 
