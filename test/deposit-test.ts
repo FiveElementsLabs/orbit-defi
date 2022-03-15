@@ -753,7 +753,6 @@ describe('Position manager contract', function () {
       expect(position.tokensOwed1).to.be.equal(0);
     });
   });
-<<<<<<< HEAD
 
   describe('Position Manager - mintAndDepositBatch', function () {
     it('Should mint and deposit multiple positions with one call', async function () {
@@ -833,7 +832,10 @@ describe('Position manager contract', function () {
 
       const withdrawTx = await PositionManagerInstance.closeUniPositions(tokens);
       expect(await NonFungiblePositionManager.balanceOf(PositionManagerInstance.address)).to.equal(0);
-=======
+      expect(await PositionManagerInstance._getAllUniPosition()).to.be.empty;
+    });
+  });
+
   describe('PositionManager - decreasePositionLiquidity', function () {
     it('decrease the liquidity in the NFT', async function () {
       const tx = await NonFungiblePositionManager.mint(
@@ -857,7 +859,7 @@ describe('Position manager contract', function () {
       const tokenId = receipt.events[receipt.events.length - 1].args.tokenId;
 
       await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true);
-      await PositionManagerInstance.depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), tokenId);
+      await PositionManagerInstance.depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
 
       const tokenOwnedBefore = await PositionManagerInstance.connect(user).getPositionBalance(tokenId);
       const liquidityBefore = await NonFungiblePositionManager.positions(tokenId);
@@ -876,7 +878,6 @@ describe('Position manager contract', function () {
 
       const liquidityAfter = await NonFungiblePositionManager.positions(tokenId);
       expect(liquidityAfter.liquidity.eq(liquidityBefore.liquidity));
->>>>>>> de2a8b01509a16a6ebc5ab10f2a30a583b1384a9
     });
   });
 });

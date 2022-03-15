@@ -197,6 +197,13 @@ contract PositionManager is IVault, ERC721Holder {
             nonfungiblePositionManager.collect(collectparams);
 
             nonfungiblePositionManager.burn(tokenIds[i]);
+
+            for (uint32 j = 0; j < uniswapNFTs.length; j++) {
+                if (uniswapNFTs[j] == tokenIds[i]) {
+                    uniswapNFTs[j] = uniswapNFTs[uniswapNFTs.length - 1];
+                    uniswapNFTs.pop();
+                }
+            }
             //this function should remove NFTs from list!!!
             //return tokens to the user?
         }
