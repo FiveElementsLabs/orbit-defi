@@ -49,6 +49,11 @@ contract PositionManager is IVault, ERC721Holder {
         uint128 tokensOwed1;
     }
 
+    struct MintAndDepositParams {
+        INonfungiblePositionManager.MintParams mintParams;
+        bool _usingPositionManagerBalance;
+    }
+
     INonfungiblePositionManager public immutable nonfungiblePositionManager;
     IUniswapV3Pool public immutable pool;
 
@@ -77,7 +82,6 @@ contract PositionManager is IVault, ERC721Holder {
      * @notice withdraw uniswap position NFT from the position manager
      */
     function withdrawUniNft(address to, uint256 tokenId) public onlyUser {
-        //internal? users should not know id
         uint256 index = uniswapNFTs.length;
         for (uint256 i = 0; i < uniswapNFTs.length; i++) {
             if (uniswapNFTs[i] == tokenId) {
@@ -201,8 +205,7 @@ contract PositionManager is IVault, ERC721Holder {
             //delete NFT burned from list
             for (uint32 j = 0; j < uniswapNFTs.length; j++) {
                 if (uniswapNFTs[j] == tokenIds[i]) {
-                    uniswapNFTs[j] = uniswapNFTs[uniswapNFTs.length - 1];
-                    uniswapNFTs.pop();
+                    removeNFTFromList(j);
                 }
             }
         }
