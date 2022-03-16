@@ -7,12 +7,8 @@ import '../interfaces/IVault.sol';
 import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
-<<<<<<< Updated upstream
-import '@openzeppelin/contracts/math/Math.sol';
-=======
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol';
->>>>>>> Stashed changes
 
 contract IdleLiquidityModule {
     INonfungiblePositionManager public immutable nonFungiblePositionManager;
@@ -51,17 +47,6 @@ contract IdleLiquidityModule {
         distanceFromRange = min(distanceFromLower, distanceFromUpper);
     }
 
-<<<<<<< Updated upstream
-=======
-    function swapLogic(
-        uint256 amount0,
-        uint256 amount1,
-        int24 tickPool,
-        int24 tickLower,
-        int24 tickUpper
-    ) public {}
-
->>>>>>> Stashed changes
     function min(int24 a, int24 b) internal pure returns (int24) {
         return a <= b ? a : b;
     }
