@@ -174,7 +174,7 @@ contract PositionManager is IVault, ERC721Holder {
     /**
      * @notice close and burn uniswap position; liquidity must be 0,
      */
-    function closeUniPositions(uint256[] memory tokenIds) external payable override onlyUser {
+    function closeUniPositions(uint256[] memory tokenIds, bool returnTokensToUser) external payable override onlyUser {
         for (uint256 i = 0; i < tokenIds.length; i++) {
             (, , , , , , , uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(tokenIds[i]);
 
@@ -190,7 +190,7 @@ contract PositionManager is IVault, ERC721Holder {
 
             INonfungiblePositionManager.CollectParams memory collectparams = INonfungiblePositionManager.CollectParams({
                 tokenId: tokenIds[i],
-                recipient: owner,
+                recipient: returnTokensToUser ? owner : address(this),
                 amount0Max: 2**128 - 1,
                 amount1Max: 2**128 - 1
             });
@@ -198,14 +198,13 @@ contract PositionManager is IVault, ERC721Holder {
 
             nonfungiblePositionManager.burn(tokenIds[i]);
 
+            //delete NFT burned from list
             for (uint32 j = 0; j < uniswapNFTs.length; j++) {
                 if (uniswapNFTs[j] == tokenIds[i]) {
                     uniswapNFTs[j] = uniswapNFTs[uniswapNFTs.length - 1];
                     uniswapNFTs.pop();
                 }
             }
-            //this function should remove NFTs from list!!!
-            //return tokens to the user?
         }
     }
 
