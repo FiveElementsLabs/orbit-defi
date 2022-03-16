@@ -372,7 +372,7 @@ describe('Position manager contract', function () {
             Date.now(),
           ],
         ],
-        [false]
+        false
       );
 
       const tokenIds = await PositionManagerInstance._getAllUniPosition();
@@ -548,7 +548,7 @@ describe('Position manager contract', function () {
               Date.now() + 1000,
             ],
           ],
-          [false]
+          false
         )
       ).to.be.reverted;
     });
@@ -793,7 +793,7 @@ describe('Position manager contract', function () {
           Date.now() + 1000, //deadline
         ],
       ];
-      const tx = await PositionManagerInstance.mintAndDeposit(mintParams, [false, false]);
+      const tx = await PositionManagerInstance.mintAndDeposit(mintParams, false);
       expect(await NonFungiblePositionManager.balanceOf(PositionManagerInstance.address)).to.equal(2);
     });
   });
