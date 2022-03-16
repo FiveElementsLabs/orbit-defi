@@ -11,7 +11,7 @@ interface IVault {
 
     function getPositionFee(uint256 tokenId) external view returns (uint128 tokensOwed0, uint128 tokensOwed1);
 
-    function closeUniPositions(uint256[] memory tokenId) external payable;
+    function closeUniPositions(uint256[] memory tokenId, bool returnTokensToUser) external payable;
 
     function increasePositionLiquidity(
         uint256 tokenId,
