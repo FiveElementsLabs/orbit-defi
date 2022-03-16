@@ -290,6 +290,27 @@ contract PositionManager is IVault, ERC721Holder {
         nonfungiblePositionManager.decreaseLiquidity(decreaseliquidityparams);
     }
 
+    function swapToken(
+        IERC20 token0,
+        uint256 amount0Desired,
+        IERC20 token1,
+        uint256 amount1Desired
+    ) external view returns (uint256, uint256) {
+        (uint160 sqrtPriceX96, , , , , , ) = pool.slot0();
+
+        //
+        uint256 h = pool.maxLiquidityPerTick();
+        console.log(h);
+
+        /* pool.swap(
+            address(this),
+            swapAmount > 0,
+            swapAmount > 0 ? swapAmount : -swapAmount,
+            sqrtPriceX96,
+            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+        ); */
+    }
+
     function _getAllUniPosition() external view override returns (uint256[] memory) {
         uint256[] memory uniswapNFTsMemory = uniswapNFTs;
         return uniswapNFTsMemory;
