@@ -3,6 +3,8 @@ import '@nomiclabs/hardhat-ethers';
 import { Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import { tokensFixture, poolFixture, routerFixture } from './shared/fixtures';
+import { isAddress } from 'ethers/lib/utils';
+import { time } from 'console';
 const PositionManagerContract = require('../artifacts/contracts/PositionManager.sol/PositionManager.json');
 
 //import { sign } from 'crypto';
@@ -355,19 +357,26 @@ describe('Position manager contract', function () {
       });
 
       const tx = await PositionManagerInstance.mintAndDeposit(
-        token0.address,
-        token1.address,
-        3000,
-        -240000 - 60,
-        -240000 + 60,
-        '0x' + (1e13).toString(16),
-        '0x' + (3e3).toString(16),
-        0,
-        0
+        [
+          [
+            token0.address,
+            token1.address,
+            3000,
+            -240000 - 60,
+            -240000 + 60,
+            '0x' + (1e13).toString(16),
+            '0x' + (3e3).toString(16),
+            0,
+            0,
+            PositionManagerInstance.address,
+            Date.now(),
+          ],
+        ],
+        false
       );
 
-      const receipt = await tx.wait();
-      const tokenId = await receipt.events[receipt.events.length - 1].args.tokenId;
+      const tokenIds = await PositionManagerInstance._getAllUniPosition();
+      const tokenId = tokenIds[tokenIds.length - 1];
     });
   });
 
@@ -524,15 +533,22 @@ describe('Position manager contract', function () {
 
       await expect(
         PositionManagerInstance.connect(signers[1]).mintAndDeposit(
-          token0.address,
-          token1.address,
-          3000,
-          -240000 - 60,
-          -240000 + 60,
-          '0x' + (1e13).toString(16),
-          '0x' + (3e3).toString(16),
-          0,
-          0
+          [
+            [
+              token0.address,
+              token1.address,
+              3000,
+              -240000 - 60,
+              -240000 + 60,
+              '0x' + (1e13).toString(16),
+              '0x' + (3e3).toString(16),
+              0,
+              0,
+              PositionManagerInstance.address,
+              Date.now() + 1000,
+            ],
+          ],
+          false
         )
       ).to.be.reverted;
     });
@@ -743,6 +759,44 @@ describe('Position manager contract', function () {
       expect(position.tokensOwed1).to.be.equal(0);
     });
   });
+
+  describe('Position Manager - mintAndDepositBatch', function () {
+    it('Should mint and deposit multiple positions with one call', async function () {
+      await token0.connect(user).approve(PositionManagerInstance.address, ethers.utils.parseEther('1000000000000'));
+      await token1.connect(user).approve(PositionManagerInstance.address, ethers.utils.parseEther('1000000000000'));
+
+      let mintParams = [
+        [
+          token0.address, // token0,
+          token1.address, // token1,
+          3000, // fee,
+          -240600, // tickLower,
+          -239400, // tickUpper,
+          '0x' + (1e10).toString(16), // amount0Desired,
+          '0x' + (1e10).toString(16), //amount1Desired,
+          0, // amount0Min,
+          0, // amount1Min,
+          PositionManagerInstance.address, // recipient
+          Date.now() + 1000, //deadline
+        ],
+        [
+          token0.address, // token0,
+          token1.address, // token1,
+          3000, // fee,
+          -241200, // tickLower,
+          -239700, // tickUpper,
+          '0x' + (1e10).toString(16), // amount0Desired,
+          '0x' + (1e10).toString(16), //amount1Desired,
+          0, // amount0Min,
+          0, // amount1Min,
+          PositionManagerInstance.address, // recipient
+          Date.now() + 1000, //deadline
+        ],
+      ];
+      const tx = await PositionManagerInstance.mintAndDeposit(mintParams, false);
+      expect(await NonFungiblePositionManager.balanceOf(PositionManagerInstance.address)).to.equal(2);
+    });
+  });
   describe('PositionManager - decreasePositionLiquidity', function () {
     it('decrease the liquidity in the NFT', async function () {
       const tx = await NonFungiblePositionManager.mint(
@@ -766,7 +820,7 @@ describe('Position manager contract', function () {
       const tokenId = receipt.events[receipt.events.length - 1].args.tokenId;
 
       await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true);
-      await PositionManagerInstance.depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), tokenId);
+      await PositionManagerInstance.depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
 
       const tokenOwnedBefore = await PositionManagerInstance.connect(user).getPositionBalance(tokenId);
       const liquidityBefore = await NonFungiblePositionManager.positions(tokenId);

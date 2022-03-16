@@ -109,52 +109,36 @@ contract PositionManager is IVault, ERC721Holder {
      * @notice mint a univ3 position and deposit in manager
      */
     function mintAndDeposit(
-        address token0Address,
-        address token1Address,
-        uint24 fee,
-        int24 tickLower,
-        int24 tickUpper,
-        uint256 amount0Desired,
-        uint256 amount1Desired,
-        uint256 amount0Min,
-        uint256 amount1Min
-    ) external onlyUser {
-        require(amount0Desired > 0 || amount1Desired > 0, 'can mint only nonzero amount');
-        IERC20 token0 = IERC20(token0Address);
-        IERC20 token1 = IERC20(token1Address);
+        INonfungiblePositionManager.MintParams[] memory mintParams,
+        bool _usingPositionManagerBalance
+    ) public {
+        //TODO: can be optimized by calculating amount that will be deposited before transferring them to positionManager
+        //require(amount0Desired > 0 || amount1Desired > 0, 'can mint only nonzero amount');
+        for (uint256 i = 0; i < mintParams.length; i++) {
+            IERC20 token0 = IERC20(mintParams[i].token0);
+            IERC20 token1 = IERC20(mintParams[i].token1);
+            if (!_usingPositionManagerBalance) {
+                token0.transferFrom(msg.sender, address(this), mintParams[i].amount0Desired);
+                token1.transferFrom(msg.sender, address(this), mintParams[i].amount1Desired);
+            }
 
-        token0.transferFrom(msg.sender, address(this), amount0Desired);
-        token1.transferFrom(msg.sender, address(this), amount1Desired);
+            _approveToken0(token0);
+            _approveToken1(token1);
 
-        _approveToken0(token0);
-        _approveToken1(token1);
+            (uint256 tokenId, , uint256 amount0Deposited, uint256 amount1Deposited) = nonfungiblePositionManager.mint(
+                mintParams[i]
+            );
 
-        INonfungiblePositionManager.MintParams memory mintParams = INonfungiblePositionManager.MintParams({
-            token0: token0Address, // token0,
-            token1: token1Address, // token1,
-            fee: fee, // fee,
-            tickLower: tickLower, // tickLower,
-            tickUpper: tickUpper, // tickUpper,
-            amount0Desired: amount0Desired, // amount0Desired,
-            amount1Desired: amount1Desired, //amount1Desired,
-            amount0Min: amount0Min, // amount0Min,
-            amount1Min: amount1Min, // amount1Min,
-            recipient: address(this), // recipient
-            deadline: block.timestamp + 1000 //deadline
-        });
-        (uint256 tokenId, , uint256 amount0Deposited, uint256 amount1Deposited) = nonfungiblePositionManager.mint(
-            mintParams
-        );
-        uniswapNFTs.push(tokenId);
+            uniswapNFTs.push(tokenId);
+            emit DepositUni(msg.sender, tokenId);
 
-        if (amount0Desired > amount0Deposited) {
-            token0.transfer(msg.sender, amount0Desired - amount0Deposited);
+            if (mintParams[i].amount0Desired > amount0Deposited && !_usingPositionManagerBalance) {
+                token0.transfer(msg.sender, mintParams[i].amount0Desired - amount0Deposited);
+            }
+            if (mintParams[i].amount1Desired > amount1Deposited && !_usingPositionManagerBalance) {
+                token1.transfer(msg.sender, mintParams[i].amount1Desired - amount1Deposited);
+            }
         }
-        if (amount1Desired > amount1Deposited) {
-            token1.transfer(msg.sender, amount1Desired - amount1Deposited);
-        }
-        //can be optimized by calculating amount that will be deposited before transferring them to positionManager
-        emit DepositUni(msg.sender, tokenId);
     }
 
     /**
