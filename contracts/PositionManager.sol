@@ -49,11 +49,6 @@ contract PositionManager is IVault, ERC721Holder {
         uint128 tokensOwed1;
     }
 
-    struct MintAndDepositParams {
-        INonfungiblePositionManager.MintParams mintParams;
-        bool _usingPositionManagerBalance;
-    }
-
     INonfungiblePositionManager public immutable nonfungiblePositionManager;
     IUniswapV3Pool public immutable pool;
 
