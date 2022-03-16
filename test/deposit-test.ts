@@ -285,7 +285,7 @@ describe('Position manager contract', function () {
       await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true);
       await PositionManagerInstance.depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
 
-      await PositionManagerInstance.closeUniPositions([tokenId]);
+      await PositionManagerInstance.closeUniPositions([tokenId], true);
     });
 
     it('Should check swap fees accrued by position and collect them', async function () {
@@ -607,7 +607,7 @@ describe('Position manager contract', function () {
       await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true);
       await PositionManagerInstance.depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
 
-      await expect(PositionManagerInstance.connect(signers[1]).closeUniPositions([tokenId])).to.be.reverted;
+      await expect(PositionManagerInstance.connect(signers[1]).closeUniPositions([tokenId], true)).to.be.reverted;
     });
   });
 
@@ -830,7 +830,7 @@ describe('Position manager contract', function () {
 
       const tokens = await PositionManagerInstance._getAllUniPosition();
 
-      const withdrawTx = await PositionManagerInstance.closeUniPositions(tokens);
+      const withdrawTx = await PositionManagerInstance.closeUniPositions(tokens, true);
       expect(await NonFungiblePositionManager.balanceOf(PositionManagerInstance.address)).to.equal(0);
       expect(await PositionManagerInstance._getAllUniPosition()).to.be.empty;
     });
