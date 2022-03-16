@@ -1,6 +1,6 @@
 import '@nomiclabs/hardhat-ethers';
 import { expect } from 'chai';
-import { Contract, ContractFactory } from 'ethers';
+import { ContractFactory } from 'ethers';
 const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json');
 const NonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json');
 const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json');
@@ -15,7 +15,6 @@ import {
   NonfungiblePositionManager,
   PositionManager,
 } from '../typechain';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 
 describe('PositionManager.sol', function () {
   //GLOBAL VARIABLE - USE THIS
