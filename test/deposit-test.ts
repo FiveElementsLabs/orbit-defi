@@ -366,7 +366,7 @@ describe('Position manager contract', function () {
             Date.now(),
           ],
         ],
-        [false]
+        false
       );
 
       const tokenIds = await PositionManagerInstance._getAllUniPosition();
@@ -542,7 +542,7 @@ describe('Position manager contract', function () {
               Date.now() + 1000,
             ],
           ],
-          [false]
+          false
         )
       ).to.be.reverted;
     });
@@ -787,10 +787,11 @@ describe('Position manager contract', function () {
           Date.now() + 1000, //deadline
         ],
       ];
-      const tx = await PositionManagerInstance.mintAndDeposit(mintParams, [false, false]);
+      const tx = await PositionManagerInstance.mintAndDeposit(mintParams, false);
       expect(await NonFungiblePositionManager.balanceOf(PositionManagerInstance.address)).to.equal(2);
     });
   });
+<<<<<<< HEAD
 
   describe('Position Manager - closeMultipleUniPositions', function () {
     it('Should close multiple positions with one call', async function () {
@@ -836,6 +837,8 @@ describe('Position manager contract', function () {
     });
   });
 
+=======
+>>>>>>> 711405278b8a7405adf2fb37ececc0fd082a33b5
   describe('PositionManager - decreasePositionLiquidity', function () {
     it('decrease the liquidity in the NFT', async function () {
       const tx = await NonFungiblePositionManager.mint(
