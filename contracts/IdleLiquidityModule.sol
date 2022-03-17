@@ -4,7 +4,6 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import '../interfaces/IVault.sol';
-import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
@@ -20,7 +19,7 @@ contract IdleLiquidityModule {
     }
 
     //returns distance from position (in ticks), if output is negative => position is out of range
-    function checkDistanceFromRange(uint256 tokenId) public view returns (int24 distanceFromRange) {
+    function checkDistanceFromRange(uint256 tokenId) public view returns (int24) {
         (
             ,
             ,
@@ -44,10 +43,10 @@ contract IdleLiquidityModule {
 
         int24 distanceFromUpper = tickUpper - tick;
         int24 distanceFromLower = tick - tickLower;
-        distanceFromRange = min(distanceFromLower, distanceFromUpper);
+        return min24(distanceFromLower, distanceFromUpper);
     }
 
-    function min(int24 a, int24 b) internal pure returns (int24) {
+    function min24(int24 a, int24 b) internal pure returns (int24) {
         return a <= b ? a : b;
     }
 }
