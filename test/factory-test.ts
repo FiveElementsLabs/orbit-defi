@@ -50,7 +50,7 @@ describe('Position manager contract', function () {
 
       [owner] = await ethers.getSigners();
 
-      await PositionManagerFactoryInstance.create(owner.address, NonFungiblePositionManager.address, poolI.address);
+      await PositionManagerFactoryInstance.create(owner.address, NonFungiblePositionManager.address);
 
       const deployedContract = await PositionManagerFactoryInstance.positionManagers(0);
       const PositionManagerInstance = await ethers.getContractAt(PositionManagerContract.abi, deployedContract);

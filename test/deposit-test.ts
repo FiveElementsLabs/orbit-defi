@@ -334,6 +334,8 @@ describe('Position manager contract', function () {
       // Fees are updated at every interaction with the position
       // ex. IncreaseLiquidity, DecreaseLiquidity
       // so here have to use PositionManager.function to account for fees
+      let positionOld = await NonFungiblePositionManager.positions(tokenId);
+      console.log(positionOld.liquidity);
       const updateTx = await PositionManagerInstance.updateUncollectedFees(tokenId);
 
       let position = await NonFungiblePositionManager.positions(tokenId);
@@ -766,7 +768,7 @@ describe('Position manager contract', function () {
       const tokenId = receipt.events[receipt.events.length - 1].args.tokenId;
 
       await NonFungiblePositionManager.setApprovalForAll(PositionManagerInstance.address, true);
-      await PositionManagerInstance.depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), tokenId);
+      await PositionManagerInstance.depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
 
       const tokenOwnedBefore = await PositionManagerInstance.connect(user).getPositionBalance(tokenId);
       const liquidityBefore = await NonFungiblePositionManager.positions(tokenId);
@@ -785,13 +787,6 @@ describe('Position manager contract', function () {
 
       const liquidityAfter = await NonFungiblePositionManager.positions(tokenId);
       expect(liquidityAfter.liquidity.eq(liquidityBefore.liquidity));
-    });
-  });
-  describe.only('TokenId', function () {
-    it('Should return the correct pool address', async function () {
-      const retValue = await PositionManagerInstance.getPoolFromTokenId(LPtokenId);
-      const poolAdd = await poolI.address;
-      expect(retValue == poolAdd);
     });
   });
 });

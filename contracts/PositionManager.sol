@@ -13,6 +13,8 @@ import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol';
 import 'hardhat/console.sol';
 import '../interfaces/IVault.sol';
+import "@uniswap/v3-periphery/contracts/libraries/PositionKey.sol";
+import "@uniswap/v3-periphery/contracts/libraries/PositionValue.sol";
 
 /**
  * @title   Position Manager
@@ -215,8 +217,9 @@ contract PositionManager is IVault, ERC721Holder {
 
     /**
      * @notice for fees to be updated need to interact with NFT
+     * not public!
      */
-    function updateUncollectedFees(uint256 tokenId) public returns (uint128 tokensOwed0, uint128 tokensOwed1) {
+    function updateUncollectedFees(uint256 tokenId) public {
         INonfungiblePositionManager.DecreaseLiquidityParams memory params = INonfungiblePositionManager
             .DecreaseLiquidityParams({
                 tokenId: tokenId,
@@ -226,15 +229,16 @@ contract PositionManager is IVault, ERC721Holder {
                 deadline: block.timestamp + 1000
             });
         nonfungiblePositionManager.decreaseLiquidity(params);
-        (, , , , , , , , , , tokensOwed0, tokensOwed1) = nonfungiblePositionManager.positions(tokenId);
     }
+    
 
     function collectPositionFee(uint256 tokenId, address recipient)
         external
         override
         returns (uint256 amount0, uint256 amount1)
     {
-        (uint128 feesToken0, uint128 feesToken1) = updateUncollectedFees(tokenId);
+        updateUncollectedFees(tokenId);
+        (, , , , , , , , , , uint128 feesToken0, uint128 feesToken1) = nonfungiblePositionManager.positions(tokenId);
         INonfungiblePositionManager.CollectParams memory params = INonfungiblePositionManager.CollectParams({
             tokenId: tokenId,
             recipient: recipient,
