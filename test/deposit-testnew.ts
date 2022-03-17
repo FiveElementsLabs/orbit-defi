@@ -254,7 +254,6 @@ describe('PositionManager.sol', function () {
       expect(e.includes('token id not found!')).to.equal(true);
     });
   });
-
   describe('PositionManager - closeUniPosition', function () {
     it('Should close and burn a uniPosition', async function () {
       await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
