@@ -194,7 +194,7 @@ describe('PositionManager.sol', function () {
       .then((mintReceipt: any) => mintReceipt.events[mintReceipt.events.length - 1].args.tokenId);
   });
 
-  describe('PositionManager - depositUniNft', async function () {
+  describe('PositionManager - depositUniNft', function () {
     it('should deposit a single UNI NFT', async function () {
       const oldOwner = await NonFungiblePositionManager.ownerOf(tokenId);
 
@@ -235,7 +235,7 @@ describe('PositionManager.sol', function () {
       expect(PositionManager.address).to.be.equal(await NonFungiblePositionManager.ownerOf(newtokenId));
     });
   });
-  describe('PositionManager - withdrawUniNft', async function () {
+  describe('PositionManager - withdrawUniNft', function () {
     it('Should withdraw a single UNI NFT', async function () {
       await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
 
@@ -255,7 +255,7 @@ describe('PositionManager.sol', function () {
     });
   });
 
-  describe('PositionManager - closeUniPosition', async function () {
+  describe('PositionManager - closeUniPosition', function () {
     it('Should close and burn a uniPosition', async function () {
       await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
 
@@ -309,7 +309,7 @@ describe('PositionManager.sol', function () {
       expect((await PositionManager._getAllUniPosition()).length).to.be.equal(beforeLenght - 2);
     });
   });
-  describe('PositionManager - collectPositionFee', async function () {
+  describe('PositionManager - collectPositionFee', function () {
     it('Should collect fees', async function () {
       await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
 
@@ -332,7 +332,7 @@ describe('PositionManager.sol', function () {
       expect(position.tokensOwed1).to.equal(0);
     });
   });
-  describe('PositionManager - mintAndDeposit', async function () {
+  describe('PositionManager - mintAndDeposit', function () {
     it('Should mint and deposit an uniV3 NFT', async function () {
       const tokenIds = (await PositionManager._getAllUniPosition()).length;
 
@@ -392,7 +392,7 @@ describe('PositionManager.sol', function () {
       expect(await NonFungiblePositionManager.balanceOf(PositionManager.address)).to.equal(oldBalance.add(2));
     });
   });
-  describe('PositionManager - increasePositionLiquidity', async function () {
+  describe('PositionManager - increasePositionLiquidity', function () {
     it('Should increase the liquidity in the NFT', async function () {
       await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
       const liquidityBefore = await Pool0.liquidity();
@@ -401,7 +401,7 @@ describe('PositionManager.sol', function () {
       expect(await Pool0.liquidity()).to.be.gt(liquidityBefore);
     });
   });
-  describe('PositionManager - decreasePositionLiquidity', async function () {
+  describe('PositionManager - decreasePositionLiquidity', function () {
     it('decrease the liquidity in the NFT', async function () {
       await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
 
@@ -418,7 +418,7 @@ describe('PositionManager.sol', function () {
       expect(liquidityAfter.liquidity).to.be.lt(liquidityBefore.liquidity);
     });
   });
-  describe('PositionManager - getPositionBalance', async function () {
+  describe('PositionManager - getPositionBalance', function () {
     it('should return the amount of token', async function () {
       await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
 
@@ -427,7 +427,7 @@ describe('PositionManager.sol', function () {
       expect(amounts[0]).to.be.gt(1);
     });
   });
-  describe('PositionManager - OnlyUser Modifier', async function () {
+  describe('PositionManager - OnlyUser Modifier', function () {
     it('depositUniNft', async function () {
       await expect(
         PositionManager.connect(trader).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId])
