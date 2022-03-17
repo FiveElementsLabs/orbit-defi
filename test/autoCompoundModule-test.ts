@@ -5,10 +5,10 @@ const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/Unisw
 const NonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json');
 const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json');
 const PositionManagerjson = require('../artifacts/contracts/PositionManager.sol/PositionManager.json');
-const FixturesConst = require('./shared/newfixtures');
+const FixturesConst = require('./shared/fixtures');
 
 import { ethers } from 'hardhat';
-import { tokensFixture, poolFixture, mintSTDAmount, routerFixture } from './shared/newfixtures';
+import { tokensFixture, poolFixture, mintSTDAmount, routerFixture } from './shared/fixtures';
 
 import {
   MockToken,

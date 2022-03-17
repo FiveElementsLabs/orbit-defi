@@ -1,37 +1,66 @@
 import { expect } from 'chai';
 import '@nomiclabs/hardhat-ethers';
-import { Contract } from 'ethers';
+import { Contract, ContractFactory } from 'ethers';
 import { ethers } from 'hardhat';
 import { tokensFixture, poolFixture } from './shared/fixtures';
+import { MockToken, IUniswapV3Factory, NonfungiblePositionManager } from '../typechain';
 
+const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json');
 const PositionManagerContract = require('../artifacts/contracts/PositionManager.sol/PositionManager.json');
+const NonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json');
+const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json');
+const FixturesConst = require('./shared/fixtures');
 
-describe('Position manager contract', function () {
+describe('PositionManagerFactory', function () {
   let PositionManagerInstance: Contract;
   let PositionManagerFactoryInstance: Contract;
 
   let owner: any;
   let signers: any;
-  let NonFungiblePositionManager: Contract;
-  let token0: Contract, token1: Contract;
+  let NonFungiblePositionManager: NonfungiblePositionManager;
+  let token0: MockToken, token1: MockToken;
   let poolI: any;
 
   before(async function () {
-    // Initializing pool states
-    const { token0Fixture, token1Fixture } = await tokensFixture();
-    token0 = token0Fixture;
-    token1 = token1Fixture;
-    const { pool, NonfungiblePositionManager } = await poolFixture(token0, token1);
-    NonFungiblePositionManager = NonfungiblePositionManager;
-    poolI = pool;
     signers = await ethers.getSigners();
     const user = signers[0];
+    token0 = await tokensFixture('ETH', 18).then((tokenFix) => tokenFix.tokenFixture);
+    token1 = await tokensFixture('USDC', 6).then((tokenFix) => tokenFix.tokenFixture);
+
+    //deploy factory, used for pools
+    const uniswapFactoryFactory = new ContractFactory(
+      UniswapV3Factoryjson['abi'],
+      UniswapV3Factoryjson['bytecode'],
+      user
+    );
+    const Factory = (await uniswapFactoryFactory.deploy().then((contract) => contract.deployed())) as IUniswapV3Factory;
+    poolI = await poolFixture(token0, token1, 3000, Factory).then((poolFix) => poolFix.pool);
+
     await token0.mint(user.address, ethers.utils.parseEther('1000000000000'));
     await token1.mint(user.address, ethers.utils.parseEther('1000000000000'));
-    let startTick = -240000;
-    const price = Math.pow(1.0001, startTick);
-    await pool.initialize('0x' + (Math.sqrt(price) * Math.pow(2, 96)).toString(16));
-    await pool.increaseObservationCardinalityNext(100);
+
+    //deploy NonFungiblePositionManagerDescriptor and NonFungiblePositionManager
+    const NonFungiblePositionManagerDescriptorFactory = new ContractFactory(
+      NonFungiblePositionManagerDescriptorjson['abi'],
+      FixturesConst.NonFungiblePositionManagerDescriptorBytecode,
+      user
+    );
+    const NonFungiblePositionManagerDescriptor = await NonFungiblePositionManagerDescriptorFactory.deploy(
+      token0.address,
+      ethers.utils.formatBytes32String('www.google.com')
+    ).then((contract) => contract.deployed());
+
+    const NonFungiblePositionManagerFactory = new ContractFactory(
+      NonFungiblePositionManagerjson['abi'],
+      NonFungiblePositionManagerjson['bytecode'],
+      user
+    );
+    NonFungiblePositionManager = (await NonFungiblePositionManagerFactory.deploy(
+      Factory.address,
+      token0.address,
+      NonFungiblePositionManagerDescriptor.address
+    ).then((contract) => contract.deployed())) as NonfungiblePositionManager;
+
     await token0
       .connect(signers[0])
       .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'));
