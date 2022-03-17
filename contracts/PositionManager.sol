@@ -110,7 +110,7 @@ contract PositionManager is IVault, ERC721Holder {
     function mintAndDeposit(
         INonfungiblePositionManager.MintParams[] memory mintParams,
         bool _usingPositionManagerBalance
-    ) public {
+    ) public onlyUser {
         //TODO: can be optimized by calculating amount that will be deposited before transferring them to positionManager
         //require(amount0Desired > 0 || amount1Desired > 0, 'can mint only nonzero amount');
         for (uint256 i = 0; i < mintParams.length; i++) {

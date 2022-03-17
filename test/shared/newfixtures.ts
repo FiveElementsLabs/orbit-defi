@@ -1,7 +1,7 @@
 import { Contract, ContractReceipt } from 'ethers';
 import { ethers } from 'hardhat';
 import { ContractFactory } from 'ethers';
-import { MockToken, IUniswapV3Pool, IUniswapV3Factory } from '../../typechain';
+import { MockToken, IUniswapV3Pool, IUniswapV3Factory, TestRouter } from '../../typechain';
 
 const UniswapV3Pool = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Pool.sol/UniswapV3Pool.json');
 export const NonFungiblePositionManagerDescriptorBytecode =
@@ -13,6 +13,10 @@ interface TokensFixture {
 
 interface PoolFixture {
   pool: IUniswapV3Pool;
+}
+
+interface RuoterFixture {
+  ruoterDeployFixture: TestRouter;
 }
 
 export async function tokensFixture(name: string, decimal: number): Promise<TokensFixture> {
@@ -40,6 +44,12 @@ export async function poolFixture(
   await pool.increaseObservationCardinalityNext(100);
 
   return { pool };
+}
+
+export async function routerFixture(): Promise<RuoterFixture> {
+  const ruoterFactory = await ethers.getContractFactory('TestRouter');
+  const ruoterDeployFixture = (await ruoterFactory.deploy()) as TestRouter;
+  return { ruoterDeployFixture };
 }
 
 export async function mintSTDAmount(token: MockToken, amount?: string) {
