@@ -77,7 +77,6 @@ contract PositionManager is IVault, ERC721Holder {
      * @notice withdraw uniswap position NFT from the position manager
      */
     function withdrawUniNft(address to, uint256 tokenId) public onlyUser {
-        //internal? users should not know id
         uint256 index = uniswapNFTs.length;
         for (uint256 i = 0; i < uniswapNFTs.length; i++) {
             if (uniswapNFTs[i] == tokenId) {
@@ -110,18 +109,14 @@ contract PositionManager is IVault, ERC721Holder {
      */
     function mintAndDeposit(
         INonfungiblePositionManager.MintParams[] memory mintParams,
-        bool[] memory _usingPositionManagerBalance
-    ) public {
+        bool _usingPositionManagerBalance
+    ) public onlyUser {
         //TODO: can be optimized by calculating amount that will be deposited before transferring them to positionManager
         //require(amount0Desired > 0 || amount1Desired > 0, 'can mint only nonzero amount');
-        require(
-            mintParams.length == _usingPositionManagerBalance.length,
-            'mint params and bool array should be the same length'
-        );
         for (uint256 i = 0; i < mintParams.length; i++) {
             IERC20 token0 = IERC20(mintParams[i].token0);
             IERC20 token1 = IERC20(mintParams[i].token1);
-            if (!_usingPositionManagerBalance[i]) {
+            if (!_usingPositionManagerBalance) {
                 token0.transferFrom(msg.sender, address(this), mintParams[i].amount0Desired);
                 token1.transferFrom(msg.sender, address(this), mintParams[i].amount1Desired);
             }
@@ -137,10 +132,10 @@ contract PositionManager is IVault, ERC721Holder {
             uniswapNFTs.push(tokenId);
             emit DepositUni(msg.sender, tokenId);
 
-            if (mintParams[i].amount0Desired > amount0Deposited && !_usingPositionManagerBalance[i]) {
+            if (mintParams[i].amount0Desired > amount0Deposited && !_usingPositionManagerBalance) {
                 token0.transfer(msg.sender, mintParams[i].amount0Desired - amount0Deposited);
             }
-            if (mintParams[i].amount1Desired > amount1Deposited && !_usingPositionManagerBalance[i]) {
+            if (mintParams[i].amount1Desired > amount1Deposited && !_usingPositionManagerBalance) {
                 token1.transfer(msg.sender, mintParams[i].amount1Desired - amount1Deposited);
             }
         }
@@ -201,8 +196,7 @@ contract PositionManager is IVault, ERC721Holder {
             //delete NFT burned from list
             for (uint32 j = 0; j < uniswapNFTs.length; j++) {
                 if (uniswapNFTs[j] == tokenIds[i]) {
-                    uniswapNFTs[j] = uniswapNFTs[uniswapNFTs.length - 1];
-                    uniswapNFTs.pop();
+                    removeNFTFromList(j);
                 }
             }
         }
