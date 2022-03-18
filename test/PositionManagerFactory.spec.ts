@@ -12,7 +12,7 @@ const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/
 const FixturesConst = require('./shared/fixtures');
 const hre = require('hardhat');
 
-describe('PositionManagerFactory', function () {
+describe('PositionManagerFactory.sol', function () {
   let PositionManagerInstance: Contract;
   let PositionManagerFactoryInstance: Contract;
 

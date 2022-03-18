@@ -96,7 +96,7 @@ describe('IdleLiquidityModule.sol', function () {
       .getContractFactory('PositionManagerFactory')
       .then((contract) => contract.deploy().then((deploy) => deploy.deployed()));
 
-    await PositionManagerFactory.create(user.address, NonFungiblePositionManager.address, Pool0.address);
+    await PositionManagerFactory.create(user.address, NonFungiblePositionManager.address);
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;

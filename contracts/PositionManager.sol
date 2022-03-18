@@ -13,8 +13,8 @@ import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol';
 import 'hardhat/console.sol';
 import '../interfaces/IVault.sol';
-import "@uniswap/v3-periphery/contracts/libraries/PositionKey.sol";
-import "@uniswap/v3-periphery/contracts/libraries/PositionValue.sol";
+import '@uniswap/v3-periphery/contracts/libraries/PositionKey.sol';
+import '@uniswap/v3-periphery/contracts/libraries/PositionValue.sol';
 
 /**
  * @title   Position Manager
@@ -32,7 +32,7 @@ contract PositionManager is IVault, ERC721Holder {
     address public immutable owner;
     uint256[] private uniswapNFTs;
     INonfungiblePositionManager public immutable nonfungiblePositionManager;
-    IUniswapV3Factory public immutable factory; 
+    IUniswapV3Factory public immutable factory;
 
     // details about the uniswap position
     struct Position {
@@ -55,12 +55,7 @@ contract PositionManager is IVault, ERC721Holder {
         uint128 tokensOwed1;
     }
 
-  
-
-    constructor(
-        address userAddress,
-        INonfungiblePositionManager _nonfungiblePositionManager
-    ) {
+    constructor(address userAddress, INonfungiblePositionManager _nonfungiblePositionManager) {
         owner = userAddress;
         nonfungiblePositionManager = _nonfungiblePositionManager;
         factory = IUniswapV3Factory(_nonfungiblePositionManager.factory());
@@ -223,7 +218,6 @@ contract PositionManager is IVault, ERC721Holder {
             });
         nonfungiblePositionManager.decreaseLiquidity(params);
     }
-    
 
     function collectPositionFee(uint256 tokenId, address recipient)
         external
@@ -279,12 +273,10 @@ contract PositionManager is IVault, ERC721Holder {
         uint256 amount0Desired,
         uint256 amount1Desired
     ) external payable onlyUser {
-        (IERC20 token0, IERC20 token1) = _getTokenAddress(tokenId);
-
         (, , , , , int24 tickLower, int24 tickUpper, uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(
             tokenId
         );
-        
+
         IUniswapV3Pool pool = getPoolFromTokenId(tokenId);
 
         (uint160 sqrtRatioX96, , , , , , ) = pool.slot0();
@@ -310,27 +302,16 @@ contract PositionManager is IVault, ERC721Holder {
         nonfungiblePositionManager.decreaseLiquidity(decreaseliquidityparams);
     }
 
-    
     /*Get pool address from token ID*/
-    function getPoolFromTokenId(uint256 tokenId) public view returns(IUniswapV3Pool) {
-        (, , address token0, address token1, uint24 fee, , , , , , , ) = nonfungiblePositionManager.positions(
-            tokenId
-        );
+    function getPoolFromTokenId(uint256 tokenId) public view returns (IUniswapV3Pool) {
+        (, , address token0, address token1, uint24 fee, , , , , , , ) = nonfungiblePositionManager.positions(tokenId);
 
-        PoolAddress.PoolKey memory key = PoolAddress.getPoolKey(
-                token0,
-                token1,
-                fee
-            );
+        PoolAddress.PoolKey memory key = PoolAddress.getPoolKey(token0, token1, fee);
 
-        address poolAddress = PoolAddress.computeAddress(
-            address(factory),
-            key
-            );
+        address poolAddress = PoolAddress.computeAddress(address(factory), key);
 
         return IUniswapV3Pool(poolAddress);
     }
-
 
     function _getAllUniPosition() external view override returns (uint256[] memory) {
         uint256[] memory uniswapNFTsMemory = uniswapNFTs;

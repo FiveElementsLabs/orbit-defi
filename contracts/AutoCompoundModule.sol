@@ -60,12 +60,7 @@ contract AutoCompoundModule {
             if (checkFee) {
                 (amount0, amount1) = positionManager.collectPositionFee(allFee[i].tokenId, address(this));
 
-                (uint256 amount0Ret, uint256 amount1Ret) = positionManager.increasePositionLiquidity(
-                    allFee[i].tokenId,
-                    amount0,
-                    amount1
-                );
-                //swap ??
+                positionManager.increasePositionLiquidity(allFee[i].tokenId, amount0, amount1);
             }
         }
     }
