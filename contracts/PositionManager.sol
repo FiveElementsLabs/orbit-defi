@@ -7,10 +7,14 @@ import '@openzeppelin/contracts/token/ERC721/ERC721Holder.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
+import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
+import '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol';
 import 'hardhat/console.sol';
 import '../interfaces/IVault.sol';
+import "@uniswap/v3-periphery/contracts/libraries/PositionKey.sol";
+import "@uniswap/v3-periphery/contracts/libraries/PositionValue.sol";
 
 /**
  * @title   Position Manager
@@ -27,6 +31,8 @@ contract PositionManager is IVault, ERC721Holder {
 
     address public immutable owner;
     uint256[] private uniswapNFTs;
+    INonfungiblePositionManager public immutable nonfungiblePositionManager;
+    IUniswapV3Factory public immutable factory; 
 
     // details about the uniswap position
     struct Position {
@@ -49,17 +55,15 @@ contract PositionManager is IVault, ERC721Holder {
         uint128 tokensOwed1;
     }
 
-    INonfungiblePositionManager public immutable nonfungiblePositionManager;
-    IUniswapV3Pool public immutable pool;
+  
 
     constructor(
         address userAddress,
-        INonfungiblePositionManager _nonfungiblePositionManager,
-        IUniswapV3Pool _pool
+        INonfungiblePositionManager _nonfungiblePositionManager
     ) {
         owner = userAddress;
         nonfungiblePositionManager = _nonfungiblePositionManager;
-        pool = _pool;
+        factory = IUniswapV3Factory(_nonfungiblePositionManager.factory());
     }
 
     /**
@@ -149,6 +153,8 @@ contract PositionManager is IVault, ERC721Holder {
             tokenId
         );
 
+        IUniswapV3Pool pool = getPoolFromTokenId(tokenId);
+
         (uint160 sqrtRatioX96, , , , , , ) = pool.slot0();
         return
             LiquidityAmounts.getAmountsForLiquidity(
@@ -204,8 +210,9 @@ contract PositionManager is IVault, ERC721Holder {
 
     /**
      * @notice for fees to be updated need to interact with NFT
+     * not public!
      */
-    function updateUncollectedFees(uint256 tokenId) public returns (uint128 tokensOwed0, uint128 tokensOwed1) {
+    function updateUncollectedFees(uint256 tokenId) public {
         INonfungiblePositionManager.DecreaseLiquidityParams memory params = INonfungiblePositionManager
             .DecreaseLiquidityParams({
                 tokenId: tokenId,
@@ -215,15 +222,16 @@ contract PositionManager is IVault, ERC721Holder {
                 deadline: block.timestamp + 1000
             });
         nonfungiblePositionManager.decreaseLiquidity(params);
-        (, , , , , , , , , , tokensOwed0, tokensOwed1) = nonfungiblePositionManager.positions(tokenId);
     }
+    
 
     function collectPositionFee(uint256 tokenId, address recipient)
         external
         override
         returns (uint256 amount0, uint256 amount1)
     {
-        (uint128 feesToken0, uint128 feesToken1) = updateUncollectedFees(tokenId);
+        updateUncollectedFees(tokenId);
+        (, , , , , , , , , , uint128 feesToken0, uint128 feesToken1) = nonfungiblePositionManager.positions(tokenId);
         INonfungiblePositionManager.CollectParams memory params = INonfungiblePositionManager.CollectParams({
             tokenId: tokenId,
             recipient: recipient,
@@ -276,6 +284,9 @@ contract PositionManager is IVault, ERC721Holder {
         (, , , , , int24 tickLower, int24 tickUpper, uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(
             tokenId
         );
+        
+        IUniswapV3Pool pool = getPoolFromTokenId(tokenId);
+
         (uint160 sqrtRatioX96, , , , , , ) = pool.slot0();
 
         uint128 liquidityToDecrease = LiquidityAmounts.getLiquidityForAmounts(
@@ -298,6 +309,28 @@ contract PositionManager is IVault, ERC721Holder {
             });
         nonfungiblePositionManager.decreaseLiquidity(decreaseliquidityparams);
     }
+
+    
+    /*Get pool address from token ID*/
+    function getPoolFromTokenId(uint256 tokenId) public view returns(IUniswapV3Pool) {
+        (, , address token0, address token1, uint24 fee, , , , , , , ) = nonfungiblePositionManager.positions(
+            tokenId
+        );
+
+        PoolAddress.PoolKey memory key = PoolAddress.getPoolKey(
+                token0,
+                token1,
+                fee
+            );
+
+        address poolAddress = PoolAddress.computeAddress(
+            address(factory),
+            key
+            );
+
+        return IUniswapV3Pool(poolAddress);
+    }
+
 
     function _getAllUniPosition() external view override returns (uint256[] memory) {
         uint256[] memory uniswapNFTsMemory = uniswapNFTs;
