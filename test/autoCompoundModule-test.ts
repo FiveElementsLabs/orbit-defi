@@ -6,6 +6,7 @@ const NonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/
 const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json');
 const PositionManagerjson = require('../artifacts/contracts/PositionManager.sol/PositionManager.json');
 const FixturesConst = require('./shared/fixtures');
+const hre = require('hardhat');
 
 import { ethers } from 'hardhat';
 import { tokensFixture, poolFixture, mintSTDAmount, routerFixture } from './shared/fixtures';
@@ -47,6 +48,8 @@ describe('AutoCompoundModule.sol', function () {
   let AutoCompoundModule: AutoCompoundModule; //module for autoCompound features
 
   before(async function () {
+    await hre.network.provider.send('hardhat_reset');
+
     user = await user; //owner of the smart vault, a normal user
     liquidityProvider = await liquidityProvider; //generic address as other users, mint pool liquidity, try to do onlyUser call etc
     trader = await trader; //used for swap

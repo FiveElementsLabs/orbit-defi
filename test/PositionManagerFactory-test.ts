@@ -10,6 +10,7 @@ const PositionManagerContract = require('../artifacts/contracts/PositionManager.
 const NonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json');
 const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json');
 const FixturesConst = require('./shared/fixtures');
+const hre = require('hardhat');
 
 describe('PositionManagerFactory', function () {
   let PositionManagerInstance: Contract;
@@ -22,6 +23,8 @@ describe('PositionManagerFactory', function () {
   let poolI: any;
 
   before(async function () {
+    await hre.network.provider.send('hardhat_reset');
+
     signers = await ethers.getSigners();
     const user = signers[0];
     token0 = await tokensFixture('ETH', 18).then((tokenFix) => tokenFix.tokenFixture);
