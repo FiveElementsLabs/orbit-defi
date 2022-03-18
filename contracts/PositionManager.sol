@@ -81,7 +81,6 @@ contract PositionManager is IVault, ERC721Holder {
      * @notice withdraw uniswap position NFT from the position manager
      */
     function withdrawUniNft(address to, uint256 tokenId) public onlyUser {
-        //internal? users should not know id
         uint256 index = uniswapNFTs.length;
         for (uint256 i = 0; i < uniswapNFTs.length; i++) {
             if (uniswapNFTs[i] == tokenId) {
@@ -113,52 +112,37 @@ contract PositionManager is IVault, ERC721Holder {
      * @notice mint a univ3 position and deposit in manager
      */
     function mintAndDeposit(
-        address token0Address,
-        address token1Address,
-        uint24 fee,
-        int24 tickLower,
-        int24 tickUpper,
-        uint256 amount0Desired,
-        uint256 amount1Desired,
-        uint256 amount0Min,
-        uint256 amount1Min
-    ) external onlyUser {
-        require(amount0Desired > 0 || amount1Desired > 0, 'can mint only nonzero amount');
-        IERC20 token0 = IERC20(token0Address);
-        IERC20 token1 = IERC20(token1Address);
+        INonfungiblePositionManager.MintParams[] memory mintParams,
+        bool _usingPositionManagerBalance
+    ) public onlyUser {
+        //TODO: can be optimized by calculating amount that will be deposited before transferring them to positionManager
+        //require(amount0Desired > 0 || amount1Desired > 0, 'can mint only nonzero amount');
+        for (uint256 i = 0; i < mintParams.length; i++) {
+            IERC20 token0 = IERC20(mintParams[i].token0);
+            IERC20 token1 = IERC20(mintParams[i].token1);
+            if (!_usingPositionManagerBalance) {
+                token0.transferFrom(msg.sender, address(this), mintParams[i].amount0Desired);
+                token1.transferFrom(msg.sender, address(this), mintParams[i].amount1Desired);
+            }
 
-        token0.transferFrom(msg.sender, address(this), amount0Desired);
-        token1.transferFrom(msg.sender, address(this), amount1Desired);
+            //approving token deposited to be utilized by nonFungiblePositionManager
+            _approveToken0(token0);
+            _approveToken1(token1);
 
-        _approveToken0(token0);
-        _approveToken1(token1);
+            (uint256 tokenId, , uint256 amount0Deposited, uint256 amount1Deposited) = nonfungiblePositionManager.mint(
+                mintParams[i]
+            );
 
-        INonfungiblePositionManager.MintParams memory mintParams = INonfungiblePositionManager.MintParams({
-            token0: token0Address, // token0,
-            token1: token1Address, // token1,
-            fee: fee, // fee,
-            tickLower: tickLower, // tickLower,
-            tickUpper: tickUpper, // tickUpper,
-            amount0Desired: amount0Desired, // amount0Desired,
-            amount1Desired: amount1Desired, //amount1Desired,
-            amount0Min: amount0Min, // amount0Min,
-            amount1Min: amount1Min, // amount1Min,
-            recipient: address(this), // recipient
-            deadline: block.timestamp + 1000 //deadline
-        });
-        (uint256 tokenId, , uint256 amount0Deposited, uint256 amount1Deposited) = nonfungiblePositionManager.mint(
-            mintParams
-        );
-        uniswapNFTs.push(tokenId);
+            uniswapNFTs.push(tokenId);
+            emit DepositUni(msg.sender, tokenId);
 
-        if (amount0Desired > amount0Deposited) {
-            token0.transfer(msg.sender, amount0Desired - amount0Deposited);
+            if (mintParams[i].amount0Desired > amount0Deposited && !_usingPositionManagerBalance) {
+                token0.transfer(msg.sender, mintParams[i].amount0Desired - amount0Deposited);
+            }
+            if (mintParams[i].amount1Desired > amount1Deposited && !_usingPositionManagerBalance) {
+                token1.transfer(msg.sender, mintParams[i].amount1Desired - amount1Deposited);
+            }
         }
-        if (amount1Desired > amount1Deposited) {
-            token1.transfer(msg.sender, amount1Desired - amount1Deposited);
-        }
-        //can be optimized by calculating amount that will be deposited before transferring them to positionManager
-        emit DepositUni(msg.sender, tokenId);
     }
 
     /**
@@ -191,28 +175,37 @@ contract PositionManager is IVault, ERC721Holder {
     /**
      * @notice close and burn uniswap position; liquidity must be 0,
      */
-    function closeUniPosition(uint256 tokenId) external payable override onlyUser {
-        (, , , , , , , uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(tokenId);
+    function closeUniPositions(uint256[] memory tokenIds, bool returnTokensToUser) external payable override onlyUser {
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            (, , , , , , , uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(tokenIds[i]);
 
-        INonfungiblePositionManager.DecreaseLiquidityParams memory decreaseliquidityparams = INonfungiblePositionManager
-            .DecreaseLiquidityParams({
-                tokenId: tokenId,
-                liquidity: liquidity,
-                amount0Min: 0,
-                amount1Min: 0,
-                deadline: block.timestamp + 1000
+            INonfungiblePositionManager.DecreaseLiquidityParams
+                memory decreaseliquidityparams = INonfungiblePositionManager.DecreaseLiquidityParams({
+                    tokenId: tokenIds[i],
+                    liquidity: liquidity,
+                    amount0Min: 0,
+                    amount1Min: 0,
+                    deadline: block.timestamp + 1000
+                });
+            nonfungiblePositionManager.decreaseLiquidity(decreaseliquidityparams);
+
+            INonfungiblePositionManager.CollectParams memory collectparams = INonfungiblePositionManager.CollectParams({
+                tokenId: tokenIds[i],
+                recipient: returnTokensToUser ? owner : address(this),
+                amount0Max: 2**128 - 1,
+                amount1Max: 2**128 - 1
             });
-        nonfungiblePositionManager.decreaseLiquidity(decreaseliquidityparams);
+            nonfungiblePositionManager.collect(collectparams);
 
-        INonfungiblePositionManager.CollectParams memory collectparams = INonfungiblePositionManager.CollectParams({
-            tokenId: tokenId,
-            recipient: owner,
-            amount0Max: 2**128 - 1,
-            amount1Max: 2**128 - 1
-        });
-        nonfungiblePositionManager.collect(collectparams);
+            nonfungiblePositionManager.burn(tokenIds[i]);
 
-        nonfungiblePositionManager.burn(tokenId);
+            //delete NFT burned from list
+            for (uint32 j = 0; j < uniswapNFTs.length; j++) {
+                if (uniswapNFTs[j] == tokenIds[i]) {
+                    removeNFTFromList(j);
+                }
+            }
+        }
     }
 
     /**
