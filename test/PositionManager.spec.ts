@@ -1,23 +1,17 @@
 import '@nomiclabs/hardhat-ethers';
 import { expect } from 'chai';
-import { ContractFactory } from 'ethers';
+import { ContractFactory, Contract } from 'ethers';
 const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json');
 const NonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json');
 const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json');
 const PositionManagerjson = require('../artifacts/contracts/PositionManager.sol/PositionManager.json');
-const FixturesConst = require('./shared/newfixtures');
+const FixturesConst = require('./shared/fixtures');
+const hre = require('hardhat');
 
 import { ethers } from 'hardhat';
-import { tokensFixture, poolFixture, mintSTDAmount, routerFixture } from './shared/newfixtures';
+import { tokensFixture, poolFixture, mintSTDAmount, routerFixture } from './shared/fixtures';
 
-import {
-  MockToken,
-  IUniswapV3Pool,
-  IUniswapV3Factory,
-  NonfungiblePositionManager,
-  PositionManager,
-  TestRouter,
-} from '../typechain';
+import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager, TestRouter } from '../typechain';
 
 describe('PositionManager.sol', function () {
   //GLOBAL VARIABLE - USE THIS
@@ -40,12 +34,14 @@ describe('PositionManager.sol', function () {
   //tokenId used globally on all test
   let tokenId: any;
 
-  let Factory: IUniswapV3Factory; // the factory that will deploy all pools
-  let NonFungiblePositionManager: NonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
+  let Factory: Contract; // the factory that will deploy all pools
+  let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
   let PositionManager: PositionManager; //Our smart vault named PositionManager
   let Router: TestRouter; //Our router to perform swap
 
   before(async function () {
+    await hre.network.provider.send('hardhat_reset');
+
     user = await user; //owner of the smart vault, a normal user
     liquidityProvider = await liquidityProvider; //generic address as other users, mint pool liquidity, try to do onlyUser call etc
     trader = await trader; //used for swap
@@ -61,7 +57,7 @@ describe('PositionManager.sol', function () {
       UniswapV3Factoryjson['bytecode'],
       user
     );
-    Factory = (await uniswapFactoryFactory.deploy().then((contract) => contract.deployed())) as IUniswapV3Factory;
+    Factory = (await uniswapFactoryFactory.deploy().then((contract) => contract.deployed())) as Contract;
 
     //deploy first 2 pools
     Pool0 = await poolFixture(tokenEth, tokenUsdc, 3000, Factory).then((poolFix) => poolFix.pool);
@@ -92,7 +88,7 @@ describe('PositionManager.sol', function () {
       Factory.address,
       tokenEth.address,
       NonFungiblePositionManagerDescriptor.address
-    ).then((contract) => contract.deployed())) as NonfungiblePositionManager;
+    ).then((contract) => contract.deployed())) as INonfungiblePositionManager;
 
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactory = await ethers
