@@ -1,6 +1,6 @@
 import '@nomiclabs/hardhat-ethers';
 import { expect } from 'chai';
-import { ContractFactory } from 'ethers';
+import { ContractFactory, Contract } from 'ethers';
 const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json');
 const NonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json');
 const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json');
@@ -13,8 +13,7 @@ import { tokensFixture, poolFixture, mintSTDAmount, routerFixture } from './shar
 import {
   MockToken,
   IUniswapV3Pool,
-  IUniswapV3Factory,
-  NonfungiblePositionManager,
+  INonfungiblePositionManager,
   PositionManager,
   AutoCompoundModule,
   TestRouter,
@@ -41,8 +40,8 @@ describe('AutoCompoundModule.sol', function () {
   //tokenId used globally on all test
   let tokenId: any;
 
-  let Factory: IUniswapV3Factory; // the factory that will deploy all pools
-  let NonFungiblePositionManager: NonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
+  let Factory: Contract; // the factory that will deploy all pools
+  let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
   let PositionManager: PositionManager; //Our smart vault named PositionManager
   let Router: TestRouter; //Our router to perform swaps
   let AutoCompoundModule: AutoCompoundModule; //module for autoCompound features
@@ -63,7 +62,7 @@ describe('AutoCompoundModule.sol', function () {
       UniswapV3Factoryjson['bytecode'],
       user
     );
-    Factory = (await uniswapFactoryFactory.deploy().then((contract) => contract.deployed())) as IUniswapV3Factory;
+    Factory = (await uniswapFactoryFactory.deploy().then((contract) => contract.deployed())) as Contract;
 
     //deploy first 2 pools
     Pool0 = await poolFixture(tokenEth, tokenUsdc, 3000, Factory).then((poolFix) => poolFix.pool);
@@ -94,7 +93,7 @@ describe('AutoCompoundModule.sol', function () {
       Factory.address,
       tokenEth.address,
       NonFungiblePositionManagerDescriptor.address
-    ).then((contract) => contract.deployed())) as NonfungiblePositionManager;
+    ).then((contract) => contract.deployed())) as INonfungiblePositionManager;
 
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactory = await ethers

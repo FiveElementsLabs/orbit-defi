@@ -1,7 +1,7 @@
 import { Contract, ContractReceipt } from 'ethers';
 import { ethers } from 'hardhat';
 import { ContractFactory } from 'ethers';
-import { MockToken, IUniswapV3Pool, IUniswapV3Factory, TestRouter } from '../../typechain';
+import { MockToken, IUniswapV3Pool, TestRouter } from '../../typechain';
 
 const UniswapV3Pool = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Pool.sol/UniswapV3Pool.json');
 export const NonFungiblePositionManagerDescriptorBytecode =
@@ -29,7 +29,7 @@ export async function poolFixture(
   token0: MockToken,
   token1: MockToken,
   fee: number,
-  factory: IUniswapV3Factory
+  factory: Contract
 ): Promise<PoolFixture> {
   const signers = await ethers.getSigners();
 

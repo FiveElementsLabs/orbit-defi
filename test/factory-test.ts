@@ -3,7 +3,7 @@ import '@nomiclabs/hardhat-ethers';
 import { Contract, ContractFactory } from 'ethers';
 import { ethers } from 'hardhat';
 import { tokensFixture, poolFixture } from './shared/fixtures';
-import { MockToken, IUniswapV3Factory, NonfungiblePositionManager } from '../typechain';
+import { MockToken, INonfungiblePositionManager } from '../typechain';
 
 const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json');
 const PositionManagerContract = require('../artifacts/contracts/PositionManager.sol/PositionManager.json');
@@ -17,7 +17,7 @@ describe('PositionManagerFactory', function () {
 
   let owner: any;
   let signers: any;
-  let NonFungiblePositionManager: NonfungiblePositionManager;
+  let NonFungiblePositionManager: INonfungiblePositionManager;
   let token0: MockToken, token1: MockToken;
   let poolI: any;
 
@@ -33,7 +33,7 @@ describe('PositionManagerFactory', function () {
       UniswapV3Factoryjson['bytecode'],
       user
     );
-    const Factory = (await uniswapFactoryFactory.deploy().then((contract) => contract.deployed())) as IUniswapV3Factory;
+    const Factory = (await uniswapFactoryFactory.deploy().then((contract) => contract.deployed())) as Contract;
     poolI = await poolFixture(token0, token1, 3000, Factory).then((poolFix) => poolFix.pool);
 
     await token0.mint(user.address, ethers.utils.parseEther('1000000000000'));
@@ -59,7 +59,7 @@ describe('PositionManagerFactory', function () {
       Factory.address,
       token0.address,
       NonFungiblePositionManagerDescriptor.address
-    ).then((contract) => contract.deployed())) as NonfungiblePositionManager;
+    ).then((contract) => contract.deployed())) as INonfungiblePositionManager;
 
     await token0
       .connect(signers[0])
