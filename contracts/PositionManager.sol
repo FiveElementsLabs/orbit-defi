@@ -319,21 +319,22 @@ contract PositionManager is IVault, ERC721Holder {
     ) public returns (uint256 amount1Out) {
         if (!_usingPositionManagerBalance) {
             token0.transferFrom(msg.sender, address(this), amount0In);
+            console.log('sono');
         }
-        _approveToken(token0);
+        token0.approve(address(swapRouter), 2**256 - 1);
+        console.log('arrivato');
 
-        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
-            tokenIn: address(token0),
-            tokenOut: address(token1),
-            fee: fee,
+        ISwapRouter.ExactInputParams memory swapParams = ISwapRouter.ExactInputParams({
+            path: abi.encodePacked(address(token0), fee, address(token1)),
             recipient: address(this),
             deadline: block.timestamp + 1000,
             amountIn: amount0In,
-            amountOutMinimum: 0,
-            sqrtPriceLimitX96: 0
+            amountOutMinimum: 0
         });
+        console.log('qui!');
 
-        amount1Out = swapRouter.exactInputSingle(params);
+        amount1Out = swapRouter.exactInput(swapParams);
+        console.log('!!');
     }
 
     /*Get pool address from token ID*/

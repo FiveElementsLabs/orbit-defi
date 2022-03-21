@@ -473,6 +473,17 @@ describe('PositionManager.sol', function () {
   });
 
   describe('PositionManager - swap', function () {
-    it('should correctly perform a swap', async function () {});
+    it('should correctly perform a swap', async function () {
+      const balancePre = await ethers.provider.getBalance(user.address);
+      console.log(balancePre);
+      const amount1Out = await PositionManager.connect(user).swap(
+        tokenEth.address,
+        tokenUsdc.address,
+        3000,
+        '0x' + (1e10).toString(16),
+        false
+      );
+      console.log(amount1Out);
+    });
   });
 });
