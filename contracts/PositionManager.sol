@@ -126,8 +126,8 @@ contract PositionManager is IVault, ERC721Holder {
             }
 
             //approving token deposited to be utilized by nonFungiblePositionManager
-            _approveToken0(token0);
-            _approveToken1(token1);
+            _approveToken(token0);
+            _approveToken(token1);
 
             (uint256 tokenId, , uint256 amount0Deposited, uint256 amount1Deposited) = nonfungiblePositionManager.mint(
                 mintParams[i]
@@ -251,8 +251,8 @@ contract PositionManager is IVault, ERC721Holder {
 
         (IERC20 token0, IERC20 token1) = _getTokenAddress(tokenId);
 
-        _approveToken0(token0);
-        _approveToken1(token1);
+        _approveToken(token0);
+        _approveToken(token1);
 
         token0.transferFrom(msg.sender, address(this), amount0Desired);
         token1.transferFrom(msg.sender, address(this), amount1Desired);
@@ -337,14 +337,9 @@ contract PositionManager is IVault, ERC721Holder {
         return uniswapNFTsMemory;
     }
 
-    function _approveToken0(IERC20 token0) private {
-        if (token0.allowance(address(this), address(nonfungiblePositionManager)) == 0)
-            token0.approve(address(nonfungiblePositionManager), 2**256 - 1);
-    }
-
-    function _approveToken1(IERC20 token1) private {
-        if (token1.allowance(address(this), address(nonfungiblePositionManager)) == 0)
-            token1.approve(address(nonfungiblePositionManager), 2**256 - 1);
+    function _approveToken(IERC20 token) private {
+        if (token.allowance(address(this), address(nonfungiblePositionManager)) == 0)
+            token.approve(address(nonfungiblePositionManager), 2**256 - 1);
     }
 
     function _getTokenAddress(uint256 tokenId) private view returns (IERC20 token0, IERC20 token1) {
