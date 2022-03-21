@@ -13,9 +13,9 @@ contract IdleLiquidityModule {
     INonfungiblePositionManager public immutable nonFungiblePositionManager;
     address public immutable uniswapV3FactoryAddress;
 
-    constructor(INonfungiblePositionManager _nonfungiblePositionManager, address _uniswapV3Factory) {
+    constructor(INonfungiblePositionManager _nonfungiblePositionManager) {
         nonFungiblePositionManager = _nonfungiblePositionManager;
-        uniswapV3FactoryAddress = _uniswapV3Factory;
+        uniswapV3FactoryAddress = _nonfungiblePositionManager.factory();
     }
 
     //returns distance from position (in ticks), if output is negative => position is out of range

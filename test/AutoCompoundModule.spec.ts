@@ -114,7 +114,7 @@ describe('AutoCompoundModule.sol', function () {
     //deploy AutoCompoundModule
     AutoCompoundModule = (await ethers
       .getContractFactory('AutoCompoundModule')
-      .then((contract) => contract.deploy(33).then((deploy) => deploy.deployed()))) as AutoCompoundModule;
+      .then((contract) => contract.deploy().then((deploy) => deploy.deployed()))) as AutoCompoundModule;
 
     //APPROVE
     //recipient: NonFungiblePositionManager - spender: user

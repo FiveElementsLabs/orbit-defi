@@ -12,7 +12,8 @@ import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 contract AutoCompoundModule {
     using SafeMath for uint256;
 
-    uint256 uncollectedFeesThreshold; //used to decide if fees should be collected
+    // TODO: make user choose threshold from pos manager
+    uint256 uncollectedFeesThreshold = 33; //used to decide if fees should be collected
 
     struct VaultFee {
         uint256 tokenId;
@@ -20,8 +21,7 @@ contract AutoCompoundModule {
         uint128 feeToken1;
     }
 
-    constructor(uint256 _uncollectedFeesThreshold) {
-        uncollectedFeesThreshold = _uncollectedFeesThreshold;
+    constructor() {
     }
 
     function checkForAllUncollectedFees(IVault positionManager) public view returns (VaultFee[] memory) {

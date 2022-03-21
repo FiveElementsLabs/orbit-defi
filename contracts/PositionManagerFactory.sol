@@ -6,7 +6,6 @@ import './PositionManager.sol';
 
 contract PositionManagerFactory {
     address[] public positionManagers;
-
     event PositionManagerCreated(
         address indexed contractAddress,
         address userAddress,
@@ -27,4 +26,5 @@ contract PositionManagerFactory {
 
         return positionManagers;
     }
+
 }
