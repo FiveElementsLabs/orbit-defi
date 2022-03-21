@@ -9,22 +9,19 @@ contract PositionManagerFactory {
     event PositionManagerCreated(
         address indexed contractAddress,
         address userAddress,
-        address nonfungiblePositionManager,
-        address pool
-    );
+        address nonfungiblePositionManager
+        );
 
     function create(
         address userAddress,
-        INonfungiblePositionManager _nonfungiblePositionManager,
-        IUniswapV3Pool _pool
+        INonfungiblePositionManager _nonfungiblePositionManager
     ) public returns (PositionManager[] memory) {
-        PositionManager manager = new PositionManager(userAddress, _nonfungiblePositionManager, _pool);
+        PositionManager manager = new PositionManager(userAddress, _nonfungiblePositionManager);
         positionManagers.push(manager);
         emit PositionManagerCreated(
             address(manager),
             userAddress,
-            address(_nonfungiblePositionManager),
-            address(_pool)
+            address(_nonfungiblePositionManager)
         );
 
         return positionManagers;

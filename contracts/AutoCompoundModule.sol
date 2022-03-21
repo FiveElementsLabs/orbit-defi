@@ -60,12 +60,7 @@ contract AutoCompoundModule {
             if (checkFee) {
                 (amount0, amount1) = positionManager.collectPositionFee(allFee[i].tokenId, address(this));
 
-                (uint256 amount0Ret, uint256 amount1Ret) = positionManager.increasePositionLiquidity(
-                    allFee[i].tokenId,
-                    amount0,
-                    amount1
-                );
-                //swap ??
+                positionManager.increasePositionLiquidity(allFee[i].tokenId, amount0, amount1);
             }
         }
     }
@@ -81,7 +76,16 @@ contract AutoCompoundModule {
 
     function _feeNeedToBeReinvested(IVault positionManager, VaultFee memory feeXToken) private view returns (bool) {
         (uint256 token0, uint256 token1) = positionManager.getPositionBalance(feeXToken.tokenId);
-        return Math.min(token0.div(feeXToken.feeToken0), token1.div(feeXToken.feeToken1)) < 33;
+        uint256 token0OverFees = 2**256 - 1;
+        uint256 token1OverFees = 2**256 - 1;
+        if (feeXToken.feeToken0 > 0) {
+            token0OverFees = token0.div(feeXToken.feeToken0);
+        }
+        if (feeXToken.feeToken1 > 0) {
+            token1OverFees = token1.div(feeXToken.feeToken1);
+        }
+
+        return Math.min(token0OverFees, token1OverFees) < uncollectedFeesThreshold;
     }
 
     function _approveToken(IERC20 token, IVault positionManager) private {

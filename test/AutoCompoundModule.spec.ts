@@ -1,10 +1,6 @@
 import '@nomiclabs/hardhat-ethers';
 import { expect } from 'chai';
-<<<<<<< HEAD
-import { ContractFactory, Contract, BigNumber } from 'ethers';
-=======
 import { ContractFactory, Contract } from 'ethers';
->>>>>>> ae7eb1b43691ca024a990bef1748cb2e4facbb5c
 const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json');
 const NonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json');
 const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json');
@@ -15,10 +11,16 @@ const hre = require('hardhat');
 import { ethers } from 'hardhat';
 import { tokensFixture, poolFixture, mintSTDAmount, routerFixture } from './shared/fixtures';
 
-import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager, TestRouter } from '../typechain';
-import { kMaxLength } from 'buffer';
+import {
+  MockToken,
+  IUniswapV3Pool,
+  INonfungiblePositionManager,
+  PositionManager,
+  AutoCompoundModule,
+  TestRouter,
+} from '../typechain';
 
-describe('IdleLiquidityModule.sol', function () {
+describe('AutoCompoundModule.sol', function () {
   //GLOBAL VARIABLE - USE THIS
   let user: any = ethers.getSigners().then(async (signers) => {
     return signers[0];
@@ -42,8 +44,8 @@ describe('IdleLiquidityModule.sol', function () {
   let Factory: Contract; // the factory that will deploy all pools
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
   let PositionManager: PositionManager; //Our smart vault named PositionManager
-  let Router: TestRouter; //Our router to perform swap
-  let IdleLiquidityModule: Contract;
+  let Router: TestRouter; //Our router to perform swaps
+  let AutoCompoundModule: AutoCompoundModule; //module for autoCompound features
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
@@ -106,14 +108,13 @@ describe('IdleLiquidityModule.sol', function () {
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
 
+    //deploy router
     Router = await routerFixture().then((RFixture) => RFixture.ruoterDeployFixture);
 
-    //deploy IdleLiquidityModule
-    IdleLiquidityModule = await ethers
-      .getContractFactory('IdleLiquidityModule')
-      .then((contract) =>
-        contract.deploy(NonFungiblePositionManager.address, Factory.address).then((deploy) => deploy.deployed())
-      );
+    //deploy AutoCompoundModule
+    AutoCompoundModule = (await ethers
+      .getContractFactory('AutoCompoundModule')
+      .then((contract) => contract.deploy(33).then((deploy) => deploy.deployed()))) as AutoCompoundModule;
 
     //APPROVE
     //recipient: NonFungiblePositionManager - spender: user
@@ -149,17 +150,15 @@ describe('IdleLiquidityModule.sol', function () {
     await tokenUsdc.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
     await tokenDai.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
     /* //recipient: NonFungiblePositionManager - spender: PositionManager
-        await tokenEth
-          .connect(PositionManager.address)
-          .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'));
-        await tokenUsdc
-          .connect(PositionManager.address)
-          .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'));
-        await tokenDai
-          .connect(PositionManager.address)
-          .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000')); */
-
-    await NonFungiblePositionManager.setApprovalForAll(PositionManager.address, true);
+    await tokenEth
+      .connect(PositionManager.address)
+      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'));
+    await tokenUsdc
+      .connect(PositionManager.address)
+      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'));
+    await tokenDai
+      .connect(PositionManager.address)
+      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000')); */
 
     // give pool some liquidity
     await NonFungiblePositionManager.connect(liquidityProvider).mint(
@@ -203,86 +202,87 @@ describe('IdleLiquidityModule.sol', function () {
       .then((mintReceipt: any) => mintReceipt.events[mintReceipt.events.length - 1].args.tokenId);
   });
 
-  describe('IdleLiquidityModule - checkDistanceFromRange', function () {
-    it('should return correct distance from range', async function () {
-      // mint a position out of range
-      const mintTx = await PositionManager.connect(user).mintAndDeposit(
-        [
-          {
-            token0: tokenEth.address,
-            token1: tokenUsdc.address,
-            fee: 3000,
-            tickLower: 0 + 60 * 1,
-            tickUpper: 0 + 60 * 5,
-            amount0Desired: '0x' + (1e23).toString(16),
-            amount1Desired: '0x' + (1e23).toString(16),
-            amount0Min: 0,
-            amount1Min: 0,
-            recipient: PositionManager.address,
-            deadline: Date.now(),
-          },
-        ],
-        false
-      );
+  describe('AutoCompoundModule - checkForAllUncollectedFees', function () {
+    it('should return the amount of fees', async function () {
+      const token0Dep = 1e18;
+      const token1Dep = 1e18;
 
-      const positions = await PositionManager._getAllUniPosition();
-      const tokenId2 = positions[positions.length - 1];
-      const distanceAfterMint = await IdleLiquidityModule.checkDistanceFromRange(tokenId2);
-      //position should be out of range
-      expect(distanceAfterMint).to.lt(0);
+      const tx2 = await NonFungiblePositionManager.connect(user).mint({
+        token0: tokenEth.address,
+        token1: tokenUsdc.address,
+        fee: 3000,
+        tickLower: 0 - 60 * 1,
+        tickUpper: 0 + 60 * 1,
+        amount0Desired: '0x' + token0Dep.toString(16),
+        amount1Desired: '0x' + token1Dep.toString(16),
+        amount0Min: 0,
+        amount1Min: 0,
+        recipient: user.address,
+        deadline: Date.now() + 1000,
+      });
 
-      // Do a trade to change tick
-      await Router.connect(trader).swap(Pool0.address, false, '0x' + (4e23).toString(16));
-      const distanceAfterTrade = await IdleLiquidityModule.checkDistanceFromRange(tokenId2);
-      //distance from range should now be greater than 0 (position in range)
-      expect(distanceAfterTrade).to.gt(0);
+      const receipt2: any = await tx2.wait();
+      await NonFungiblePositionManager.setApprovalForAll(PositionManager.address, true);
+      await PositionManager.depositUniNft(user.address, [
+        tokenId,
+        receipt2.events[receipt2.events.length - 1].args.tokenId,
+      ]);
+
+      const res = await AutoCompoundModule.checkForAllUncollectedFees(PositionManager.address);
     });
   });
 
-  describe('IdleLiquidityModule - swap', function () {
-    it('test swap', async function () {
-      //console.log(await NonFungiblePositionManager.positions(tokenId));
+  describe('AutoCompoundModule - collectFees', function () {
+    it('should collect all the fees to be reinvested', async function () {
+      const token0Dep = 1e27;
+      const token1Dep = 1e27;
+      const tx2 = await NonFungiblePositionManager.connect(user).mint({
+        token0: tokenEth.address,
+        token1: tokenUsdc.address,
+        fee: 3000,
+        tickLower: 0 - 60 * 1,
+        tickUpper: 0 + 60 * 1,
+        amount0Desired: '0x' + token0Dep.toString(16),
+        amount1Desired: '0x' + token1Dep.toString(16),
+        amount0Min: 0,
+        amount1Min: 0,
+        recipient: user.address,
+        deadline: Date.now() + 1000,
+      });
 
-      /*  for (let i = 0; i < 100; i++) {
-        await Router.connect(trader).swap(Pool0.address, false, '0x' + (4e23).toString(16));
-      } */
+      const receipt2: any = await tx2.wait();
+      const tokenId2 = receipt2.events[receipt2.events.length - 1].args.tokenId;
 
-      let ratio = await IdleLiquidityModule.getRatioFromRange(-60000, 60000, tokenEth.address, tokenUsdc.address, 3000);
-      console.log(ratio);
+      await NonFungiblePositionManager.setApprovalForAll(PositionManager.address, true);
+      await PositionManager.depositUniNft(user.address, [tokenId, tokenId2]);
 
-      /*  console.log('ratio');
-      ratio = ratio / 1e18;
-      console.log(ratio);
+      let positionBeforeTrade = await NonFungiblePositionManager.positions(tokenId2);
+      expect(positionBeforeTrade.tokensOwed0).to.be.equal(0);
+      expect(positionBeforeTrade.tokensOwed1).to.be.equal(0);
 
-      const x0 = BigNumber.from('0x' + (2000).toString(16));
-      const y0 = BigNumber.from('0x' + (1000).toString(16));
+      let sign;
+      // Do some trades to accrue fees
+      for (let i = 0; i < 20; i++) {
+        // @ts-ignore
+        sign = i % 2 == 0;
+        await Router.connect(trader).swap(Pool0.address, sign, '0x' + (2e27).toString(16));
+        //({ tick, sqrtPriceX96 } = await poolI.slot0());
+      }
 
-      const sqrtPriceX96: BigNumber = await Pool0.slot0().then((r) => r.sqrtPriceX96);
-      const pow = BigNumber.from('0x2').pow(96);
-      const value: BigNumber = x0.mul(Math.pow(sqrtPriceX96.div(pow).toNumber(), 2)).add(y0);
+      await PositionManager.updateUncollectedFees(tokenId);
+      await PositionManager.updateUncollectedFees(tokenId2);
 
-      console.log('value');
-      console.log(value);
+      let positionAfterTrade = await NonFungiblePositionManager.positions(tokenId2);
 
-      const y = (ratio / (ratio + 1)) * value.toNumber();
-      console.log('y');
-      console.log(y);
+      expect(positionAfterTrade.tokensOwed0).to.gt(0);
+      expect(positionAfterTrade.tokensOwed1).to.gt(0);
 
-      const toSwapY = y0.toNumber() - y;
-      console.log('toSwapY');
-      console.log(toSwapY);
- */
-      const res = await IdleLiquidityModule.swap(
-        '0x' + (2000).toString(16),
-        '0x' + (1000).toString(16),
-        tokenEth.address,
-        tokenUsdc.address,
-        3000,
-        -60000,
-        60000
-      );
+      await AutoCompoundModule.collectFees(PositionManager.address, tokenEth.address, tokenUsdc.address);
 
-      console.log(res);
+      let position = await NonFungiblePositionManager.positions(tokenId2);
+
+      expect(position.tokensOwed0).to.be.equal(0);
+      expect(position.tokensOwed1).to.be.equal(0);
     });
   });
 });
