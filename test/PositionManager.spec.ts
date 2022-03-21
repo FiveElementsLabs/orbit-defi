@@ -90,17 +90,18 @@ describe('PositionManager.sol', function () {
       NonFungiblePositionManagerDescriptor.address
     ).then((contract) => contract.deployed())) as INonfungiblePositionManager;
 
+    //deploy router
+    Router = await routerFixture().then((RFixture) => RFixture.ruoterDeployFixture);
+
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactory = await ethers
       .getContractFactory('PositionManagerFactory')
       .then((contract) => contract.deploy().then((deploy) => deploy.deployed()));
 
-    await PositionManagerFactory.create(user.address, NonFungiblePositionManager.address);
+    await PositionManagerFactory.create(user.address, NonFungiblePositionManager.address, Router.address);
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
-
-    Router = await routerFixture().then((RFixture) => RFixture.ruoterDeployFixture);
 
     //APPROVE
     //recipient: NonFungiblePositionManager - spender: user
@@ -469,5 +470,9 @@ describe('PositionManager.sol', function () {
       await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
       await expect(PositionManager.connect(trader).closeUniPositions([tokenId], true)).to.be.reverted;
     });
+  });
+
+  describe('PositionManager - swap', function () {
+    it('should correctly perform a swap', async function () {});
   });
 });

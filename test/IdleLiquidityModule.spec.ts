@@ -1,10 +1,6 @@
 import '@nomiclabs/hardhat-ethers';
 import { expect } from 'chai';
-<<<<<<< HEAD
 import { ContractFactory, Contract, BigNumber } from 'ethers';
-=======
-import { ContractFactory, Contract } from 'ethers';
->>>>>>> ae7eb1b43691ca024a990bef1748cb2e4facbb5c
 const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json');
 const NonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json');
 const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json');
@@ -96,17 +92,18 @@ describe('IdleLiquidityModule.sol', function () {
       NonFungiblePositionManagerDescriptor.address
     ).then((contract) => contract.deployed())) as INonfungiblePositionManager;
 
+    //deploy router
+    Router = await routerFixture().then((RFixture) => RFixture.ruoterDeployFixture);
+
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactory = await ethers
       .getContractFactory('PositionManagerFactory')
       .then((contract) => contract.deploy().then((deploy) => deploy.deployed()));
 
-    await PositionManagerFactory.create(user.address, NonFungiblePositionManager.address);
+    await PositionManagerFactory.create(user.address, NonFungiblePositionManager.address, Router.address);
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
-
-    Router = await routerFixture().then((RFixture) => RFixture.ruoterDeployFixture);
 
     //deploy IdleLiquidityModule
     IdleLiquidityModule = await ethers
@@ -241,48 +238,16 @@ describe('IdleLiquidityModule.sol', function () {
 
   describe('IdleLiquidityModule - swap', function () {
     it('test swap', async function () {
-      //console.log(await NonFungiblePositionManager.positions(tokenId));
-
-      /*  for (let i = 0; i < 100; i++) {
-        await Router.connect(trader).swap(Pool0.address, false, '0x' + (4e23).toString(16));
-      } */
-
-      let ratio = await IdleLiquidityModule.getRatioFromRange(-60000, 60000, tokenEth.address, tokenUsdc.address, 3000);
-      console.log(ratio);
-
-      /*  console.log('ratio');
-      ratio = ratio / 1e18;
-      console.log(ratio);
-
-      const x0 = BigNumber.from('0x' + (2000).toString(16));
-      const y0 = BigNumber.from('0x' + (1000).toString(16));
-
-      const sqrtPriceX96: BigNumber = await Pool0.slot0().then((r) => r.sqrtPriceX96);
-      const pow = BigNumber.from('0x2').pow(96);
-      const value: BigNumber = x0.mul(Math.pow(sqrtPriceX96.div(pow).toNumber(), 2)).add(y0);
-
-      console.log('value');
-      console.log(value);
-
-      const y = (ratio / (ratio + 1)) * value.toNumber();
-      console.log('y');
-      console.log(y);
-
-      const toSwapY = y0.toNumber() - y;
-      console.log('toSwapY');
-      console.log(toSwapY);
- */
-      const res = await IdleLiquidityModule.swap(
+      const tickPool = await Pool1.slot0().then((r) => r.tick);
+      console.log('TickPool', tickPool);
+      const yToSwap = await IdleLiquidityModule.amount1toSwap(
+        tickPool,
+        -6000,
+        +6000,
         '0x' + (2000).toString(16),
-        '0x' + (1000).toString(16),
-        tokenEth.address,
-        tokenUsdc.address,
-        3000,
-        -60000,
-        60000
+        '0x' + (1000).toString(16)
       );
-
-      console.log(res);
+      console.log('yToSwap', yToSwap);
     });
   });
 });

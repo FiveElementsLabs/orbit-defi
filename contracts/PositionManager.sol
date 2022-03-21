@@ -15,6 +15,7 @@ import 'hardhat/console.sol';
 import '../interfaces/IVault.sol';
 import '@uniswap/v3-periphery/contracts/libraries/PositionKey.sol';
 import '@uniswap/v3-periphery/contracts/libraries/PositionValue.sol';
+import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 
 /**
  * @title   Position Manager
@@ -33,6 +34,7 @@ contract PositionManager is IVault, ERC721Holder {
     uint256[] private uniswapNFTs;
     INonfungiblePositionManager public immutable nonfungiblePositionManager;
     IUniswapV3Factory public immutable factory;
+    ISwapRouter public immutable swapRouter;
 
     // details about the uniswap position
     struct Position {
@@ -55,10 +57,15 @@ contract PositionManager is IVault, ERC721Holder {
         uint128 tokensOwed1;
     }
 
-    constructor(address userAddress, INonfungiblePositionManager _nonfungiblePositionManager) {
+    constructor(
+        address userAddress,
+        INonfungiblePositionManager _nonfungiblePositionManager,
+        ISwapRouter _swapRouter
+    ) {
         owner = userAddress;
         nonfungiblePositionManager = _nonfungiblePositionManager;
         factory = IUniswapV3Factory(_nonfungiblePositionManager.factory());
+        swapRouter = _swapRouter;
     }
 
     /**
@@ -302,25 +309,33 @@ contract PositionManager is IVault, ERC721Holder {
         nonfungiblePositionManager.decreaseLiquidity(decreaseliquidityparams);
     }
 
-    function swapToken(
+    //swaps token0 in change of token1
+    function swap(
         IERC20 token0,
-        uint256 amount0Desired,
         IERC20 token1,
-        uint256 amount1Desired
-    ) external view returns (uint256, uint256) {
-        (uint160 sqrtPriceX96, , , , , , ) = pool.slot0();
+        uint24 fee,
+        uint256 amount0In,
+        bool _usingPositionManagerBalance
+    ) public returns (uint256 amount1Out) {
+        if (!_usingPositionManagerBalance) {
+            token0.transferFrom(msg.sender, address(this), amount0In);
+        }
+        _approveToken(token0);
 
-        //
-        uint256 h = pool.maxLiquidityPerTick();
-        console.log(h);
+        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
+            tokenIn: address(token0),
+            tokenOut: address(token1),
+            fee: fee,
+            recipient: address(this),
+            deadline: block.timestamp + 1000,
+            amountIn: amount0In,
+            amountOutMinimum: 0,
+            sqrtPriceLimitX96: 0
+        });
 
-        /* pool.swap(
-            address(this),
-            swapAmount > 0,
-            swapAmount > 0 ? swapAmount : -swapAmount,
-            sqrtPriceX96,
-            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-        ); */
+        amount1Out = swapRouter.exactInputSingle(params);
+    }
+
     /*Get pool address from token ID*/
     function getPoolFromTokenId(uint256 tokenId) public view returns (IUniswapV3Pool) {
         (, , address token0, address token1, uint24 fee, , , , , , , ) = nonfungiblePositionManager.positions(tokenId);
