@@ -30,9 +30,15 @@ contract PositionManager is IVault, ERC721Holder {
     event WithdrawUni(address to, uint256 tokenId);
 
     address public immutable owner;
+    address public immutable gov;
     uint256[] private uniswapNFTs;
     INonfungiblePositionManager public immutable nonfungiblePositionManager;
     IUniswapV3Factory public immutable factory;
+
+    struct Module {
+        address moduleAddress;
+        bool    activated;
+    }
 
     // details about the uniswap position
     struct Position {
@@ -59,12 +65,13 @@ contract PositionManager is IVault, ERC721Holder {
         owner = userAddress;
         nonfungiblePositionManager = _nonfungiblePositionManager;
         factory = IUniswapV3Factory(_nonfungiblePositionManager.factory());
+        gov = msg.sender;
     }
 
     /**
      * @notice add uniswap position NFT to the position manager
      */
-    function depositUniNft(address from, uint256[] calldata tokenIds) external override onlyUser {
+    function depositUniNft(address from, uint256[] calldata tokenIds) external override onlyOwner {
         for (uint32 i = 0; i < tokenIds.length; i++) {
             nonfungiblePositionManager.safeTransferFrom(from, address(this), tokenIds[i], '0x0');
             uniswapNFTs.push(tokenIds[i]);
@@ -75,7 +82,7 @@ contract PositionManager is IVault, ERC721Holder {
     /**
      * @notice withdraw uniswap position NFT from the position manager
      */
-    function withdrawUniNft(address to, uint256 tokenId) public onlyUser {
+    function withdrawUniNft(address to, uint256 tokenId) public onlyOwner {
         uint256 index = uniswapNFTs.length;
         for (uint256 i = 0; i < uniswapNFTs.length; i++) {
             if (uniswapNFTs[i] == tokenId) {
@@ -96,7 +103,7 @@ contract PositionManager is IVault, ERC721Holder {
     }
 
     //wrapper for withdraw of all univ3positions in manager
-    function withdrawAllUniNft(address to) external override onlyUser {
+    function withdrawAllUniNft(address to) external override onlyOwner {
         require(uniswapNFTs.length > 0, 'no NFT to withdraw');
         while (uniswapNFTs.length > 0) {
             withdrawUniNft(to, uniswapNFTs[0]);
@@ -109,7 +116,7 @@ contract PositionManager is IVault, ERC721Holder {
     function mintAndDeposit(
         INonfungiblePositionManager.MintParams[] memory mintParams,
         bool _usingPositionManagerBalance
-    ) public onlyUser {
+    ) public onlyOwner {
         //TODO: can be optimized by calculating amount that will be deposited before transferring them to positionManager
         //require(amount0Desired > 0 || amount1Desired > 0, 'can mint only nonzero amount');
         for (uint256 i = 0; i < mintParams.length; i++) {
@@ -170,7 +177,7 @@ contract PositionManager is IVault, ERC721Holder {
     /**
      * @notice close and burn uniswap position; liquidity must be 0,
      */
-    function closeUniPositions(uint256[] memory tokenIds, bool returnTokensToUser) external payable override onlyUser {
+    function closeUniPositions(uint256[] memory tokenIds, bool returnTokensToUser) external payable override onlyOwner {
         for (uint256 i = 0; i < tokenIds.length; i++) {
             (, , , , , , , uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(tokenIds[i]);
 
@@ -272,7 +279,7 @@ contract PositionManager is IVault, ERC721Holder {
         uint256 tokenId,
         uint256 amount0Desired,
         uint256 amount1Desired
-    ) external payable onlyUser {
+    ) external payable onlyOwner {
         (, , , , , int24 tickLower, int24 tickUpper, uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(
             tokenId
         );
@@ -331,8 +338,44 @@ contract PositionManager is IVault, ERC721Holder {
         token1 = IERC20(token1address);
     }
 
-    modifier onlyUser() {
-        require(msg.sender == owner, 'Only owner can call this function');
+
+    // Modules activation modifier
+    /*
+    function update(uint i, address moduleAddress, bool activated) external onlyOwnerOrGov {
+        Module storage module = modules[i];
+        module.moduleAddress  = moduleAddress;
+        module.activated      = activated;
+    }*/
+
+    //User and governance modifiers
+    
+    modifier onlyOwner() {
+        require(msg.sender == owner, 'Only owner');
         _;
     }
+    /*
+    modifier onlyGov() {
+        require(msg.sender == gov, 'Only gov');
+        _;
+    }
+
+    modifier onlyOwnerOrGov {
+        require((msg.sender == gov) || (msg.sender == owner), 'Only owner or gov');
+        _;
+    }
+
+    modifier onlyModules(uint index) {
+        require(msg.sender == modules[index].moduleAddress, 'Only modules');
+        _;
+    }
+
+    modifier onlyModulesOrOwner(uint index) {
+        require((msg.sender == modules[index].moduleAddress || msg.sender == owner), "Only modules or owner");
+        _;
+    }
+
+    modifier moduleActivated(uint index) {
+        require(modules[index].activated, "Module should be activated");
+        _;
+    }*/
 }
