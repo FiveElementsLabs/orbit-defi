@@ -96,7 +96,7 @@ contract PositionManager is IVault, ERC721Holder {
         emit WithdrawUni(to, tokenId);
     }
 
-    //remove awareness of nft at index index
+    //remove awareness of nft at index
     function removeNFTFromList(uint256 index) internal {
         uniswapNFTs[index] = uniswapNFTs[uniswapNFTs.length - 1];
         uniswapNFTs.pop();
@@ -274,7 +274,6 @@ contract PositionManager is IVault, ERC721Holder {
     }
 
     //decrease liquidity and return the amount of token withdrawed in tokensOwed0 and tokensOwed1 - the fees
-
     function decreasePositionLiquidity(
         uint256 tokenId,
         uint256 amount0Desired,
