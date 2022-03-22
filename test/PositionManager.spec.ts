@@ -317,7 +317,7 @@ describe('PositionManager.sol', function () {
       await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
 
       // Do some trades to accrue fees
-      for (let i = 0; i < 20; i++) {
+      for (let i = 0; i < 10; i++) {
         const res = await SwapRouter.connect(trader).exactInputSingle([
           i % 2 === 0 ? tokenEth.address : tokenUsdc.address,
           i % 2 === 0 ? tokenUsdc.address : tokenEth.address,
@@ -557,8 +557,8 @@ describe('PositionManager.sol', function () {
         positions[positions.length - 1]
       );
 
-      expect(positionBalance0.toNumber()).to.be.closeTo(amount0Desired, 1e2);
-      expect(positionBalance1.toNumber()).to.be.closeTo(amount1Desired, 1e2);
+      expect(positionBalance0.toNumber()).to.be.closeTo(amount0Desired, 5e3);
+      expect(positionBalance1.toNumber()).to.be.closeTo(amount1Desired, 5e3);
     });
   });
 });
