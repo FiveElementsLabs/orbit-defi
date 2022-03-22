@@ -1,6 +1,6 @@
 import '@nomiclabs/hardhat-ethers';
 import { expect } from 'chai';
-import { ContractFactory, Contract } from 'ethers';
+import { ContractFactory, Contract, BigNumber } from 'ethers';
 const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json');
 const NonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json');
 const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json');
@@ -12,6 +12,7 @@ import { ethers } from 'hardhat';
 import { tokensFixture, poolFixture, mintSTDAmount, routerFixture } from './shared/fixtures';
 
 import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager, TestRouter } from '../typechain';
+import { kMaxLength } from 'buffer';
 
 describe('IdleLiquidityModule.sol', function () {
   //GLOBAL VARIABLE - USE THIS
@@ -91,17 +92,18 @@ describe('IdleLiquidityModule.sol', function () {
       NonFungiblePositionManagerDescriptor.address
     ).then((contract) => contract.deployed())) as INonfungiblePositionManager;
 
+    //deploy router
+    Router = await routerFixture().then((RFixture) => RFixture.ruoterDeployFixture);
+
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactory = await ethers
       .getContractFactory('PositionManagerFactory')
       .then((contract) => contract.deploy().then((deploy) => deploy.deployed()));
 
-    await PositionManagerFactory.create(user.address, NonFungiblePositionManager.address);
+    await PositionManagerFactory.create(user.address, NonFungiblePositionManager.address, Router.address);
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
-
-    Router = await routerFixture().then((RFixture) => RFixture.ruoterDeployFixture);
 
     //deploy IdleLiquidityModule
     IdleLiquidityModule = await ethers

@@ -5,6 +5,7 @@ const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/Unisw
 const NonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json');
 const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json');
 const PositionManagerjson = require('../artifacts/contracts/PositionManager.sol/PositionManager.json');
+const SwapRouterjson = require('@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json');
 const FixturesConst = require('./shared/fixtures');
 const hre = require('hardhat');
 
@@ -38,6 +39,7 @@ describe('PositionManager.sol', function () {
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
   let PositionManager: PositionManager; //Our smart vault named PositionManager
   let Router: TestRouter; //Our router to perform swap
+  let SwapRouter: Contract;
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
@@ -90,17 +92,22 @@ describe('PositionManager.sol', function () {
       NonFungiblePositionManagerDescriptor.address
     ).then((contract) => contract.deployed())) as INonfungiblePositionManager;
 
+    //deploy router
+    const SwapRouterFactory = new ContractFactory(SwapRouterjson['abi'], SwapRouterjson['bytecode'], user);
+    //Router = await routerFixture().then((RFixture) => RFixture.ruoterDeployFixture);
+    SwapRouter = (await SwapRouterFactory.deploy(Factory.address, tokenEth.address).then((contract) =>
+      contract.deployed()
+    )) as Contract;
+
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactory = await ethers
       .getContractFactory('PositionManagerFactory')
       .then((contract) => contract.deploy().then((deploy) => deploy.deployed()));
 
-    await PositionManagerFactory.create(user.address, NonFungiblePositionManager.address);
+    await PositionManagerFactory.create(user.address, NonFungiblePositionManager.address, SwapRouter.address);
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
-
-    Router = await routerFixture().then((RFixture) => RFixture.ruoterDeployFixture);
 
     //APPROVE
     //recipient: NonFungiblePositionManager - spender: user
@@ -128,9 +135,9 @@ describe('PositionManager.sol', function () {
     await tokenUsdc.connect(user).approve(PositionManager.address, ethers.utils.parseEther('1000000000000'));
     await tokenDai.connect(user).approve(PositionManager.address, ethers.utils.parseEther('1000000000000'));
     //recipient: Router - spender: trader
-    await tokenEth.connect(trader).approve(Router.address, ethers.utils.parseEther('1000000000000'));
-    await tokenUsdc.connect(trader).approve(Router.address, ethers.utils.parseEther('1000000000000'));
-    await tokenDai.connect(trader).approve(Router.address, ethers.utils.parseEther('1000000000000'));
+    await tokenEth.connect(trader).approve(SwapRouter.address, ethers.utils.parseEther('1000000000000'));
+    await tokenUsdc.connect(trader).approve(SwapRouter.address, ethers.utils.parseEther('1000000000000'));
+    await tokenDai.connect(trader).approve(SwapRouter.address, ethers.utils.parseEther('1000000000000'));
     //recipient: Pool0 - spender: trader
     await tokenEth.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
     await tokenUsdc.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
@@ -296,7 +303,7 @@ describe('PositionManager.sol', function () {
       await PositionManager.connect(user).mintAndDeposit(mintParams, false);
 
       const tokens = await PositionManager._getAllUniPosition();
-      const beforeBalance: any = await NonFungiblePositionManager.balanceOf(PositionManager.address);
+      const beforeBalance = await NonFungiblePositionManager.balanceOf(PositionManager.address);
       const beforeLenght = tokens.length;
 
       await PositionManager.connect(user).closeUniPositions([tokens[beforeLenght - 1], tokens[beforeLenght - 2]], true);
@@ -311,10 +318,17 @@ describe('PositionManager.sol', function () {
 
       // Do some trades to accrue fees
       for (let i = 0; i < 20; i++) {
-        const sign = i % 2 == 0;
-        await Router.connect(trader).swap(Pool0.address, sign, 1e15);
+        const res = await SwapRouter.connect(trader).exactInputSingle([
+          i % 2 === 0 ? tokenEth.address : tokenUsdc.address,
+          i % 2 === 0 ? tokenUsdc.address : tokenEth.address,
+          3000,
+          trader.address,
+          Date.now() + 1000,
+          1e15,
+          0,
+          0,
+        ]);
       }
-
       // Fees are updated at every interaction with the position
       await PositionManager.connect(user).updateUncollectedFees(tokenId);
 
@@ -468,6 +482,83 @@ describe('PositionManager.sol', function () {
     it('closeUniPosition', async function () {
       await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
       await expect(PositionManager.connect(trader).closeUniPositions([tokenId], true)).to.be.reverted;
+    });
+  });
+
+  describe('PositionManager - swap', function () {
+    it('should correctly perform a swap', async function () {
+      const balancePreUsdc = (await tokenEth.balanceOf(PositionManager.address)).toNumber();
+      await PositionManager.connect(user).swap(
+        tokenEth.address,
+        tokenUsdc.address,
+        3000,
+        '0x' + (1e5).toString(16),
+        false
+      );
+      const balancePostUsdc = (await tokenUsdc.balanceOf(PositionManager.address)).toNumber();
+
+      expect(balancePostUsdc).to.be.closeTo(balancePreUsdc + 1e5, 5e3);
+    });
+  });
+
+  describe('PositionManager - swapToPositionRatio', function () {
+    it('should correctly perform a swap', async function () {
+      const tx = await PositionManager.connect(user).swapToPositionRatio(
+        tokenEth.address,
+        tokenUsdc.address,
+        3000,
+        '0x' + (7e5).toString(16),
+        '0x' + (1.5e5).toString(16),
+        -600,
+        600,
+        false
+      );
+    });
+
+    it('should correctly calculate the amount to swap', async function () {
+      const tickPool = (await Pool0.slot0()).tick;
+      let amount0Desired = 1e5;
+      let amount1Desired = 2e5;
+      const tickLower = -660;
+      const tickUpper = 660;
+
+      const [amountToSwap, amount0In] = await PositionManager.connect(user)._calcAmountToSwap(
+        tickPool,
+        tickLower,
+        tickUpper,
+        '0x' + amount0Desired.toString(16),
+        '0x' + amount1Desired.toString(16)
+      );
+      const price = Math.pow(1.0001, tickPool);
+
+      amount0Desired = Math.round(amount0Desired + (amount0In ? -1 : 1 / price) * amountToSwap.toNumber());
+      amount1Desired = Math.round(amount1Desired + (amount0In ? price : -1) * amountToSwap.toNumber());
+
+      const transaction = await PositionManager.connect(user).mintAndDeposit(
+        [
+          {
+            token0: tokenEth.address,
+            token1: tokenUsdc.address,
+            fee: 3000,
+            tickLower: tickLower,
+            tickUpper: tickUpper,
+            amount0Desired: amount0Desired,
+            amount1Desired: amount1Desired,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: PositionManager.address,
+            deadline: Date.now() + 1000,
+          },
+        ],
+        false
+      );
+      const positions = await PositionManager._getAllUniPosition();
+      const [positionBalance0, positionBalance1] = await PositionManager.getPositionBalance(
+        positions[positions.length - 1]
+      );
+
+      expect(positionBalance0.toNumber()).to.be.closeTo(amount0Desired, 1e2);
+      expect(positionBalance1.toNumber()).to.be.closeTo(amount1Desired, 1e2);
     });
   });
 });
