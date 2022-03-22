@@ -317,7 +317,7 @@ describe('PositionManager.sol', function () {
       await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
 
       // Do some trades to accrue fees
-      for (let i = 0; i < 20; i++) {
+      for (let i = 0; i < 10; i++) {
         const res = await SwapRouter.connect(trader).exactInputSingle([
           i % 2 === 0 ? tokenEth.address : tokenUsdc.address,
           i % 2 === 0 ? tokenUsdc.address : tokenEth.address,

@@ -11,10 +11,7 @@ import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol';
-import 'hardhat/console.sol';
 import '../interfaces/IPositionManager.sol';
-import '@uniswap/v3-periphery/contracts/libraries/PositionKey.sol';
-import '@uniswap/v3-periphery/contracts/libraries/PositionValue.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '@uniswap/v3-core/contracts/libraries/FixedPoint96.sol';
 
