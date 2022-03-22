@@ -316,17 +316,6 @@ describe('PositionManager.sol', function () {
     it('Should collect fees', async function () {
       await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
 
-      /*   struct ExactInputSingleParams {
-        address tokenIn;
-        address tokenOut;
-        uint24 fee;
-        address recipient;
-        uint256 deadline;
-        uint256 amountIn;
-        uint256 amountOutMinimum;
-        uint160 sqrtPriceLimitX96;
-    }*/
-
       // Do some trades to accrue fees
       for (let i = 0; i < 20; i++) {
         const res = await SwapRouter.connect(trader).exactInputSingle([

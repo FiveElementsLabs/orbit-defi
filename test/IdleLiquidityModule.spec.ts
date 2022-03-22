@@ -235,19 +235,4 @@ describe('IdleLiquidityModule.sol', function () {
       expect(distanceAfterTrade).to.gt(0);
     });
   });
-
-  describe('IdleLiquidityModule - swap', function () {
-    it('test swap', async function () {
-      const tickPool = await Pool1.slot0().then((r) => r.tick);
-      console.log('TickPool', tickPool);
-      const yToSwap = await IdleLiquidityModule.amount1toSwap(
-        tickPool,
-        -6000,
-        +6000,
-        '0x' + (2000).toString(16),
-        '0x' + (1000).toString(16)
-      );
-      console.log('yToSwap', yToSwap);
-    });
-  });
 });
