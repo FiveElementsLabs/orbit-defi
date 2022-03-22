@@ -518,8 +518,8 @@ describe('PositionManager.sol', function () {
         tokenEth.address,
         tokenUsdc.address,
         3000,
-        '0x' + (1e5).toString(16),
-        '0x' + (2e5).toString(16),
+        '0x' + (7e5).toString(16),
+        '0x' + (1.5e5).toString(16),
         -600,
         600,
         false

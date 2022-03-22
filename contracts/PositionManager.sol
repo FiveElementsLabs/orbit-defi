@@ -16,6 +16,7 @@ import '../interfaces/IVault.sol';
 import '@uniswap/v3-periphery/contracts/libraries/PositionKey.sol';
 import '@uniswap/v3-periphery/contracts/libraries/PositionValue.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
+import '@uniswap/v3-core/contracts/libraries/FixedPoint96.sol';
 
 /**
  * @title   Position Manager
@@ -362,15 +363,19 @@ contract PositionManager is IVault, ERC721Holder {
 
         uint160 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(tickPool);
 
-        uint256 valueX96 = (amount0In * ((uint256(sqrtPriceX96)**2) >> 96)) + (amount1In << 96);
+        uint256 valueX96 = (amount0In * ((uint256(sqrtPriceX96)**2) >> FixedPoint96.RESOLUTION)) +
+            (amount1In << FixedPoint96.RESOLUTION);
 
-        uint256 yX96 = (ratioE18 * valueX96) / (ratioE18 + 1e18);
+        uint256 amount1PostX96 = (ratioE18 * valueX96) / (ratioE18 + 1e18);
 
-        token0In = !(amount1In >= (yX96 >> 96));
+        token0In = !(amount1In >= (amount1PostX96 >> FixedPoint96.RESOLUTION));
         if (token0In) {
-            amountToSwap = (((yX96 - (amount1In << 96)) / sqrtPriceX96) << 96) / sqrtPriceX96;
+            amountToSwap =
+                (((amount1PostX96 - (amount1In << FixedPoint96.RESOLUTION)) / sqrtPriceX96) <<
+                    FixedPoint96.RESOLUTION) /
+                sqrtPriceX96;
         } else {
-            amountToSwap = amount1In - (yX96 >> 96);
+            amountToSwap = amount1In - (amount1PostX96 >> FixedPoint96.RESOLUTION);
         }
     }
 
