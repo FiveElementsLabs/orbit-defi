@@ -50,39 +50,6 @@ contract IdleLiquidityModule {
         return min24(distanceFromLower, distanceFromUpper);
     }
 
-    function getRatioFromRange(
-        int24 tickPool,
-        int24 tickLower,
-        int24 tickUpper
-    ) public pure returns (uint256 ratioE18) {
-        uint256 amount0 = 1e18;
-        uint160 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(tickPool);
-        uint160 sqrtPriceLowerX96 = TickMath.getSqrtRatioAtTick(tickLower);
-        uint160 sqrtPriceUpperX96 = TickMath.getSqrtRatioAtTick(tickUpper);
-
-        // @dev Calculates amount0 * (sqrt(upper) * sqrt(lower)) / (sqrt(upper) - sqrt(lower))
-        uint128 liquidity = LiquidityAmounts.getLiquidityForAmount0(sqrtPriceX96, sqrtPriceUpperX96, amount0);
-        ratioE18 = LiquidityAmounts.getAmount1ForLiquidity(sqrtPriceX96, sqrtPriceLowerX96, liquidity);
-    }
-
-    function amount1toSwap(
-        int24 tickPool,
-        int24 tickLower,
-        int24 tickUpper,
-        uint256 amount0Input,
-        uint256 amount1Input
-    ) public pure returns (int256 yToSwap) {
-        uint256 ratioE18 = getRatioFromRange(tickPool, tickLower, tickUpper);
-
-        uint160 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(tickPool);
-
-        uint256 valueX96 = (amount0Input * ((uint256(sqrtPriceX96)**2) >> 96)) + (amount1Input << 96);
-
-        uint256 y = ((ratioE18 * valueX96) / (ratioE18 + 1e18)) >> 96;
-
-        yToSwap = int256(amount1Input - y);
-    }
-
     function min24(int24 a, int24 b) internal pure returns (int24) {
         return a <= b ? a : b;
     }

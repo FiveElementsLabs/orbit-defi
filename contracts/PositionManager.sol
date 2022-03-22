@@ -309,7 +309,7 @@ contract PositionManager is IVault, ERC721Holder {
         nonfungiblePositionManager.decreaseLiquidity(decreaseliquidityparams);
     }
 
-    //swaps token0 in change of token1
+    //swaps token0 for token1
     function swap(
         IERC20 token0,
         IERC20 token1,
@@ -319,22 +319,86 @@ contract PositionManager is IVault, ERC721Holder {
     ) public returns (uint256 amount1Out) {
         if (!_usingPositionManagerBalance) {
             token0.transferFrom(msg.sender, address(this), amount0In);
-            console.log('sono');
         }
         token0.approve(address(swapRouter), 2**256 - 1);
-        console.log('arrivato');
 
-        ISwapRouter.ExactInputParams memory swapParams = ISwapRouter.ExactInputParams({
-            path: abi.encodePacked(address(token0), fee, address(token1)),
+        ISwapRouter.ExactInputSingleParams memory swapParams = ISwapRouter.ExactInputSingleParams({
+            tokenIn: address(token0),
+            tokenOut: address(token1),
+            fee: fee,
             recipient: address(this),
             deadline: block.timestamp + 1000,
             amountIn: amount0In,
-            amountOutMinimum: 0
+            amountOutMinimum: 0,
+            sqrtPriceLimitX96: 0
         });
-        console.log('qui!');
 
-        amount1Out = swapRouter.exactInput(swapParams);
-        console.log('!!');
+        amount1Out = swapRouter.exactInputSingle(swapParams);
+    }
+
+    function _getRatioFromRange(
+        int24 tickPool,
+        int24 tickLower,
+        int24 tickUpper
+    ) public pure returns (uint256 ratioE18) {
+        uint256 amount0 = 1e18;
+        uint160 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(tickPool);
+        uint160 sqrtPriceLowerX96 = TickMath.getSqrtRatioAtTick(tickLower);
+        uint160 sqrtPriceUpperX96 = TickMath.getSqrtRatioAtTick(tickUpper);
+
+        // @dev Calculates amount0 * (sqrt(upper) * sqrt(lower)) / (sqrt(upper) - sqrt(lower))
+        uint128 liquidity = LiquidityAmounts.getLiquidityForAmount0(sqrtPriceX96, sqrtPriceUpperX96, amount0);
+        ratioE18 = LiquidityAmounts.getAmount1ForLiquidity(sqrtPriceX96, sqrtPriceLowerX96, liquidity);
+    }
+
+    function _calcAmountToSwap(
+        int24 tickPool,
+        int24 tickLower,
+        int24 tickUpper,
+        uint256 amount0In,
+        uint256 amount1In
+    ) public pure returns (uint256 amountToSwap, bool token0In) {
+        uint256 ratioE18 = _getRatioFromRange(tickPool, tickLower, tickUpper);
+
+        uint160 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(tickPool);
+
+        uint256 valueX96 = (amount0In * ((uint256(sqrtPriceX96)**2) >> 96)) + (amount1In << 96);
+
+        uint256 yX96 = (ratioE18 * valueX96) / (ratioE18 + 1e18);
+
+        token0In = !(amount1In >= (yX96 >> 96));
+        if (token0In) {
+            amountToSwap = (((yX96 - (amount1In << 96)) / sqrtPriceX96) << 96) / sqrtPriceX96;
+        } else {
+            amountToSwap = amount1In - (yX96 >> 96);
+        }
+    }
+
+    //performs swap to optimal ratio for the position at tickLower and tickUpper
+    function swapToPositionRatio(
+        IERC20 token0,
+        IERC20 token1,
+        uint24 fee,
+        uint256 amount0In,
+        uint256 amount1In,
+        int24 tickLower,
+        int24 tickUpper,
+        bool _usingPositionManagerBalance
+    ) public returns (uint256 amountOut) {
+        if (!_usingPositionManagerBalance) {
+            token0.transferFrom(msg.sender, address(this), amount0In);
+            token1.transferFrom(msg.sender, address(this), amount1In);
+        }
+
+        IUniswapV3Pool pool = IUniswapV3Pool(
+            PoolAddress.computeAddress(address(factory), PoolAddress.getPoolKey(address(token0), address(token1), fee))
+        );
+        (, int24 tickPool, , , , , ) = pool.slot0();
+        (uint256 amountToSwap, bool token0In) = _calcAmountToSwap(tickPool, tickLower, tickUpper, amount0In, amount1In);
+
+        if (amountToSwap != 0) {
+            amountOut = swap(token0In ? token0 : token1, token0In ? token1 : token0, fee, amountToSwap, true);
+        }
     }
 
     /*Get pool address from token ID*/
