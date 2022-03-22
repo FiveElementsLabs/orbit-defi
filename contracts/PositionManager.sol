@@ -12,7 +12,7 @@ import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol';
 import 'hardhat/console.sol';
-import '../interfaces/IVault.sol';
+import '../interfaces/IPositionManager.sol';
 import '@uniswap/v3-periphery/contracts/libraries/PositionKey.sol';
 import '@uniswap/v3-periphery/contracts/libraries/PositionValue.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
@@ -27,7 +27,7 @@ import '@uniswap/v3-core/contracts/libraries/FixedPoint96.sol';
  * @notice  vault works for multiple positions
  */
 
-contract PositionManager is IVault, ERC721Holder {
+contract PositionManager is IPositionManager, ERC721Holder {
     event DepositUni(address indexed from, uint256 tokenId);
     event WithdrawUni(address to, uint256 tokenId);
 
@@ -83,7 +83,7 @@ contract PositionManager is IVault, ERC721Holder {
     /**
      * @notice withdraw uniswap position NFT from the position manager
      */
-    function withdrawUniNft(address to, uint256 tokenId) public onlyUser {
+    function withdrawUniNft(address to, uint256 tokenId) public override onlyUser {
         uint256 index = uniswapNFTs.length;
         for (uint256 i = 0; i < uniswapNFTs.length; i++) {
             if (uniswapNFTs[i] == tokenId) {
@@ -117,7 +117,7 @@ contract PositionManager is IVault, ERC721Holder {
     function mintAndDeposit(
         INonfungiblePositionManager.MintParams[] memory mintParams,
         bool _usingPositionManagerBalance
-    ) public onlyUser {
+    ) public override onlyUser {
         //TODO: can be optimized by calculating amount that will be deposited before transferring them to positionManager
         //require(amount0Desired > 0 || amount1Desired > 0, 'can mint only nonzero amount');
         for (uint256 i = 0; i < mintParams.length; i++) {
@@ -215,7 +215,7 @@ contract PositionManager is IVault, ERC721Holder {
      * @notice for fees to be updated need to interact with NFT
      * not public!
      */
-    function updateUncollectedFees(uint256 tokenId) public {
+    function updateUncollectedFees(uint256 tokenId) public override {
         INonfungiblePositionManager.DecreaseLiquidityParams memory params = INonfungiblePositionManager
             .DecreaseLiquidityParams({
                 tokenId: tokenId,
@@ -280,7 +280,7 @@ contract PositionManager is IVault, ERC721Holder {
         uint256 tokenId,
         uint256 amount0Desired,
         uint256 amount1Desired
-    ) external payable onlyUser {
+    ) external payable override onlyUser {
         (, , , , , int24 tickLower, int24 tickUpper, uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(
             tokenId
         );
@@ -317,7 +317,7 @@ contract PositionManager is IVault, ERC721Holder {
         uint24 fee,
         uint256 amount0In,
         bool _usingPositionManagerBalance
-    ) public returns (uint256 amount1Out) {
+    ) public override returns (uint256 amount1Out) {
         if (!_usingPositionManagerBalance) {
             token0.transferFrom(msg.sender, address(this), amount0In);
         }
@@ -389,7 +389,7 @@ contract PositionManager is IVault, ERC721Holder {
         int24 tickLower,
         int24 tickUpper,
         bool _usingPositionManagerBalance
-    ) public returns (uint256 amountOut) {
+    ) public override returns (uint256 amountOut) {
         if (!_usingPositionManagerBalance) {
             token0.transferFrom(msg.sender, address(this), amount0In);
             token1.transferFrom(msg.sender, address(this), amount1In);

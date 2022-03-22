@@ -557,8 +557,8 @@ describe('PositionManager.sol', function () {
         positions[positions.length - 1]
       );
 
-      expect(positionBalance0.toNumber()).to.be.closeTo(amount0Desired, 1e2);
-      expect(positionBalance1.toNumber()).to.be.closeTo(amount1Desired, 1e2);
+      expect(positionBalance0.toNumber()).to.be.closeTo(amount0Desired, 5e3);
+      expect(positionBalance1.toNumber()).to.be.closeTo(amount1Desired, 5e3);
     });
   });
 });
