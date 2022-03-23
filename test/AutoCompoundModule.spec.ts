@@ -103,19 +103,18 @@ describe('AutoCompoundModule.sol', function () {
 
     //deploy the registry
     registry = await RegistryFixture().then((registryFix) => registryFix.registryFixture);
+    //deploy router
+    Router = await routerFixture().then((RFixture) => RFixture.ruoterDeployFixture);
 
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactory = await ethers
       .getContractFactory('PositionManagerFactory')
       .then((contract) => contract.deploy().then((deploy) => deploy.deployed()));
 
-    await PositionManagerFactory.create(user.address, NonFungiblePositionManager.address);
+    await PositionManagerFactory.create(user.address, NonFungiblePositionManager.address, Router.address);
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
-
-    //deploy router
-    Router = await routerFixture().then((RFixture) => RFixture.ruoterDeployFixture);
 
     //deploy AutoCompoundModule
     AutoCompoundModule = (await ethers

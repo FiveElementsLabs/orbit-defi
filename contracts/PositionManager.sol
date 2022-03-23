@@ -12,10 +12,10 @@ import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol';
 import 'hardhat/console.sol';
-import '../interfaces/IVault.sol';
-import '@uniswap/v3-periphery/contracts/libraries/PositionKey.sol';
-import '@uniswap/v3-periphery/contracts/libraries/PositionValue.sol';
 import './Registry.sol';
+import '../interfaces/IPositionManager.sol';
+import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
+import '@uniswap/v3-core/contracts/libraries/FixedPoint96.sol';
 
 /**
  * @title   Position Manager
@@ -26,7 +26,7 @@ import './Registry.sol';
  * @notice  vault works for multiple positions
  */
 
-contract PositionManager is IVault, ERC721Holder {
+contract PositionManager is IPositionManager, ERC721Holder {
     event DepositUni(address indexed from, uint256 tokenId);
     event WithdrawUni(address to, uint256 tokenId);
     Registry public immutable registry = Registry(0x59b670e9fA9D0A427751Af201D676719a970857b);
@@ -35,6 +35,7 @@ contract PositionManager is IVault, ERC721Holder {
     uint256[] private uniswapNFTs;
     INonfungiblePositionManager public immutable nonfungiblePositionManager;
     IUniswapV3Factory public immutable factory;
+    ISwapRouter public immutable swapRouter;
 
     struct Module {
         address moduleAddress;
@@ -62,11 +63,16 @@ contract PositionManager is IVault, ERC721Holder {
         uint128 tokensOwed1;
     }
 
-    constructor(address userAddress, INonfungiblePositionManager _nonfungiblePositionManager) {
+    constructor(
+        address userAddress,
+        INonfungiblePositionManager _nonfungiblePositionManager,
+        ISwapRouter _swapRouter
+    ) {
         owner = userAddress;
         nonfungiblePositionManager = _nonfungiblePositionManager;
         factory = IUniswapV3Factory(_nonfungiblePositionManager.factory());
         gov = msg.sender;
+        swapRouter = _swapRouter;
     }
 
     /**
@@ -83,7 +89,7 @@ contract PositionManager is IVault, ERC721Holder {
     /**
      * @notice withdraw uniswap position NFT from the position manager
      */
-    function withdrawUniNft(address to, uint256 tokenId) public onlyOwner {
+    function withdrawUniNft(address to, uint256 tokenId) public override onlyOwner {
         uint256 index = uniswapNFTs.length;
         for (uint256 i = 0; i < uniswapNFTs.length; i++) {
             if (uniswapNFTs[i] == tokenId) {
@@ -117,7 +123,7 @@ contract PositionManager is IVault, ERC721Holder {
     function mintAndDeposit(
         INonfungiblePositionManager.MintParams[] memory mintParams,
         bool _usingPositionManagerBalance
-    ) public onlyOwner {
+    ) public override onlyOwner {
         //TODO: can be optimized by calculating amount that will be deposited before transferring them to positionManager
         //require(amount0Desired > 0 || amount1Desired > 0, 'can mint only nonzero amount');
         for (uint256 i = 0; i < mintParams.length; i++) {
@@ -220,7 +226,7 @@ contract PositionManager is IVault, ERC721Holder {
      * @notice for fees to be updated need to interact with NFT
      * not public!
      */
-    function updateUncollectedFees(uint256 tokenId) public onlyOwnerOrModule {
+    function updateUncollectedFees(uint256 tokenId) public override onlyOwnerOrModule {
         INonfungiblePositionManager.DecreaseLiquidityParams memory params = INonfungiblePositionManager
             .DecreaseLiquidityParams({
                 tokenId: tokenId,
@@ -285,7 +291,7 @@ contract PositionManager is IVault, ERC721Holder {
         uint256 tokenId,
         uint256 amount0Desired,
         uint256 amount1Desired
-    ) external payable onlyOwnerOrModule {
+    ) external payable override onlyOwnerOrModule {
         (, , , , , int24 tickLower, int24 tickUpper, uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(
             tokenId
         );
@@ -313,6 +319,102 @@ contract PositionManager is IVault, ERC721Holder {
                 deadline: block.timestamp + 1000
             });
         nonfungiblePositionManager.decreaseLiquidity(decreaseliquidityparams);
+    }
+
+    //swaps token0 for token1
+    function swap(
+        IERC20 token0,
+        IERC20 token1,
+        uint24 fee,
+        uint256 amount0In,
+        bool _usingPositionManagerBalance
+    ) public override returns (uint256 amount1Out) {
+        if (!_usingPositionManagerBalance) {
+            token0.transferFrom(msg.sender, address(this), amount0In);
+        }
+        token0.approve(address(swapRouter), 2**256 - 1);
+
+        ISwapRouter.ExactInputSingleParams memory swapParams = ISwapRouter.ExactInputSingleParams({
+            tokenIn: address(token0),
+            tokenOut: address(token1),
+            fee: fee,
+            recipient: address(this),
+            deadline: block.timestamp + 1000,
+            amountIn: amount0In,
+            amountOutMinimum: 0,
+            sqrtPriceLimitX96: 0
+        });
+
+        amount1Out = swapRouter.exactInputSingle(swapParams);
+    }
+
+    function _getRatioFromRange(
+        int24 tickPool,
+        int24 tickLower,
+        int24 tickUpper
+    ) public pure returns (uint256 ratioE18) {
+        uint256 amount0 = 1e18;
+        uint160 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(tickPool);
+        uint160 sqrtPriceLowerX96 = TickMath.getSqrtRatioAtTick(tickLower);
+        uint160 sqrtPriceUpperX96 = TickMath.getSqrtRatioAtTick(tickUpper);
+
+        // @dev Calculates amount0 * (sqrt(upper) * sqrt(lower)) / (sqrt(upper) - sqrt(lower))
+        uint128 liquidity = LiquidityAmounts.getLiquidityForAmount0(sqrtPriceX96, sqrtPriceUpperX96, amount0);
+        ratioE18 = LiquidityAmounts.getAmount1ForLiquidity(sqrtPriceX96, sqrtPriceLowerX96, liquidity);
+    }
+
+    function _calcAmountToSwap(
+        int24 tickPool,
+        int24 tickLower,
+        int24 tickUpper,
+        uint256 amount0In,
+        uint256 amount1In
+    ) public pure returns (uint256 amountToSwap, bool token0In) {
+        uint256 ratioE18 = _getRatioFromRange(tickPool, tickLower, tickUpper);
+
+        uint160 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(tickPool);
+
+        uint256 valueX96 = (amount0In * ((uint256(sqrtPriceX96)**2) >> FixedPoint96.RESOLUTION)) +
+            (amount1In << FixedPoint96.RESOLUTION);
+
+        uint256 amount1PostX96 = (ratioE18 * valueX96) / (ratioE18 + 1e18);
+
+        token0In = !(amount1In >= (amount1PostX96 >> FixedPoint96.RESOLUTION));
+        if (token0In) {
+            amountToSwap =
+                (((amount1PostX96 - (amount1In << FixedPoint96.RESOLUTION)) / sqrtPriceX96) <<
+                    FixedPoint96.RESOLUTION) /
+                sqrtPriceX96;
+        } else {
+            amountToSwap = amount1In - (amount1PostX96 >> FixedPoint96.RESOLUTION);
+        }
+    }
+
+    //performs swap to optimal ratio for the position at tickLower and tickUpper
+    function swapToPositionRatio(
+        IERC20 token0,
+        IERC20 token1,
+        uint24 fee,
+        uint256 amount0In,
+        uint256 amount1In,
+        int24 tickLower,
+        int24 tickUpper,
+        bool _usingPositionManagerBalance
+    ) public override returns (uint256 amountOut) {
+        if (!_usingPositionManagerBalance) {
+            token0.transferFrom(msg.sender, address(this), amount0In);
+            token1.transferFrom(msg.sender, address(this), amount1In);
+        }
+
+        IUniswapV3Pool pool = IUniswapV3Pool(
+            PoolAddress.computeAddress(address(factory), PoolAddress.getPoolKey(address(token0), address(token1), fee))
+        );
+        (, int24 tickPool, , , , , ) = pool.slot0();
+        (uint256 amountToSwap, bool token0In) = _calcAmountToSwap(tickPool, tickLower, tickUpper, amount0In, amount1In);
+
+        if (amountToSwap != 0) {
+            amountOut = swap(token0In ? token0 : token1, token0In ? token1 : token0, fee, amountToSwap, true);
+        }
     }
 
     /*Get pool address from token ID*/

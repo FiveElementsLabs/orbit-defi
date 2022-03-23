@@ -3,7 +3,7 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import '../interfaces/IVault.sol'; //interface for PositionManager to be done
+import '../interfaces/IPositionManager.sol'; //interface for PositionManager to be done
 import 'hardhat/console.sol';
 import '@openzeppelin/contracts/math/Math.sol';
 import '@openzeppelin/contracts/math/SafeMath.sol';
@@ -24,7 +24,7 @@ contract AutoCompoundModule {
     constructor() {
     }
 
-    function checkForAllUncollectedFees(IVault positionManager) public view returns (VaultFee[] memory) {
+    function checkForAllUncollectedFees(IPositionManager positionManager) public view returns (VaultFee[] memory) {
         uint256[] memory allTokenId = positionManager._getAllUniPosition();
 
         uint256 size = allTokenId.length;
@@ -41,7 +41,7 @@ contract AutoCompoundModule {
     }
 
     function collectFees(
-        IVault positionManager,
+        IPositionManager positionManager,
         address token0Address,
         address token1Address
     ) public {
@@ -66,7 +66,7 @@ contract AutoCompoundModule {
     }
 
     function reinvestFees(
-        IVault positionManager,
+        IPositionManager positionManager,
         uint256 tokenId,
         uint256 amount0,
         uint256 amount1
@@ -74,7 +74,11 @@ contract AutoCompoundModule {
         positionManager.increasePositionLiquidity(tokenId, amount0, amount1);
     }
 
-    function _feeNeedToBeReinvested(IVault positionManager, VaultFee memory feeXToken) private view returns (bool) {
+    function _feeNeedToBeReinvested(IPositionManager positionManager, VaultFee memory feeXToken)
+        private
+        view
+        returns (bool)
+    {
         (uint256 token0, uint256 token1) = positionManager.getPositionBalance(feeXToken.tokenId);
         uint256 token0OverFees = 2**256 - 1;
         uint256 token1OverFees = 2**256 - 1;
@@ -88,7 +92,7 @@ contract AutoCompoundModule {
         return Math.min(token0OverFees, token1OverFees) < uncollectedFeesThreshold;
     }
 
-    function _approveToken(IERC20 token, IVault positionManager) private {
+    function _approveToken(IERC20 token, IPositionManager positionManager) private {
         if (token.allowance(address(this), address(positionManager)) == 0)
             token.approve(address(positionManager), 2**256 - 1);
     }
