@@ -3,11 +3,15 @@ import { expect } from 'chai';
 import { Contract } from 'ethers';
 const hre = require('hardhat');
 import { ethers } from 'hardhat';
+const { getContractAddress } = require('@ethersproject/address');
+import { RegistryFixture } from './shared/fixtures';
+
+import { Registry } from '../typechain';
 
 describe('Registry.sol', function () {
   let deployer: any;
   let user: any;
-  let registry: Contract;
+  let registry: Registry;
   const contractAddr1 = '0x00000000219ab540356cBB839Cbe05303d7705Fa';
   const id1 = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes(contractAddr1));
 
@@ -19,9 +23,7 @@ describe('Registry.sol', function () {
     user = signers[1];
 
     //deploy the registry
-    registry = await ethers
-      .getContractFactory('Registry')
-      .then((contract) => contract.deploy().then((deploy) => deploy.deployed()));
+    registry = await RegistryFixture().then((registryFix) => registryFix.registryFixture);
   });
 
   describe('Deployment ', function () {
@@ -30,16 +32,16 @@ describe('Registry.sol', function () {
     });
   });
   describe('Modules update ', function () {
-    it('Should add new contract', async function () {
-      // For the sake of test let's use deployer address
-      const tx = await registry.connect(deployer).addNewContract(id1, contractAddr1);
-      const address = await registry.getAddr(id1);
-      expect(address).to.be.equal(contractAddr1);
+    it('Should add and activate new contract', async function () {
+      const tx = await registry.connect(deployer).addNewContract(contractAddr1);
+      const entry = await registry.entries(contractAddr1);
+      const activated = entry['activated'];
+      expect(activated).to.be.equal(true);
     });
 
     it('Should fail if it is not called by owner', async function () {
       try {
-        await registry.connect(user).addNewContract(id1, contractAddr1);
+        await registry.connect(user).addNewContract(contractAddr1);
       } catch (err: any) {
         expect(err.toString()).to.have.string('Only owner');
       }

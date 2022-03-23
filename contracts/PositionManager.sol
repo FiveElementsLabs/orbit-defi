@@ -15,6 +15,7 @@ import 'hardhat/console.sol';
 import '../interfaces/IVault.sol';
 import '@uniswap/v3-periphery/contracts/libraries/PositionKey.sol';
 import '@uniswap/v3-periphery/contracts/libraries/PositionValue.sol';
+import './Registry.sol';
 
 /**
  * @title   Position Manager
@@ -28,7 +29,7 @@ import '@uniswap/v3-periphery/contracts/libraries/PositionValue.sol';
 contract PositionManager is IVault, ERC721Holder {
     event DepositUni(address indexed from, uint256 tokenId);
     event WithdrawUni(address to, uint256 tokenId);
-
+    Registry public immutable registry = Registry(0x59b670e9fA9D0A427751Af201D676719a970857b);
     address public immutable owner;
     address public immutable gov;
     uint256[] private uniswapNFTs;
@@ -37,7 +38,7 @@ contract PositionManager is IVault, ERC721Holder {
 
     struct Module {
         address moduleAddress;
-        bool    activated;
+        bool activated;
     }
 
     // details about the uniswap position
@@ -177,7 +178,12 @@ contract PositionManager is IVault, ERC721Holder {
     /**
      * @notice close and burn uniswap position; liquidity must be 0,
      */
-    function closeUniPositions(uint256[] memory tokenIds, bool returnTokensToUser) external payable override onlyOwner {
+    function closeUniPositions(uint256[] memory tokenIds, bool returnTokensToUser)
+        external
+        payable
+        override
+        onlyOwnerOrModule
+    {
         for (uint256 i = 0; i < tokenIds.length; i++) {
             (, , , , , , , uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(tokenIds[i]);
 
@@ -214,7 +220,7 @@ contract PositionManager is IVault, ERC721Holder {
      * @notice for fees to be updated need to interact with NFT
      * not public!
      */
-    function updateUncollectedFees(uint256 tokenId) public {
+    function updateUncollectedFees(uint256 tokenId) public onlyOwnerOrModule {
         INonfungiblePositionManager.DecreaseLiquidityParams memory params = INonfungiblePositionManager
             .DecreaseLiquidityParams({
                 tokenId: tokenId,
@@ -229,6 +235,7 @@ contract PositionManager is IVault, ERC721Holder {
     function collectPositionFee(uint256 tokenId, address recipient)
         external
         override
+        onlyOwnerOrModule
         returns (uint256 amount0, uint256 amount1)
     {
         updateUncollectedFees(tokenId);
@@ -247,7 +254,7 @@ contract PositionManager is IVault, ERC721Holder {
         uint256 tokenId,
         uint256 amount0Desired,
         uint256 amount1Desired
-    ) external payable override returns (uint256 amount0, uint256 amount1) {
+    ) external payable override onlyOwnerOrModule returns (uint256 amount0, uint256 amount1) {
         require(amount0Desired > 0 || amount1Desired > 0, 'send some token to increase liquidity');
 
         (IERC20 token0, IERC20 token1) = _getTokenAddress(tokenId);
@@ -278,7 +285,7 @@ contract PositionManager is IVault, ERC721Holder {
         uint256 tokenId,
         uint256 amount0Desired,
         uint256 amount1Desired
-    ) external payable onlyOwner {
+    ) external payable onlyOwnerOrModule {
         (, , , , , int24 tickLower, int24 tickUpper, uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(
             tokenId
         );
@@ -337,44 +344,14 @@ contract PositionManager is IVault, ERC721Holder {
         token1 = IERC20(token1address);
     }
 
-
     // Modules activation modifier
-    /*
-    function update(uint i, address moduleAddress, bool activated) external onlyOwnerOrGov {
-        Module storage module = modules[i];
-        module.moduleAddress  = moduleAddress;
-        module.activated      = activated;
-    }*/
-
-    //User and governance modifiers
-    
     modifier onlyOwner() {
         require(msg.sender == owner, 'Only owner');
         _;
     }
-    /*
-    modifier onlyGov() {
-        require(msg.sender == gov, 'Only gov');
+
+    modifier onlyOwnerOrModule() {
+        require((msg.sender == owner) || (registry.isApproved(msg.sender)), 'Only owner or module');
         _;
     }
-
-    modifier onlyOwnerOrGov {
-        require((msg.sender == gov) || (msg.sender == owner), 'Only owner or gov');
-        _;
-    }
-
-    modifier onlyModules(uint index) {
-        require(msg.sender == modules[index].moduleAddress, 'Only modules');
-        _;
-    }
-
-    modifier onlyModulesOrOwner(uint index) {
-        require((msg.sender == modules[index].moduleAddress || msg.sender == owner), "Only modules or owner");
-        _;
-    }
-
-    modifier moduleActivated(uint index) {
-        require(modules[index].activated, "Module should be activated");
-        _;
-    }*/
 }

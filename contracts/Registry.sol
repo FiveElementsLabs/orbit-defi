@@ -1,45 +1,32 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.6;
 
-/// @title Stores all the important DFS addresses and can be changed (timelock)
+/// @title Stores all the important module addresses
 contract Registry {
-
     address public owner;
 
     struct Entry {
-        address contractAddr;
         bool activated;
         bool exists;
     }
 
-    mapping(bytes32 => Entry) public entries;
+    mapping(address => Entry) public entries;
 
-    constructor () {
+    constructor() {
         owner = msg.sender;
     }
 
-    function addNewContract(
-        bytes32 _id,
-        address _contractAddr
-    ) public onlyOwner {
-        require(!entries[_id].exists, "Entry already exists");
-
-        entries[_id] = Entry({
-            contractAddr: _contractAddr,
-            activated: true,
-            exists: true
-        });
+    function addNewContract(address _contractAddr) external onlyOwner {
+        require(!entries[_contractAddr].exists, 'Entry already exists');
+        entries[_contractAddr] = Entry({activated: true, exists: true});
     }
 
-    /// @notice Given an contract id returns the registered address
-    /// @dev Id is keccak256 of the contract name
-    /// @param _id Id of contract
-    function getAddr(bytes32 _id) public view returns (address) {
-        return entries[_id].contractAddr;
+    function isApproved(address _contractAddr) public view returns (bool) {
+        return entries[_contractAddr].activated;
     }
 
     modifier onlyOwner() {
-        require(msg.sender == owner, "Only owner");
+        require(msg.sender == owner, 'Only owner');
         _;
     }
 }

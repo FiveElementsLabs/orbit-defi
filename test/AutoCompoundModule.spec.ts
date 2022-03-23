@@ -9,7 +9,7 @@ const FixturesConst = require('./shared/fixtures');
 const hre = require('hardhat');
 
 import { ethers } from 'hardhat';
-import { tokensFixture, poolFixture, mintSTDAmount, routerFixture } from './shared/fixtures';
+import { tokensFixture, poolFixture, mintSTDAmount, routerFixture, RegistryFixture } from './shared/fixtures';
 
 import {
   MockToken,
@@ -18,6 +18,7 @@ import {
   PositionManager,
   AutoCompoundModule,
   TestRouter,
+  Registry,
 } from '../typechain';
 
 describe('AutoCompoundModule.sol', function () {
@@ -37,6 +38,8 @@ describe('AutoCompoundModule.sol', function () {
 
   //all the pools used globally
   let Pool0: IUniswapV3Pool, Pool1: IUniswapV3Pool;
+
+  let registry: Registry;
 
   //tokenId used globally on all test
   let tokenId: any;
@@ -98,6 +101,9 @@ describe('AutoCompoundModule.sol', function () {
       NonFungiblePositionManagerDescriptor.address
     ).then((contract) => contract.deployed())) as INonfungiblePositionManager;
 
+    //deploy the registry
+    registry = await RegistryFixture().then((registryFix) => registryFix.registryFixture);
+
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactory = await ethers
       .getContractFactory('PositionManagerFactory')
@@ -115,6 +121,9 @@ describe('AutoCompoundModule.sol', function () {
     AutoCompoundModule = (await ethers
       .getContractFactory('AutoCompoundModule')
       .then((contract) => contract.deploy().then((deploy) => deploy.deployed()))) as AutoCompoundModule;
+
+    // Approve autocompound module
+    await registry.addNewContract(AutoCompoundModule.address);
 
     //APPROVE
     //recipient: NonFungiblePositionManager - spender: user
