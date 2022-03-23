@@ -5,7 +5,7 @@ pragma solidity 0.7.6;
 import './PositionManager.sol';
 
 contract PositionManagerFactory {
-    PositionManager[] public positionManagers;
+    address[] public positionManagers;
     event PositionManagerCreated(
         address indexed contractAddress,
         address userAddress,
@@ -17,9 +17,9 @@ contract PositionManagerFactory {
         address userAddress,
         INonfungiblePositionManager _nonfungiblePositionManager,
         ISwapRouter _swapRouter
-    ) public returns (PositionManager[] memory) {
+    ) public returns (address[] memory) {
         PositionManager manager = new PositionManager(userAddress, _nonfungiblePositionManager, _swapRouter);
-        positionManagers.push(manager);
+        positionManagers.push(address(manager));
         emit PositionManagerCreated(
             address(manager),
             userAddress,

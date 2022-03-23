@@ -108,9 +108,7 @@ describe('IdleLiquidityModule.sol', function () {
     //deploy IdleLiquidityModule
     IdleLiquidityModule = await ethers
       .getContractFactory('IdleLiquidityModule')
-      .then((contract) =>
-        contract.deploy(NonFungiblePositionManager.address, Factory.address).then((deploy) => deploy.deployed())
-      );
+      .then((contract) => contract.deploy(NonFungiblePositionManager.address).then((deploy) => deploy.deployed()));
 
     //APPROVE
     //recipient: NonFungiblePositionManager - spender: user

@@ -11,6 +11,8 @@ import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol';
+import 'hardhat/console.sol';
+import './Registry.sol';
 import '../interfaces/IPositionManager.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '@uniswap/v3-core/contracts/libraries/FixedPoint96.sol';
@@ -27,12 +29,18 @@ import '@uniswap/v3-core/contracts/libraries/FixedPoint96.sol';
 contract PositionManager is IPositionManager, ERC721Holder {
     event DepositUni(address indexed from, uint256 tokenId);
     event WithdrawUni(address to, uint256 tokenId);
-
+    Registry public immutable registry = Registry(0x59b670e9fA9D0A427751Af201D676719a970857b);
     address public immutable owner;
+    address public immutable gov;
     uint256[] private uniswapNFTs;
     INonfungiblePositionManager public immutable nonfungiblePositionManager;
     IUniswapV3Factory public immutable factory;
     ISwapRouter public immutable swapRouter;
+
+    struct Module {
+        address moduleAddress;
+        bool activated;
+    }
 
     // details about the uniswap position
     struct Position {
@@ -63,13 +71,14 @@ contract PositionManager is IPositionManager, ERC721Holder {
         owner = userAddress;
         nonfungiblePositionManager = _nonfungiblePositionManager;
         factory = IUniswapV3Factory(_nonfungiblePositionManager.factory());
+        gov = msg.sender;
         swapRouter = _swapRouter;
     }
 
     /**
      * @notice add uniswap position NFT to the position manager
      */
-    function depositUniNft(address from, uint256[] calldata tokenIds) external override onlyUser {
+    function depositUniNft(address from, uint256[] calldata tokenIds) external override onlyOwner {
         for (uint32 i = 0; i < tokenIds.length; i++) {
             nonfungiblePositionManager.safeTransferFrom(from, address(this), tokenIds[i], '0x0');
             uniswapNFTs.push(tokenIds[i]);
@@ -80,7 +89,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
     /**
      * @notice withdraw uniswap position NFT from the position manager
      */
-    function withdrawUniNft(address to, uint256 tokenId) public override onlyUser {
+    function withdrawUniNft(address to, uint256 tokenId) public override onlyOwner {
         uint256 index = uniswapNFTs.length;
         for (uint256 i = 0; i < uniswapNFTs.length; i++) {
             if (uniswapNFTs[i] == tokenId) {
@@ -94,14 +103,14 @@ contract PositionManager is IPositionManager, ERC721Holder {
         emit WithdrawUni(to, tokenId);
     }
 
-    //remove awareness of nft at index index
+    //remove awareness of nft at index
     function removeNFTFromList(uint256 index) internal {
         uniswapNFTs[index] = uniswapNFTs[uniswapNFTs.length - 1];
         uniswapNFTs.pop();
     }
 
     //wrapper for withdraw of all univ3positions in manager
-    function withdrawAllUniNft(address to) external override onlyUser {
+    function withdrawAllUniNft(address to) external override onlyOwner {
         require(uniswapNFTs.length > 0, 'no NFT to withdraw');
         while (uniswapNFTs.length > 0) {
             withdrawUniNft(to, uniswapNFTs[0]);
@@ -114,7 +123,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
     function mintAndDeposit(
         INonfungiblePositionManager.MintParams[] memory mintParams,
         bool _usingPositionManagerBalance
-    ) public override onlyUser {
+    ) public override onlyOwner {
         //TODO: can be optimized by calculating amount that will be deposited before transferring them to positionManager
         //require(amount0Desired > 0 || amount1Desired > 0, 'can mint only nonzero amount');
         for (uint256 i = 0; i < mintParams.length; i++) {
@@ -175,7 +184,12 @@ contract PositionManager is IPositionManager, ERC721Holder {
     /**
      * @notice close and burn uniswap position; liquidity must be 0,
      */
-    function closeUniPositions(uint256[] memory tokenIds, bool returnTokensToUser) external payable override onlyUser {
+    function closeUniPositions(uint256[] memory tokenIds, bool returnTokensToUser)
+        external
+        payable
+        override
+        onlyOwnerOrModule
+    {
         for (uint256 i = 0; i < tokenIds.length; i++) {
             (, , , , , , , uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(tokenIds[i]);
 
@@ -212,7 +226,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
      * @notice for fees to be updated need to interact with NFT
      * not public!
      */
-    function updateUncollectedFees(uint256 tokenId) public override {
+    function updateUncollectedFees(uint256 tokenId) public override onlyOwnerOrModule {
         INonfungiblePositionManager.DecreaseLiquidityParams memory params = INonfungiblePositionManager
             .DecreaseLiquidityParams({
                 tokenId: tokenId,
@@ -227,6 +241,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
     function collectPositionFee(uint256 tokenId, address recipient)
         external
         override
+        onlyOwnerOrModule
         returns (uint256 amount0, uint256 amount1)
     {
         updateUncollectedFees(tokenId);
@@ -245,7 +260,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
         uint256 tokenId,
         uint256 amount0Desired,
         uint256 amount1Desired
-    ) external payable override returns (uint256 amount0, uint256 amount1) {
+    ) external payable override onlyOwnerOrModule returns (uint256 amount0, uint256 amount1) {
         require(amount0Desired > 0 || amount1Desired > 0, 'send some token to increase liquidity');
 
         (IERC20 token0, IERC20 token1) = _getTokenAddress(tokenId);
@@ -272,12 +287,11 @@ contract PositionManager is IPositionManager, ERC721Holder {
     }
 
     //decrease liquidity and return the amount of token withdrawed in tokensOwed0 and tokensOwed1 - the fees
-
     function decreasePositionLiquidity(
         uint256 tokenId,
         uint256 amount0Desired,
         uint256 amount1Desired
-    ) external payable override onlyUser {
+    ) external payable override onlyOwnerOrModule {
         (, , , , , int24 tickLower, int24 tickUpper, uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(
             tokenId
         );
@@ -432,8 +446,14 @@ contract PositionManager is IPositionManager, ERC721Holder {
         token1 = IERC20(token1address);
     }
 
-    modifier onlyUser() {
-        require(msg.sender == owner, 'Only owner can call this function');
+    // Modules activation modifier
+    modifier onlyOwner() {
+        require(msg.sender == owner, 'Only owner');
+        _;
+    }
+
+    modifier onlyOwnerOrModule() {
+        require((msg.sender == owner) || (registry.isApproved(msg.sender)), 'Only owner or module');
         _;
     }
 }
