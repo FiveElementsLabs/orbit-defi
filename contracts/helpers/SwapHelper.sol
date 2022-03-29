@@ -7,7 +7,13 @@ import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import '@uniswap/v3-core/contracts/libraries/FixedPoint96.sol';
 
+///@title library to help with swap amounts calculations
 library SwapHelper {
+    ///@notice calculate the ratio of the token amounts for a given position
+    ///@param tickPool tick of the pool
+    ///@param tickLower lower tick of position
+    ///@param tickUpper upper tick of position
+    ///@return ratioE18 amount1/amount0 * 1e18
     function getRatioFromRange(
         int24 tickPool,
         int24 tickLower,
@@ -18,12 +24,18 @@ library SwapHelper {
         uint160 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(tickPool);
         uint160 sqrtPriceLowerX96 = TickMath.getSqrtRatioAtTick(tickLower);
         uint160 sqrtPriceUpperX96 = TickMath.getSqrtRatioAtTick(tickUpper);
-
-        // @dev Calculates amount0 * (sqrt(upper) * sqrt(lower)) / (sqrt(upper) - sqrt(lower))
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmount0(sqrtPriceX96, sqrtPriceUpperX96, amount0);
         ratioE18 = LiquidityAmounts.getAmount1ForLiquidity(sqrtPriceX96, sqrtPriceLowerX96, liquidity);
     }
 
+    ///@notice calculate amount to be swapped in order to deposit according to the ratio selected position needs
+    ///@param tickPool tick of the pool
+    ///@param tickLower lower tick of position
+    ///@param tickUpper upper tick of position
+    ///@param amount0In amount of token0 available
+    ///@param amount1In amount of token1 available
+    ///@return amountToSwap amount of token to be swapped
+    ///@return token0In true if token0 is swapped for token1, false if token1 is swapped for token1
     function calcAmountToSwap(
         int24 tickPool,
         int24 tickLower,
