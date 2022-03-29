@@ -28,3 +28,5 @@ jobs:
 
       - run: npx hardhat test
       - run: echo "🎉 Hardhat Test passed."
+
+      - run: npx hardhat coverage
