@@ -35,7 +35,7 @@ describe('TestERC20Helper', () => {
     tokenEth = await tokensFixture('ETH', 18).then((tokenFix) => tokenFix.tokenFixture);
 
     //deploy the contract
-    const TestERC20HelperFactory = await ethers.getContractFactory('TestERC20Helper');
+    const TestERC20HelperFactory = await ethers.getContractFactory('MockERC20Helper');
     TestERC20Helper = await TestERC20HelperFactory.deploy();
     await TestERC20Helper.deployed();
   });

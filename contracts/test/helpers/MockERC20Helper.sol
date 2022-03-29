@@ -6,7 +6,7 @@ pragma abicoder v2;
 import '../../helpers/ERC20Helper.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
-contract TestERC20Helper {
+contract MockERC20Helper {
     ///@notice library to interact with ERC20 helper for testing
 
     ///@notice approve the token to be able to transfer it
