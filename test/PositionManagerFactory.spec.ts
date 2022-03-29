@@ -2,8 +2,8 @@ import { expect } from 'chai';
 import '@nomiclabs/hardhat-ethers';
 import { Contract, ContractFactory } from 'ethers';
 import { ethers } from 'hardhat';
-import { tokensFixture, poolFixture } from './shared/fixtures';
-import { MockToken, INonfungiblePositionManager } from '../typechain';
+import { tokensFixture, poolFixture, routerFixture } from './shared/fixtures';
+import { MockToken, INonfungiblePositionManager, ISwapRouter } from '../typechain';
 
 const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json');
 const PositionManagerContract = require('../artifacts/contracts/PositionManager.sol/PositionManager.json');
@@ -12,7 +12,7 @@ const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/
 const FixturesConst = require('./shared/fixtures');
 const hre = require('hardhat');
 
-describe('PositionManagerFactory', function () {
+describe('PositionManagerFactory.sol', function () {
   let PositionManagerInstance: Contract;
   let PositionManagerFactoryInstance: Contract;
 
@@ -21,6 +21,7 @@ describe('PositionManagerFactory', function () {
   let NonFungiblePositionManager: INonfungiblePositionManager;
   let token0: MockToken, token1: MockToken;
   let poolI: any;
+  let Router: ISwapRouter;
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
@@ -64,6 +65,9 @@ describe('PositionManagerFactory', function () {
       NonFungiblePositionManagerDescriptor.address
     ).then((contract) => contract.deployed())) as INonfungiblePositionManager;
 
+    //deploy router
+    Router = await routerFixture().then((RFixture: any) => RFixture.ruoterDeployFixture);
+
     await token0
       .connect(signers[0])
       .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'));
@@ -82,7 +86,7 @@ describe('PositionManagerFactory', function () {
 
       [owner] = await ethers.getSigners();
 
-      await PositionManagerFactoryInstance.create(owner.address, NonFungiblePositionManager.address);
+      await PositionManagerFactoryInstance.create(owner.address, NonFungiblePositionManager.address, Router.address);
 
       const deployedContract = await PositionManagerFactoryInstance.positionManagers(0);
       const PositionManagerInstance = await ethers.getContractAt(PositionManagerContract.abi, deployedContract);

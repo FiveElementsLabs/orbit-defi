@@ -1,7 +1,8 @@
 import { Contract, ContractReceipt } from 'ethers';
 import { ethers } from 'hardhat';
 import { ContractFactory } from 'ethers';
-import { MockToken, IUniswapV3Pool, TestRouter } from '../../typechain';
+import { MockToken, IUniswapV3Pool, TestRouter, Registry } from '../../typechain';
+const { getContractAddress } = require('@ethersproject/address');
 
 const UniswapV3Pool = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Pool.sol/UniswapV3Pool.json');
 export const NonFungiblePositionManagerDescriptorBytecode =
@@ -19,10 +20,28 @@ interface RuoterFixture {
   ruoterDeployFixture: TestRouter;
 }
 
+interface RegistryFixture {
+  registryFixture: Registry;
+}
+
 export async function tokensFixture(name: string, decimal: number): Promise<TokensFixture> {
   const tokenFactory = await ethers.getContractFactory('MockToken');
   const tokenFixture: MockToken = (await tokenFactory.deploy(name, name, decimal)) as MockToken;
   return { tokenFixture };
+}
+
+export async function RegistryFixture(): Promise<RegistryFixture> {
+  const signers = await ethers.getSigners();
+  const deployer = signers[0];
+  const transactionCount = await deployer.getTransactionCount();
+  const futureAddress = getContractAddress({
+    from: deployer.address,
+    nonce: transactionCount,
+  });
+  console.log(futureAddress);
+  const registryFactory = await ethers.getContractFactory('Registry');
+  const registryFixture: Registry = (await registryFactory.deploy()) as Registry;
+  return { registryFixture };
 }
 
 export async function poolFixture(

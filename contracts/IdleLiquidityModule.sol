@@ -3,19 +3,18 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import '../interfaces/IVault.sol';
+import '../interfaces/IPositionManager.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol';
 
 contract IdleLiquidityModule {
     INonfungiblePositionManager public immutable nonFungiblePositionManager;
     address public immutable uniswapV3FactoryAddress;
 
-    constructor(INonfungiblePositionManager _nonfungiblePositionManager, address _uniswapV3Factory) {
+    constructor(INonfungiblePositionManager _nonfungiblePositionManager) {
         nonFungiblePositionManager = _nonfungiblePositionManager;
-        uniswapV3FactoryAddress = _uniswapV3Factory;
+        uniswapV3FactoryAddress = _nonfungiblePositionManager.factory();
     }
 
     //returns distance from position (in ticks), if output is negative => position is out of range
