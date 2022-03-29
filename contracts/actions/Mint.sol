@@ -5,7 +5,6 @@ pragma abicoder v2;
 
 import './BaseAction.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 
@@ -13,6 +12,8 @@ import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol';
 import '@uniswap/v3-periphery/contracts/libraries/PositionKey.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
+import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
+import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 
 contract Mint is BaseAction {
     event DepositUni(address indexed from, uint256 tokenId);
@@ -34,9 +35,11 @@ contract Mint is BaseAction {
     }
 
     INonfungiblePositionManager public immutable nonfungiblePositionManager;
+    IUniswapV3Factory public immutable factory;
 
-    constructor(INonfungiblePositionManager _nonfungiblePositionManager) {
+    constructor(INonfungiblePositionManager _nonfungiblePositionManager, IUniswapV3Factory _uniV3Factory) {
         nonfungiblePositionManager = _nonfungiblePositionManager;
+        factory = _uniV3Factory;
     }
 
     function doAction(bytes memory inputs) public override returns (bytes memory) {
@@ -124,7 +127,7 @@ contract Mint is BaseAction {
     function getPool(
         address token0,
         address token1,
-        uint128 fee
+        uint24 fee
     ) public view returns (IUniswapV3Pool) {
         PoolAddress.PoolKey memory key = PoolAddress.getPoolKey(token0, token1, fee);
 
