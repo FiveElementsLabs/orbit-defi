@@ -45,17 +45,15 @@ library ERC20Helper {
         address from,
         uint256 amount
     ) internal returns (uint256) {
-        bool done = false;
-        uint256 needed;
+        uint256 needed = 0;
         uint256 balance = _getBalance(token, address(this));
         if (balance < amount) {
-            needed = amount - balance;
-            if (needed < _getBalance(token, from)) {
+            if (amount - balance < _getBalance(token, from)) {
+                needed = amount - balance;
                 IERC20(token).safeTransferFrom(from, address(this), needed);
-                done = true;
             }
         }
-        return done ? needed : 0;
+        return needed;
     }
 
     ///@notice withdraw the tokens from the vault and send them to the user

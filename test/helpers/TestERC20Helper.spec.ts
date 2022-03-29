@@ -53,6 +53,7 @@ describe('TestERC20Helper', () => {
       const allowance = await tokenEth.connect(spender).allowance(TestERC20Helper.address, owner.address);
       expect(allowance.toString()).to.equal(ethers.utils.parseEther(tokenToApproveAmount));
     });
+
     it('Approve spender to be the spender of owners tokens with -1 amount', async function () {
       const tokenToApproveAmount = '-1';
       let errorMessage;
@@ -116,6 +117,7 @@ describe('TestERC20Helper', () => {
         )
       ).to.be.revertedWith('ERC20: transfer amount exceeds allowance');
     });
+
     it('Withdraw tokens from owner to ', async function () {
       await mintSTDAmount(tokenEth);
       await tokenEth.connect(owner).approve(TestERC20Helper.address, ethers.utils.parseEther('100000000000000'));
@@ -149,6 +151,7 @@ describe('TestERC20Helper', () => {
       expect(balanceBeforeOwner.div(balanceAfterOwner).toNumber()).to.be.equal(1);
       expect(balanceBeforeTestERC20Helper).to.be.lt(balanceAfterTestERC20Helper);
     });
+
     it('Pull tokens from owner to ', async function () {
       await mintSTDAmount(tokenEth);
       const balanceBeforeOwner = await tokenEth.balanceOf(owner.address);
@@ -165,6 +168,7 @@ describe('TestERC20Helper', () => {
       expect(balanceBeforeOwner).to.be.equal(balanceAfterOwner);
       expect(balanceBeforeTestERC20Helper).to.be.equal(balanceAfterTestERC20Helper);
     });
+
     it('Pull tokens from owner to ', async function () {
       await mintSTDAmount(tokenEth);
       const balanceBeforeOwner = await tokenEth.balanceOf(owner.address);

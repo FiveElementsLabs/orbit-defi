@@ -3,7 +3,7 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import '../helper/ERC20Helper.sol';
+import '../../helpers/ERC20Helper.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 contract TestERC20Helper {
