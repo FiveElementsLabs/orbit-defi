@@ -317,5 +317,15 @@ describe('SwapHelper.sol', function () {
       const amount1In = 5e5;
       await MockSwapHelper.calcAmountToSwap(tickPool, tickLower, tickUpper, amount0In, amount1In);
     });
+
+    it('should revert if both amount are zero', async function () {
+      const tickPool = 0;
+      const tickLower = -300;
+      const tickUpper = 300;
+      const amount0In = 0;
+      const amount1In = 0;
+      await expect(MockSwapHelper.calcAmountToSwap(tickPool, tickLower, tickUpper, amount0In, amount1In)).to.be
+        .reverted;
+    });
   });
 });
