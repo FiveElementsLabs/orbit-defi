@@ -53,6 +53,21 @@ describe('TestERC20Helper', () => {
       const allowance = await tokenEth.connect(spender).allowance(TestERC20Helper.address, owner.address);
       expect(allowance.toString()).to.equal(ethers.utils.parseEther(tokenToApproveAmount));
     });
+    it('Approve spender to be the spender of owners tokens with -1 amount', async function () {
+      const tokenToApproveAmount = '-1';
+      let errorMessage;
+      try {
+        await TestERC20Helper.connect(spender).approveToken(
+          tokenEth.address,
+          owner.address,
+          ethers.utils.parseEther(tokenToApproveAmount)
+        );
+      } catch (e: any) {
+        errorMessage = e.reason;
+      }
+
+      expect(errorMessage).to.equal('value out-of-bounds');
+    });
   });
 
   describe('TestERC20Helper - getBalance', function () {
@@ -61,6 +76,16 @@ describe('TestERC20Helper', () => {
       const balance = await TestERC20Helper.getBalance(tokenEth.address, owner.address);
       expect(balance.toString()).to.equal((await tokenEth.balanceOf(owner.address)).toString());
     });
+    it("Should fail to get balance of random's address", async function () {
+      let errorMessage;
+      try {
+        await TestERC20Helper.getBalance(tokenEth.address, '0x0');
+      } catch (e: any) {
+        errorMessage = e.reason;
+      }
+
+      expect(errorMessage).to.equal('invalid address');
+    });
   });
 
   describe('TestERC20Helper - getAllowance', function () {
@@ -68,7 +93,6 @@ describe('TestERC20Helper', () => {
       await mintSTDAmount(tokenEth);
       tokenEth.connect(owner).approve(TestERC20Helper.address, ethers.utils.parseEther('100000000000000'));
       const allowance = await TestERC20Helper.getAllowance(tokenEth.address, owner.address, spender.address);
-      console.log(allowance);
       expect(allowance.toString()).to.equal((await tokenEth.allowance(owner.address, spender.address)).toString());
     });
 
@@ -76,7 +100,6 @@ describe('TestERC20Helper', () => {
       await mintSTDAmount(tokenEth);
       tokenEth.connect(owner).approve(TestERC20Helper.address, ethers.utils.parseEther('0'));
       const allowance = await TestERC20Helper.getAllowance(tokenEth.address, owner.address, spender.address);
-      console.log(allowance);
       expect(allowance.toString()).to.equal((await tokenEth.allowance(owner.address, spender.address)).toString());
     });
   });
@@ -107,8 +130,6 @@ describe('TestERC20Helper', () => {
 
       expect(ownerBalanceAfter.toString()).to.be.equal(ownerBalanceBefore.add('1').toString());
     });
-
-    //TODO: test withdraw with result 'ERC20: transfer amount exceeds allowance'
   });
 
   describe('TestERC20Helper - pullTokensIfNeeded', function () {
@@ -128,8 +149,33 @@ describe('TestERC20Helper', () => {
       expect(balanceBeforeOwner.div(balanceAfterOwner).toNumber()).to.be.equal(1);
       expect(balanceBeforeTestERC20Helper).to.be.lt(balanceAfterTestERC20Helper);
     });
+    it('Pull tokens from owner to ', async function () {
+      await mintSTDAmount(tokenEth);
+      const balanceBeforeOwner = await tokenEth.balanceOf(owner.address);
+      const balanceBeforeTestERC20Helper = await tokenEth.balanceOf(TestERC20Helper.address);
+      tokenEth.connect(owner).approve(TestERC20Helper.address, ethers.utils.parseEther('100000000000'));
+
+      await TestERC20Helper.connect(owner).pullTokensIfNeeded(
+        tokenEth.address,
+        owner.address,
+        ethers.utils.parseEther('10000000000000000000000')
+      );
+      const balanceAfterOwner = await tokenEth.balanceOf(owner.address);
+      const balanceAfterTestERC20Helper = await tokenEth.balanceOf(TestERC20Helper.address);
+      expect(balanceBeforeOwner).to.be.equal(balanceAfterOwner);
+      expect(balanceBeforeTestERC20Helper).to.be.equal(balanceAfterTestERC20Helper);
+    });
+    it('Pull tokens from owner to ', async function () {
+      await mintSTDAmount(tokenEth);
+      const balanceBeforeOwner = await tokenEth.balanceOf(owner.address);
+      const balanceBeforeTestERC20Helper = await tokenEth.balanceOf(TestERC20Helper.address);
+      tokenEth.connect(owner).approve(TestERC20Helper.address, ethers.utils.parseEther('100000000000'));
+
+      await TestERC20Helper.connect(owner).pullTokensIfNeeded(tokenEth.address, owner.address, '1');
+      const balanceAfterOwner = await tokenEth.balanceOf(owner.address);
+      const balanceAfterTestERC20Helper = await tokenEth.balanceOf(TestERC20Helper.address);
+      expect(balanceBeforeOwner).to.be.equal(balanceAfterOwner);
+      expect(balanceBeforeTestERC20Helper).to.be.equal(balanceAfterTestERC20Helper);
+    });
   });
 });
-
-//4999999999999999900000000000000  -  4999000000000000000000000000000
-//4999000000000000000000000000000  -  4998999999999999900000000000000
