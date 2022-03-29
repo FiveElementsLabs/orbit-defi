@@ -43,7 +43,7 @@ describe('TestERC20Helper', () => {
   beforeEach(async function () {});
 
   describe('TestERC20Helper - approveToken', function () {
-    it("Approve spender to be the spender of owner's tokens", async function () {
+    it("approves spender to be the spender of owner's tokens", async function () {
       const tokenToApproveAmount = '100000000000000';
       await TestERC20Helper.connect(spender).approveToken(
         tokenEth.address,
@@ -54,7 +54,7 @@ describe('TestERC20Helper', () => {
       expect(allowance.toString()).to.equal(ethers.utils.parseEther(tokenToApproveAmount));
     });
 
-    it('Approve spender to be the spender of owners tokens with -1 amount', async function () {
+    it('approves spender to be the spender of owners tokens with -1 amount', async function () {
       const tokenToApproveAmount = '-1';
       let errorMessage;
       try {
@@ -72,7 +72,7 @@ describe('TestERC20Helper', () => {
   });
 
   describe('TestERC20Helper - getBalance', function () {
-    it("Get balance of owner's token", async function () {
+    it("gets balance of owner's token", async function () {
       await mintSTDAmount(tokenEth);
       const balance = await TestERC20Helper.getBalance(tokenEth.address, owner.address);
       expect(balance.toString()).to.equal((await tokenEth.balanceOf(owner.address)).toString());
@@ -90,14 +90,14 @@ describe('TestERC20Helper', () => {
   });
 
   describe('TestERC20Helper - getAllowance', function () {
-    it("Get allowance of owner's token", async function () {
+    it("gets allowance of owner's token", async function () {
       await mintSTDAmount(tokenEth);
       tokenEth.connect(owner).approve(TestERC20Helper.address, ethers.utils.parseEther('100000000000000'));
       const allowance = await TestERC20Helper.getAllowance(tokenEth.address, owner.address, spender.address);
       expect(allowance.toString()).to.equal((await tokenEth.allowance(owner.address, spender.address)).toString());
     });
 
-    it("Get allowance of owner's token with approve equal 0", async function () {
+    it("gets allowance of owner's token with approve amount equal 0", async function () {
       await mintSTDAmount(tokenEth);
       tokenEth.connect(owner).approve(TestERC20Helper.address, ethers.utils.parseEther('0'));
       const allowance = await TestERC20Helper.getAllowance(tokenEth.address, owner.address, spender.address);
@@ -106,7 +106,7 @@ describe('TestERC20Helper', () => {
   });
 
   describe('TestERC20Helper - withdrawTokens', function () {
-    it('Withdraw tokens exceed allowance', async function () {
+    it('should give transfer amount exceeds allowance', async function () {
       await tokenEth.connect(owner).transfer(TestERC20Helper.address, '100000000000000');
 
       await expect(
@@ -118,7 +118,7 @@ describe('TestERC20Helper', () => {
       ).to.be.revertedWith('ERC20: transfer amount exceeds allowance');
     });
 
-    it('Withdraw tokens from owner to ', async function () {
+    it('withdraws tokens from owner to ', async function () {
       await mintSTDAmount(tokenEth);
       await tokenEth.connect(owner).approve(TestERC20Helper.address, ethers.utils.parseEther('100000000000000'));
       await tokenEth.connect(owner).transfer(TestERC20Helper.address, '100000000000000');
@@ -135,7 +135,7 @@ describe('TestERC20Helper', () => {
   });
 
   describe('TestERC20Helper - pullTokensIfNeeded', function () {
-    it('Pull tokens from owner to ', async function () {
+    it('pulls tokens from owner to ', async function () {
       await mintSTDAmount(tokenEth);
       const balanceBeforeOwner = await tokenEth.balanceOf(owner.address);
       const balanceBeforeTestERC20Helper = await tokenEth.balanceOf(TestERC20Helper.address);
@@ -152,7 +152,7 @@ describe('TestERC20Helper', () => {
       expect(balanceBeforeTestERC20Helper).to.be.lt(balanceAfterTestERC20Helper);
     });
 
-    it('Pull tokens from owner to ', async function () {
+    it('pulls tokens from owner to ', async function () {
       await mintSTDAmount(tokenEth);
       const balanceBeforeOwner = await tokenEth.balanceOf(owner.address);
       const balanceBeforeTestERC20Helper = await tokenEth.balanceOf(TestERC20Helper.address);
@@ -169,7 +169,7 @@ describe('TestERC20Helper', () => {
       expect(balanceBeforeTestERC20Helper).to.be.equal(balanceAfterTestERC20Helper);
     });
 
-    it('Pull tokens from owner to ', async function () {
+    it('pulls tokens from owner to ', async function () {
       await mintSTDAmount(tokenEth);
       const balanceBeforeOwner = await tokenEth.balanceOf(owner.address);
       const balanceBeforeTestERC20Helper = await tokenEth.balanceOf(TestERC20Helper.address);
