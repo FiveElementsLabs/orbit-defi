@@ -5,7 +5,7 @@ pragma abicoder v2;
 
 import '../helper/ERC20Helper.sol';
 
-contract TestERC20Helper is ERC20Helper {
+contract TestERC20Helper {
     ///@notice library to interact with ERC20 helper for testing
 
     ///@notice approve the token to be able to transfer it
@@ -18,7 +18,7 @@ contract TestERC20Helper is ERC20Helper {
         address spender,
         uint256 amount
     ) public {
-        _approveToken(token, spender, amount);
+        ERC20Helper._approveToken(token, spender, amount);
     }
 
     ///@notice transfer the token to the spender
@@ -26,7 +26,7 @@ contract TestERC20Helper is ERC20Helper {
     ///@param token address of the token
     ///@param account address of the owner
     function getBalance(address token, address account) public {
-        _getBalance(token, account);
+        ERC20Helper._getBalance(token, account);
     }
 
     ///@notice return the allowance of the token that spender is able to spend
@@ -40,7 +40,7 @@ contract TestERC20Helper is ERC20Helper {
         address owner,
         address spender
     ) public view returns (uint256) {
-        return _getAllowance(token, owner, spender);
+        return ERC20Helper._getAllowance(token, owner, spender);
     }
 
     ///@notice pull token if it is below the threshold of amount
@@ -54,7 +54,7 @@ contract TestERC20Helper is ERC20Helper {
         address from,
         uint256 amount
     ) public returns (uint256) {
-        return _pullTokensIfNeeded(token, from, amount);
+        return ERC20Helper._pullTokensIfNeeded(token, from, amount);
     }
 
     ///@notice withdraw the tokens from the vault and send them to the user
@@ -67,6 +67,6 @@ contract TestERC20Helper is ERC20Helper {
         address to,
         uint256 amount
     ) public {
-        _withdrawTokens(token, to, amount);
+        ERC20Helper._withdrawTokens(token, to, amount);
     }
 }

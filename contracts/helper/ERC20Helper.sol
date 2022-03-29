@@ -3,6 +3,7 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
+import '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 library ERC20Helper {
@@ -12,7 +13,7 @@ library ERC20Helper {
     ///@notice approve the token to be able to transfer it
     ///@param token address of the token
     ///@param spender address of the spender
-    ///@param balance address of the balance
+    ///@param amount address of the balance
     function _approveToken(
         address token,
         address spender,
@@ -45,11 +46,13 @@ library ERC20Helper {
         uint256 amount
     ) internal returns (uint256) {
         bool done = false;
-        uint256 balance = getBalance(token, address(this));
+        uint256 needed;
+        uint256 balance = _getBalance(token, address(this));
         if (balance < amount) {
-            uint256 needed = amount - balance;
-            if (needed < getBalance(token, from)) {
-                done = IERC20(token).safeTransferFrom(from, address(this), needed);
+            needed = amount - balance;
+            if (needed < _getBalance(token, from)) {
+                IERC20(token).safeTransferFrom(from, address(this), needed);
+                done = true;
             }
         }
         return done ? needed : 0;
