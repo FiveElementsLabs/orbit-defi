@@ -16,7 +16,7 @@ import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager
 import { getContractFactory } from '@nomiclabs/hardhat-ethers/types';
 import { AnyTxtRecord } from 'dns';
 
-describe('PositionManager.sol', function () {
+describe('SwapHelper.sol', function () {
   //GLOBAL VARIABLE - USE THIS
   let user: any = ethers.getSigners().then(async (signers) => {
     return signers[0];
@@ -204,7 +204,7 @@ describe('PositionManager.sol', function () {
       .then((mintReceipt: any) => mintReceipt.events[mintReceipt.events.length - 1].args.tokenId);
   });
 
-  describe('SwapHelper.sol - getRatioFromRange', function () {
+  describe('getRatioFromRange', function () {
     it('should calculate ratio=1 correctly', async function () {
       const tickPool = 0;
       const tickLower = -300;
@@ -230,7 +230,7 @@ describe('PositionManager.sol', function () {
     });
   });
 
-  describe('SwapHelper.sol - calcAmountToSwap', function () {
+  describe('calcAmountToSwap', function () {
     it('should swap all to one token if poolTick is under tickLower', async function () {
       const tickPool = -400;
       const tickLower = -20;
