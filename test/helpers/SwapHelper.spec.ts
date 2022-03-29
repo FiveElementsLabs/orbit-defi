@@ -146,16 +146,6 @@ describe('PositionManager.sol', function () {
     await tokenEth.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
     await tokenUsdc.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
     await tokenDai.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
-    /* //recipient: NonFungiblePositionManager - spender: PositionManager
-        await tokenEth
-          .connect(PositionManager.address)
-          .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'));
-        await tokenUsdc
-          .connect(PositionManager.address)
-          .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'));
-        await tokenDai
-          .connect(PositionManager.address)
-          .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000')); */
 
     await NonFungiblePositionManager.setApprovalForAll(PositionManager.address, true);
 
@@ -307,6 +297,25 @@ describe('PositionManager.sol', function () {
       );
       expect(amountToSwap.toNumber()).to.be.closeTo((amount0In - amount1In) / 2, (amount0In - amount1In) / 1e4);
       expect(token0In).to.equal(true);
+    });
+
+    it('should revert if negative amounts are passed', async function () {
+      const tickPool = 0;
+      const tickLower = -300;
+      const tickUpper = 300;
+      const amount0In = -1e6;
+      const amount1In = 5e5;
+      await expect(MockSwapHelper.calcAmountToSwap(tickPool, tickLower, tickUpper, amount0In, amount1In)).to.be
+        .reverted;
+    });
+
+    it('should work if zero amounts are passed', async function () {
+      const tickPool = 0;
+      const tickLower = -300;
+      const tickUpper = 300;
+      const amount0In = 0;
+      const amount1In = 5e5;
+      await MockSwapHelper.calcAmountToSwap(tickPool, tickLower, tickUpper, amount0In, amount1In);
     });
   });
 });
