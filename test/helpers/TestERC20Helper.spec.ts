@@ -32,7 +32,7 @@ describe('TestERC20Helper', () => {
     await hre.network.provider.send('hardhat_reset');
 
     //deploy the token
-    tokenEth = await tokensFixture('ETH', 18).then((tokenFix) => tokenFix.tokenFixture);
+    tokenEth = (await tokensFixture('ETH', 18)).tokenFixture;
 
     //deploy the contract
     const TestERC20HelperFactory = await ethers.getContractFactory('MockERC20Helper');
