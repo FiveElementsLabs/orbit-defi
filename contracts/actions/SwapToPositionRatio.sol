@@ -31,12 +31,7 @@ contract SwapToPositionRatio is BaseAction, UniswapAddressHolder {
         uint256 amountOut;
     }
 
-    //TODO: This should be in a helper.
-    ISwapRouter public immutable swapRouter;
-
-    constructor(ISwapRouter _swapRouter) {
-        swapRouter = _swapRouter;
-    }
+    ISwapRouter swapRouter = ISwapRouter(swapRouterAddress);
 
     function doAction(bytes memory inputs) public override returns (bytes memory outputs) {
         InputStruct memory inputsStruct = decodeInputs(inputs);
@@ -81,7 +76,7 @@ contract SwapToPositionRatio is BaseAction, UniswapAddressHolder {
         uint24 fee,
         uint256 amount0In
     ) internal returns (uint256 amount1Out) {
-        token0.approve(address(swapRouter), 2**256 - 1);
+        token0.approve(swapRouterAddress, 2**256 - 1);
 
         ISwapRouter.ExactInputSingleParams memory swapParams = ISwapRouter.ExactInputSingleParams({
             tokenIn: address(token0),
