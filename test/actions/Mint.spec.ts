@@ -85,12 +85,8 @@ describe('Mint.sol', function () {
 
     //Deploy Mint Action
     const mintActionFactory = await ethers.getContractFactory('Mint');
-    MintAction = (await mintActionFactory.deploy()) as Mint;
+    MintAction = (await mintActionFactory.deploy(NonFungiblePositionManager.address, Factory.address)) as Mint;
     await MintAction.deployed();
-
-    //set addresses in Mint Action
-    await MintAction.setNonFungibleAddress(NonFungiblePositionManager.address);
-    await MintAction.setFactoryAddress(Factory.address);
 
     //get AbiCoder
     abiCoder = ethers.utils.defaultAbiCoder;
