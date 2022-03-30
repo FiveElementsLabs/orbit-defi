@@ -7,6 +7,7 @@ import './BaseAction.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
+import '../helpers/ERC20Helper.sol';
 
 //these contracts should be imported from helpers
 import '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol';
@@ -15,9 +16,18 @@ import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 
+///@notice action to mint a UniswapV3 position NFT
 contract Mint is BaseAction {
     event DepositUni(address indexed from, uint256 tokenId);
 
+    ///@notice input the decoder expects
+    ///@param token0Address address of first token of the pool
+    ///@param token1Address address of second token of the pool
+    ///@param fee fee tier of the pool
+    ///@param tickLower lower tick of position
+    ///@param tickUpper upper tick of position
+    ///@param amount0Desired maximum token0 amount to be deposited
+    ///@param amount1Desired maximum token1 amount to be deposited
     struct InputStruct {
         address token0Address;
         address token1Address;
@@ -28,12 +38,17 @@ contract Mint is BaseAction {
         uint256 amount1Desired;
     }
 
+    ///@notice output the encoder produces
+    ///@param tokenId ID of the minted NFT
+    ///@param amount0Deposited token0 amount deposited
+    ///@param amount1Deposited token1 amount deposited
     struct OutputStruct {
         uint256 tokenId;
         uint256 amount0Deposited;
         uint256 amount1Deposited;
     }
 
+    //TODO: these should be in a helper
     INonfungiblePositionManager public immutable nonfungiblePositionManager;
     IUniswapV3Factory public immutable factory;
 
@@ -42,18 +57,24 @@ contract Mint is BaseAction {
         factory = _uniV3Factory;
     }
 
+    ///@notice executes the action of the contract (mint), should be the only function visible from the outside
+    ///@param inputs input bytes to be decoded according to InputStruct
+    ///@return bytes outputs encoded according OutputStruct
     function doAction(bytes memory inputs) public override returns (bytes memory) {
         InputStruct memory inputsStruct = decodeInputs(inputs);
         OutputStruct memory outputsStruct = mint(inputsStruct);
         return encodeOutputs(outputsStruct);
     }
 
+    ///@notice mints a UniswapV3 position NFT
+    ///@param inputs input parameters for minting
+    ///@param outputs output parameters
     function mint(InputStruct memory inputs) internal returns (OutputStruct memory outputs) {
         // TODO: use helper to get pool price
-        (, int24 tickPool, , , , , ) = getPool(inputs.token0Address, inputs.token1Address, inputs.fee).slot0();
+        (uint160 sqrtPriceX96, , , , , , ) = getPool(inputs.token0Address, inputs.token1Address, inputs.fee).slot0();
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
-            TickMath.getSqrtRatioAtTick(tickPool),
+            sqrtPriceX96,
             TickMath.getSqrtRatioAtTick(inputs.tickLower),
             TickMath.getSqrtRatioAtTick(inputs.tickUpper),
             inputs.amount0Desired,
@@ -61,16 +82,14 @@ contract Mint is BaseAction {
         );
 
         (uint256 amount0, uint256 amount1) = LiquidityAmounts.getAmountsForLiquidity(
-            TickMath.getSqrtRatioAtTick(tickPool),
+            sqrtPriceX96,
             TickMath.getSqrtRatioAtTick(inputs.tickLower),
             TickMath.getSqrtRatioAtTick(inputs.tickUpper),
             liquidity
         );
 
-        IERC20 token0 = IERC20(inputs.token0Address);
-        token0.approve(address(nonfungiblePositionManager), amount0);
-        IERC20 token1 = IERC20(inputs.token1Address);
-        token1.approve(address(nonfungiblePositionManager), amount1);
+        ERC20Helper._approveToken(inputs.token0Address, address(nonfungiblePositionManager), amount0);
+        ERC20Helper._approveToken(inputs.token1Address, address(nonfungiblePositionManager), amount1);
 
         (uint256 tokenId, , uint256 amount0Deposited, uint256 amount1Deposited) = nonfungiblePositionManager.mint(
             INonfungiblePositionManager.MintParams({
@@ -99,6 +118,9 @@ contract Mint is BaseAction {
         emit DepositUni(msg.sender, tokenId);
     }
 
+    ///@notice decodes inputs to InputStruct
+    ///@param inputBytes input bytes to be decoded
+    ///@return input decoded input struct
     function decodeInputs(bytes memory inputBytes) internal pure returns (InputStruct memory input) {
         (
             address token0Address,
@@ -120,10 +142,14 @@ contract Mint is BaseAction {
         });
     }
 
+    ///@notice encode the outputs to bytes
+    ///@param outputs outputs to be encoded
+    ///@return outputBytes encoded outputs
     function encodeOutputs(OutputStruct memory outputs) internal pure returns (bytes memory outputBytes) {
         outputBytes = abi.encode(outputs);
     }
 
+    //TODO: when we have a helper, this function should be removed
     function getPool(
         address token0,
         address token1,
