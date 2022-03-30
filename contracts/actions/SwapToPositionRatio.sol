@@ -13,7 +13,7 @@ import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 
-contract Swap is BaseAction, UniswapAddressHolder {
+contract SwapToPositionRatio is BaseAction, UniswapAddressHolder {
     event Output(bytes output);
 
     struct InputStruct {
