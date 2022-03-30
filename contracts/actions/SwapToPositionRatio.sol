@@ -57,13 +57,13 @@ contract Swap is BaseAction, UniswapAddressHolder {
         );
 
         if (amountToSwap != 0) {
-            amountOut = swap(
+            uint256 amountOut = swap(
                 token0In ? inputs.token0 : inputs.token1,
                 token0In ? inputs.token1 : inputs.token0,
                 inputs.fee,
-                amountToSwap,
-                true
+                amountToSwap
             );
+
             outputs = OutputStruct({amountOut: amountOut});
         }
     }
@@ -121,7 +121,7 @@ contract Swap is BaseAction, UniswapAddressHolder {
         address token0,
         address token1,
         uint24 fee
-    ) public pure returns (IUniswapV3Pool) {
+    ) public view returns (IUniswapV3Pool) {
         PoolAddress.PoolKey memory key = PoolAddress.getPoolKey(token0, token1, fee);
 
         address poolAddress = PoolAddress.computeAddress(uniswapV3FactoryAddress, key);
