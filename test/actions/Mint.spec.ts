@@ -113,10 +113,8 @@ describe('Mint.sol', function () {
 
     //Deploy Mint Action
     const mintActionFactory = await ethers.getContractFactory('Mint');
-    MintAction = (await mintActionFactory.deploy(NonFungiblePositionManager.address, Factory.address)) as Contract;
+    MintAction = (await mintActionFactory.deploy()) as Contract;
     await MintAction.deployed();
-
-    //deploy abicoder
 
     //APPROVE
     //recipient: NonFungiblePositionManager - spender: user
@@ -151,6 +149,10 @@ describe('Mint.sol', function () {
     await tokenEth.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
     await tokenUsdc.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
     await tokenDai.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
+    //recipient: Mint action - spender: user
+    await tokenEth.connect(user).approve(MintAction.address, ethers.utils.parseEther('100000000000000'));
+    await tokenUsdc.connect(user).approve(MintAction.address, ethers.utils.parseEther('100000000000000'));
+    await tokenDai.connect(user).approve(MintAction.address, ethers.utils.parseEther('100000000000000'));
     /* //recipient: NonFungiblePositionManager - spender: PositionManager
     await tokenEth
       .connect(PositionManager.address)
@@ -204,20 +206,39 @@ describe('Mint.sol', function () {
 
   describe('doAction', function () {
     it('should correctly mint a UNIV3 position', async function () {
-      let abiCoder = ethers.utils.defaultAbiCoder;
-      console.log(Factory.address);
+      const abiCoder = ethers.utils.defaultAbiCoder;
+      const balancePre = await NonFungiblePositionManager.balanceOf(user.address);
+
       const inputBytes = await abiCoder.encode(
         ['address', 'address', 'uint24', 'int24', 'int24', 'uint256', 'uint256'],
         [tokenEth.address, tokenUsdc.address, 3000, -720, 3600, '0x' + (5e5).toString(16), '0x' + (5e5).toString(16)]
       );
 
-      const outputBytes = await MintAction.connect(user).doAction(inputBytes);
+      const events = (await (await MintAction.connect(user).doAction(inputBytes)).wait()).events;
 
-      console.log(outputBytes);
+      expect(await NonFungiblePositionManager.balanceOf(user.address)).to.gt(balancePre);
+    });
 
-      const outputs = await abiCoder.decode(['uint256', 'uint256', 'uint256'], '0');
+    it('should correctly return bytes', async function () {
+      const abiCoder = ethers.utils.defaultAbiCoder;
+      const balancePre = await NonFungiblePositionManager.balanceOf(user.address);
+
+      const inputBytes = await abiCoder.encode(
+        ['address', 'address', 'uint24', 'int24', 'int24', 'uint256', 'uint256'],
+        [tokenEth.address, tokenUsdc.address, 3000, -720, 720, '0x' + (5e5).toString(16), '0x' + (5e5).toString(16)]
+      );
+
+      const events = (await (await MintAction.connect(user).doAction(inputBytes)).wait()).events;
+
+      const outputEvent = events[events.length - 1];
+
+      console.log(outputEvent);
+      console.log(outputEvent.data);
+
+      const outputs = await abiCoder.decode(['uint256', 'uint256', 'uint256'], outputEvent.args[0]);
 
       console.log(outputs);
+      expect(await NonFungiblePositionManager.balanceOf(user.address)).to.gt(balancePre);
     });
   });
 });

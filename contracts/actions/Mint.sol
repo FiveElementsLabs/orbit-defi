@@ -20,6 +20,7 @@ import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 ///@notice action to mint a UniswapV3 position NFT
 contract Mint is BaseAction, UniswapAddressHolder {
     event DepositUni(address indexed from, uint256 tokenId);
+    event Output(bytes output);
 
     ///@notice input the decoder expects
     ///@param token0Address address of first token of the pool
@@ -51,11 +52,12 @@ contract Mint is BaseAction, UniswapAddressHolder {
 
     ///@notice executes the action of the contract (mint), should be the only function visible from the outside
     ///@param inputs input bytes to be decoded according to InputStruct
-    ///@return bytes outputs encoded according OutputStruct
-    function doAction(bytes memory inputs) public override returns (bytes memory) {
+    ///@return outputs outputs encoded according OutputStruct
+    function doAction(bytes memory inputs) public override returns (bytes memory outputs) {
         InputStruct memory inputsStruct = decodeInputs(inputs);
         OutputStruct memory outputsStruct = mint(inputsStruct);
-        return encodeOutputs(outputsStruct);
+        outputs = encodeOutputs(outputsStruct);
+        emit Output(outputs);
     }
 
     ///@notice mints a UniswapV3 position NFT
@@ -80,6 +82,9 @@ contract Mint is BaseAction, UniswapAddressHolder {
             liquidity
         );
 
+        amount0 = ERC20Helper._pullTokensIfNeeded(inputs.token0Address, msg.sender, amount0);
+        amount1 = ERC20Helper._pullTokensIfNeeded(inputs.token1Address, msg.sender, amount1);
+
         ERC20Helper._approveToken(inputs.token0Address, nonfungiblePositionManagerAddress, amount0);
         ERC20Helper._approveToken(inputs.token1Address, nonfungiblePositionManagerAddress, amount1);
 
@@ -102,14 +107,20 @@ contract Mint is BaseAction, UniswapAddressHolder {
             );
 
         //TODO: push TokenID to positon manager's positions list
+        emit DepositUni(msg.sender, tokenId);
+
+        if (amount0 > amount0Deposited) {
+            ERC20Helper._withdrawTokens(inputs.token0Address, msg.sender, amount0 - amount0Deposited);
+        }
+        if (amount1 > amount1Deposited) {
+            ERC20Helper._withdrawTokens(inputs.token0Address, msg.sender, amount1 - amount1Deposited);
+        }
 
         outputs = OutputStruct({
             tokenId: tokenId,
             amount0Deposited: amount0Deposited,
             amount1Deposited: amount1Deposited
         });
-
-        emit DepositUni(msg.sender, tokenId);
     }
 
     ///@notice decodes inputs to InputStruct
@@ -148,7 +159,7 @@ contract Mint is BaseAction, UniswapAddressHolder {
         address token0,
         address token1,
         uint24 fee
-    ) public view returns (IUniswapV3Pool) {
+    ) public pure returns (IUniswapV3Pool) {
         PoolAddress.PoolKey memory key = PoolAddress.getPoolKey(token0, token1, fee);
 
         address poolAddress = PoolAddress.computeAddress(uniswapV3FactoryAddress, key);
