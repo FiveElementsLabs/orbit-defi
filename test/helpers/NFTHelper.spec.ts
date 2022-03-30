@@ -62,10 +62,11 @@ describe('TestNFTHelper', () => {
       UniswapV3Factoryjson['bytecode'],
       owner
     );
-    Factory = (await uniswapFactoryFactory.deploy().then((contract) => contract.deployed())) as Contract;
+    Factory = (await uniswapFactoryFactory.deploy()) as Contract;
+    await Factory.deployed();
 
     //deploy pool
-    Pool0 = await poolFixture(tokenEth, tokenUsdc, 3000, Factory).then((poolFix) => poolFix.pool);
+    Pool0 = (await poolFixture(tokenEth, tokenUsdc, 3000, Factory)).pool;
 
     //deploy NonFungiblePositionManagerDescriptor and NonFungiblePositionManager
     const NonFungiblePositionManagerDescriptorFactory = new ContractFactory(
@@ -76,7 +77,8 @@ describe('TestNFTHelper', () => {
     const NonFungiblePositionManagerDescriptor = await NonFungiblePositionManagerDescriptorFactory.deploy(
       tokenEth.address,
       ethers.utils.formatBytes32String('www.google.com')
-    ).then((contract) => contract.deployed());
+    );
+    await NonFungiblePositionManagerDescriptor.deployed();
 
     const NonFungiblePositionManagerFactory = new ContractFactory(
       NonFungiblePositionManagerjson['abi'],
@@ -87,7 +89,8 @@ describe('TestNFTHelper', () => {
       Factory.address,
       tokenEth.address,
       NonFungiblePositionManagerDescriptor.address
-    ).then((contract) => contract.deployed())) as INonfungiblePositionManager;
+    )) as INonfungiblePositionManager;
+    await NonFungiblePositionManager.deployed();
 
     //APPROVE
     //recipient: NonFungiblePositionManager - spender: user
@@ -116,9 +119,8 @@ describe('TestNFTHelper', () => {
       { gasLimit: 670000 }
     );
 
-    tokenId = await txMint
-      .wait()
-      .then((mintReceipt: any) => mintReceipt.events[mintReceipt.events.length - 1].args.tokenId);
+    const receipt: any = await txMint.wait();
+    tokenId = receipt.events[receipt.events.length - 1].args.tokenId;
 
     //deploy the contract
     const TestNFTHelperFactory = await ethers.getContractFactory('MockNFTHelper');
