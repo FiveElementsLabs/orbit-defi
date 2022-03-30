@@ -16,6 +16,7 @@ import './Registry.sol';
 import '../interfaces/IPositionManager.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '@uniswap/v3-core/contracts/libraries/FixedPoint96.sol';
+import './actions/BaseAction.sol';
 
 /**
  * @title   Position Manager
@@ -106,6 +107,12 @@ contract PositionManager is IPositionManager, ERC721Holder {
         require((msg.sender == owner) || (registry.isApproved(msg.sender)), 'Only owner or module');
         _;
     }
+
+    function doAction(address actionAddress, bytes memory inputs) public returns (bytes memory outputs) {
+        BaseAction action = BaseAction(actionAddress);
+        outputs = action.doAction(inputs);
+    }
+
     //###########################################################################################
 
     //What should be deleted after refactoring
