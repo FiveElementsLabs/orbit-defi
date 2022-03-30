@@ -9,7 +9,7 @@ import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 
-///@title library to interact with NFT token and do some usefull function with it
+///@title library to interact with NFT token and do some useful function with it
 library NFTHelper {
     ///@notice get the pool address
     ///@param factory address of the UniswapV3Factory
