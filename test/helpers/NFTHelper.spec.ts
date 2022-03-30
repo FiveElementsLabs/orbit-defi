@@ -138,7 +138,6 @@ describe('TestNFTHelper', () => {
       );
       expect(pooladdress).to.equal(Pool0.address);
     });
-
     it('Get wrong pool address', async function () {
       const pooladdress = await TestNFTHelper.getPoolAddress(
         Factory.address,
@@ -149,6 +148,7 @@ describe('TestNFTHelper', () => {
       expect(pooladdress).to.not.equal(Pool0.address);
     });
   });
+
   describe('TestNFTHelper - getPoolFromTokenId', function () {
     it('Get pool from token id', async function () {
       const pooladdress = await TestNFTHelper.getPoolFromTokenId(
@@ -156,7 +156,6 @@ describe('TestNFTHelper', () => {
         NonFungiblePositionManager.address, //nonFungiblepositionamanager
         Factory.address //factory
       );
-
       expect(pooladdress).to.equal(Pool0.address);
     });
     it('Failed to get pool from fake token id', async function () {
@@ -169,6 +168,7 @@ describe('TestNFTHelper', () => {
       ).to.be.revertedWith('Invalid token ID');
     });
   });
+
   describe('TestNFTHelper - getTokenAddress', function () {
     it('Get token address from tokenId', async function () {
       const tokenaddress = await TestNFTHelper.getTokenAddress(
@@ -196,6 +196,7 @@ describe('TestNFTHelper', () => {
       expect(liquidity[1].toString()).to.equal('999999999999999');
     });
   });
+
   describe('TestNFTHelper - getLiquidityFromAmount', function () {
     it('Get amounts for liquidity', async function () {
       const token0Dep = '1000000000000000';
