@@ -18,8 +18,8 @@ contract SwapToPositionRatio is BaseAction, UniswapAddressHolder {
     event Output(bytes output);
 
     struct InputStruct {
-        IERC20 token0;
-        IERC20 token1;
+        address token0;
+        address token1;
         uint24 fee;
         uint256 amount0In;
         uint256 amount1In;
@@ -43,8 +43,8 @@ contract SwapToPositionRatio is BaseAction, UniswapAddressHolder {
     function swapToPositionRatio(InputStruct memory inputs) internal returns (OutputStruct memory outputs) {
         address poolAddress = NFTHelper._getPoolAddress(
             uniswapV3FactoryAddress,
-            address(inputs.token0),
-            address(inputs.token1),
+            inputs.token0,
+            inputs.token1,
             inputs.fee
         );
         IUniswapV3Pool pool = IUniswapV3Pool(poolAddress);
@@ -71,16 +71,16 @@ contract SwapToPositionRatio is BaseAction, UniswapAddressHolder {
     }
 
     function swap(
-        IERC20 token0,
-        IERC20 token1,
+        address token0,
+        address token1,
         uint24 fee,
         uint256 amount0In
     ) internal returns (uint256 amount1Out) {
-        token0.approve(swapRouterAddress, 2**256 - 1);
+        IERC20(token0).approve(swapRouterAddress, 2**256 - 1);
 
         ISwapRouter.ExactInputSingleParams memory swapParams = ISwapRouter.ExactInputSingleParams({
-            tokenIn: address(token0),
-            tokenOut: address(token1),
+            tokenIn: token0,
+            tokenOut: token1,
             fee: fee,
             recipient: address(this),
             deadline: block.timestamp + 1000,
@@ -94,14 +94,14 @@ contract SwapToPositionRatio is BaseAction, UniswapAddressHolder {
 
     function decodeInputs(bytes memory inputBytes) internal pure returns (InputStruct memory input) {
         (
-            IERC20 token0,
-            IERC20 token1,
+            address token0,
+            address token1,
             uint24 fee,
             uint256 amount0In,
             uint256 amount1In,
             int24 tickLower,
             int24 tickUpper
-        ) = abi.decode(inputBytes, (IERC20, IERC20, uint24, uint256, uint256, int24, int24));
+        ) = abi.decode(inputBytes, (address, address, uint24, uint256, uint256, int24, int24));
 
         input = InputStruct({
             token0: token0,
