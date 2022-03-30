@@ -153,7 +153,7 @@ describe('Mint.sol', function () {
         [tokenEth.address, tokenUsdc.address, 3000, tickLower, tickUpper, amount0In, amount1In]
       );
 
-      const events = (await (await MintAction.connect(user).doAction(inputBytes)).wait()).events;
+      const events = (await (await MintAction.connect(user).doAction(inputBytes)).wait()).events as any;
 
       const outputEvent = events[events.length - 1];
 
