@@ -27,41 +27,13 @@ import '@uniswap/v3-core/contracts/libraries/FixedPoint96.sol';
  */
 
 contract PositionManager is IPositionManager, ERC721Holder {
+    //What should remain inside the PositionManager after refactoring
     event DepositUni(address indexed from, uint256 tokenId);
     event WithdrawUni(address to, uint256 tokenId);
-    Registry public immutable registry = Registry(0x59b670e9fA9D0A427751Af201D676719a970857b);
-    address public immutable owner;
-    address public immutable gov;
+
     uint256[] private uniswapNFTs;
+    address public immutable owner;
     INonfungiblePositionManager public immutable nonfungiblePositionManager;
-    IUniswapV3Factory public immutable factory;
-    ISwapRouter public immutable swapRouter;
-
-    struct Module {
-        address moduleAddress;
-        bool activated;
-    }
-
-    // details about the uniswap position
-    struct Position {
-        // the nonce for permits
-        uint96 nonce;
-        // the address that is approved for spending this token
-        address operator;
-        // the ID of the pool with which this token is connected
-        uint80 poolId;
-        // the tick range of the position
-        int24 tickLower;
-        int24 tickUpper;
-        // the liquidity of the position
-        uint128 liquidity;
-        // the fee growth of the aggregate position as of the last action on the individual position
-        uint256 feeGrowthInside0LastX128;
-        uint256 feeGrowthInside1LastX128;
-        // how many uncollected tokens are owed to the position, as of the last computation
-        uint128 tokensOwed0;
-        uint128 tokensOwed1;
-    }
 
     constructor(
         address userAddress,
@@ -70,9 +42,15 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ) {
         owner = userAddress;
         nonfungiblePositionManager = _nonfungiblePositionManager;
-        factory = IUniswapV3Factory(_nonfungiblePositionManager.factory());
-        gov = msg.sender;
-        swapRouter = _swapRouter;
+        factory = IUniswapV3Factory(_nonfungiblePositionManager.factory()); //this will be in the actions
+        gov = msg.sender; //TODO: hardcode in another contract
+        swapRouter = _swapRouter; //this will be in the actions
+    }
+
+    //TODO: refactor of user parameters
+    struct Module {
+        address moduleAddress;
+        bool activated;
     }
 
     /**
@@ -107,6 +85,41 @@ contract PositionManager is IPositionManager, ERC721Holder {
     function removeNFTFromList(uint256 index) internal {
         uniswapNFTs[index] = uniswapNFTs[uniswapNFTs.length - 1];
         uniswapNFTs.pop();
+    }
+
+    function _getAllUniPosition() external view override returns (uint256[] memory) {
+        uint256[] memory uniswapNFTsMemory = uniswapNFTs;
+        return uniswapNFTsMemory;
+    }
+
+    //###########################################################################################
+
+    //What should be deleted after refactoring
+
+    Registry public immutable registry = Registry(0x59b670e9fA9D0A427751Af201D676719a970857b);
+    address public immutable gov;
+    IUniswapV3Factory public immutable factory;
+    ISwapRouter public immutable swapRouter;
+
+    // details about the uniswap position
+    struct Position {
+        // the nonce for permits
+        uint96 nonce;
+        // the address that is approved for spending this token
+        address operator;
+        // the ID of the pool with which this token is connected
+        uint80 poolId;
+        // the tick range of the position
+        int24 tickLower;
+        int24 tickUpper;
+        // the liquidity of the position
+        uint128 liquidity;
+        // the fee growth of the aggregate position as of the last action on the individual position
+        uint256 feeGrowthInside0LastX128;
+        uint256 feeGrowthInside1LastX128;
+        // how many uncollected tokens are owed to the position, as of the last computation
+        uint128 tokensOwed0;
+        uint128 tokensOwed1;
     }
 
     //wrapper for withdraw of all univ3positions in manager
@@ -426,11 +439,6 @@ contract PositionManager is IPositionManager, ERC721Holder {
         address poolAddress = PoolAddress.computeAddress(address(factory), key);
 
         return IUniswapV3Pool(poolAddress);
-    }
-
-    function _getAllUniPosition() external view override returns (uint256[] memory) {
-        uint256[] memory uniswapNFTsMemory = uniswapNFTs;
-        return uniswapNFTsMemory;
     }
 
     function _approveToken(IERC20 token) private {
