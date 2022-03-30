@@ -87,11 +87,25 @@ contract PositionManager is IPositionManager, ERC721Holder {
         uniswapNFTs.pop();
     }
 
+    function pushPositionId(uint256 tokenId) public {
+        uniswapNFTs.push(tokenId);
+    }
+
     function _getAllUniPosition() external view override returns (uint256[] memory) {
         uint256[] memory uniswapNFTsMemory = uniswapNFTs;
         return uniswapNFTsMemory;
     }
 
+    // Modules activation modifier
+    modifier onlyOwner() {
+        require(msg.sender == owner, 'Only owner');
+        _;
+    }
+
+    modifier onlyOwnerOrModule() {
+        require((msg.sender == owner) || (registry.isApproved(msg.sender)), 'Only owner or module');
+        _;
+    }
     //###########################################################################################
 
     //What should be deleted after refactoring
@@ -452,16 +466,5 @@ contract PositionManager is IPositionManager, ERC721Holder {
         );
         token0 = IERC20(token0address);
         token1 = IERC20(token1address);
-    }
-
-    // Modules activation modifier
-    modifier onlyOwner() {
-        require(msg.sender == owner, 'Only owner');
-        _;
-    }
-
-    modifier onlyOwnerOrModule() {
-        require((msg.sender == owner) || (registry.isApproved(msg.sender)), 'Only owner or module');
-        _;
     }
 }
