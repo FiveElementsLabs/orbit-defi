@@ -152,7 +152,7 @@ contract Mint is BaseAction, UniswapAddressHolder {
         address token0,
         address token1,
         uint24 fee
-    ) public pure returns (IUniswapV3Pool) {
+    ) public view returns (IUniswapV3Pool) {
         PoolAddress.PoolKey memory key = PoolAddress.getPoolKey(token0, token1, fee);
 
         address poolAddress = PoolAddress.computeAddress(uniswapV3FactoryAddress, key);
