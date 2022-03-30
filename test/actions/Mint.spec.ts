@@ -222,7 +222,7 @@ describe('Mint.sol', function () {
       const amount1In = 5e5;
       const tickLower = -720;
       const tickUpper = 3600;
-      const inputBytes = await abiCoder.encode(
+      const inputBytes = abiCoder.encode(
         ['address', 'address', 'uint24', 'int24', 'int24', 'uint256', 'uint256'],
         [tokenEth.address, tokenUsdc.address, 3000, tickLower, tickUpper, amount0In, amount1In]
       );
@@ -237,7 +237,7 @@ describe('Mint.sol', function () {
       const amount1In = 5e5;
       const tickLower = -720;
       const tickUpper = 720;
-      const inputBytes = await abiCoder.encode(
+      const inputBytes = abiCoder.encode(
         ['address', 'address', 'uint24', 'int24', 'int24', 'uint256', 'uint256'],
         [tokenEth.address, tokenUsdc.address, 3000, tickLower, tickUpper, amount0In, amount1In]
       );
@@ -246,7 +246,7 @@ describe('Mint.sol', function () {
 
       const outputEvent = events[events.length - 1];
 
-      const outputs = await abiCoder.decode(['uint256', 'uint256', 'uint256'], outputEvent.args[0]);
+      const outputs = abiCoder.decode(['uint256', 'uint256', 'uint256'], outputEvent.args[0]);
 
       expect(await outputs[0].toNumber()).to.equal(5);
       expect(await outputs[1].toNumber()).to.be.closeTo(amount0In, amount0In / 1e5);
@@ -258,7 +258,7 @@ describe('Mint.sol', function () {
       const amount1In = 5e5;
       const tickLower = -720;
       const tickUpper = 720;
-      const inputBytes = await abiCoder.encode(
+      const inputBytes = abiCoder.encode(
         ['address', 'address', 'uint24', 'int24', 'int24', 'uint256', 'uint256'],
         [tokenEth.address, tokenUsdc.address, 3000, tickLower, tickUpper, amount0In, amount1In]
       );
@@ -266,6 +266,32 @@ describe('Mint.sol', function () {
       const events = (await (await MintAction.connect(user).doAction(inputBytes)).wait()).events;
 
       expect(await tokenEth.balanceOf(MintAction.address)).to.equal(0);
+    });
+
+    it('should revert if pool does not exist', async function () {
+      const amount0In = 7e5;
+      const amount1In = 5e5;
+      const tickLower = -720;
+      const tickUpper = 720;
+      const inputBytes = abiCoder.encode(
+        ['address', 'address', 'uint24', 'int24', 'int24', 'uint256', 'uint256'],
+        [tokenEth.address, tokenUsdc.address, 450, tickLower, tickUpper, amount0In, amount1In]
+      );
+
+      await expect(MintAction.connect(user).doAction(inputBytes)).to.be.reverted;
+    });
+
+    it('should revert if a too high/low tick is passed', async function () {
+      const amount0In = 7e5;
+      const amount1In = 5e5;
+      const tickLower = -60;
+      const tickUpper = 900000;
+      const inputBytes = abiCoder.encode(
+        ['address', 'address', 'uint24', 'int24', 'int24', 'uint256', 'uint256'],
+        [tokenEth.address, tokenUsdc.address, 3000, tickLower, tickUpper, amount0In, amount1In]
+      );
+
+      await expect(MintAction.connect(user).doAction(inputBytes)).to.be.reverted;
     });
   });
 });

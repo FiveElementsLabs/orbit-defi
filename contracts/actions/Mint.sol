@@ -16,7 +16,6 @@ import '@uniswap/v3-periphery/contracts/libraries/PositionKey.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
-import 'hardhat/console.sol';
 
 ///@notice action to mint a UniswapV3 position NFT
 contract Mint is BaseAction, UniswapAddressHolder {
