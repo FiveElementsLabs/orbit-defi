@@ -16,6 +16,7 @@ import '@uniswap/v3-periphery/contracts/libraries/PositionKey.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
+import 'hardhat/console.sol';
 
 ///@notice action to mint a UniswapV3 position NFT
 contract Mint is BaseAction, UniswapAddressHolder {
@@ -108,13 +109,6 @@ contract Mint is BaseAction, UniswapAddressHolder {
 
         //TODO: push TokenID to positon manager's positions list
         emit DepositUni(msg.sender, tokenId);
-
-        if (amount0 > amount0Deposited) {
-            ERC20Helper._withdrawTokens(inputs.token0Address, msg.sender, amount0 - amount0Deposited);
-        }
-        if (amount1 > amount1Deposited) {
-            ERC20Helper._withdrawTokens(inputs.token0Address, msg.sender, amount1 - amount1Deposited);
-        }
 
         outputs = OutputStruct({
             tokenId: tokenId,

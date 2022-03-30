@@ -13,7 +13,14 @@ import { AbiCoder } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import { tokensFixture, poolFixture, mintSTDAmount, routerFixture } from '../shared/fixtures';
 
-import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager, TestRouter } from '../../typechain';
+import {
+  MockToken,
+  IUniswapV3Pool,
+  INonfungiblePositionManager,
+  PositionManager,
+  TestRouter,
+  Mint,
+} from '../../typechain';
 
 describe('Mint.sol', function () {
   //GLOBAL VARIABLE - USE THIS
@@ -42,6 +49,7 @@ describe('Mint.sol', function () {
   let Router: TestRouter; //Our router to perform swap
   let SwapRouter: Contract;
   let MintAction: Contract;
+  let abiCoder: AbiCoder;
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
@@ -115,6 +123,9 @@ describe('Mint.sol', function () {
     const mintActionFactory = await ethers.getContractFactory('Mint');
     MintAction = (await mintActionFactory.deploy()) as Contract;
     await MintAction.deployed();
+
+    //get AbiCoder
+    abiCoder = ethers.utils.defaultAbiCoder;
 
     //APPROVE
     //recipient: NonFungiblePositionManager - spender: user
@@ -206,12 +217,14 @@ describe('Mint.sol', function () {
 
   describe('doAction', function () {
     it('should correctly mint a UNIV3 position', async function () {
-      const abiCoder = ethers.utils.defaultAbiCoder;
       const balancePre = await NonFungiblePositionManager.balanceOf(user.address);
-
+      const amount0In = 5e5;
+      const amount1In = 5e5;
+      const tickLower = -720;
+      const tickUpper = 3600;
       const inputBytes = await abiCoder.encode(
         ['address', 'address', 'uint24', 'int24', 'int24', 'uint256', 'uint256'],
-        [tokenEth.address, tokenUsdc.address, 3000, -720, 3600, '0x' + (5e5).toString(16), '0x' + (5e5).toString(16)]
+        [tokenEth.address, tokenUsdc.address, 3000, tickLower, tickUpper, amount0In, amount1In]
       );
 
       const events = (await (await MintAction.connect(user).doAction(inputBytes)).wait()).events;
@@ -219,26 +232,40 @@ describe('Mint.sol', function () {
       expect(await NonFungiblePositionManager.balanceOf(user.address)).to.gt(balancePre);
     });
 
-    it('should correctly return bytes', async function () {
-      const abiCoder = ethers.utils.defaultAbiCoder;
-      const balancePre = await NonFungiblePositionManager.balanceOf(user.address);
-
+    it('should correctly return bytes output', async function () {
+      const amount0In = 5e5;
+      const amount1In = 5e5;
+      const tickLower = -720;
+      const tickUpper = 720;
       const inputBytes = await abiCoder.encode(
         ['address', 'address', 'uint24', 'int24', 'int24', 'uint256', 'uint256'],
-        [tokenEth.address, tokenUsdc.address, 3000, -720, 720, '0x' + (5e5).toString(16), '0x' + (5e5).toString(16)]
+        [tokenEth.address, tokenUsdc.address, 3000, tickLower, tickUpper, amount0In, amount1In]
       );
 
       const events = (await (await MintAction.connect(user).doAction(inputBytes)).wait()).events;
 
       const outputEvent = events[events.length - 1];
 
-      console.log(outputEvent);
-      console.log(outputEvent.data);
-
       const outputs = await abiCoder.decode(['uint256', 'uint256', 'uint256'], outputEvent.args[0]);
 
-      console.log(outputs);
-      expect(await NonFungiblePositionManager.balanceOf(user.address)).to.gt(balancePre);
+      expect(await outputs[0].toNumber()).to.equal(5);
+      expect(await outputs[1].toNumber()).to.be.closeTo(amount0In, amount0In / 1e5);
+      expect(await outputs[2].toNumber()).to.be.closeTo(amount1In, amount1In / 1e5);
+    });
+
+    it('should only take necessary amount of tokens', async function () {
+      const amount0In = 7e5;
+      const amount1In = 5e5;
+      const tickLower = -720;
+      const tickUpper = 720;
+      const inputBytes = await abiCoder.encode(
+        ['address', 'address', 'uint24', 'int24', 'int24', 'uint256', 'uint256'],
+        [tokenEth.address, tokenUsdc.address, 3000, tickLower, tickUpper, amount0In, amount1In]
+      );
+
+      const events = (await (await MintAction.connect(user).doAction(inputBytes)).wait()).events;
+
+      expect(await tokenEth.balanceOf(MintAction.address)).to.equal(0);
     });
   });
 });
