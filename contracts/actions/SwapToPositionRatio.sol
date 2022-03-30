@@ -6,6 +6,7 @@ pragma abicoder v2;
 import './BaseAction.sol';
 import '../helpers/UniswapAddressHolder.sol';
 import '../helpers/SwapHelper.sol';
+import '../helpers/NFTHelper.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 // These contracts should be imported from helpers.
@@ -45,8 +46,14 @@ contract SwapToPositionRatio is BaseAction, UniswapAddressHolder {
     }
 
     function swapToPositionRatio(InputStruct memory inputs) internal returns (OutputStruct memory outputs) {
-        // TODO: Use helper to get pool.
-        (, int24 tickPool, , , , , ) = getPool(address(inputs.token0), address(inputs.token1), inputs.fee).slot0();
+        address poolAddress = NFTHelper._getPoolAddress(
+            uniswapV3FactoryAddress,
+            address(inputs.token0),
+            address(inputs.token1),
+            inputs.fee
+        );
+        IUniswapV3Pool pool = IUniswapV3Pool(poolAddress);
+        (, int24 tickPool, , , , , ) = pool.slot0();
 
         (uint256 amountToSwap, bool token0In) = SwapHelper.calcAmountToSwap(
             tickPool,
@@ -114,18 +121,5 @@ contract SwapToPositionRatio is BaseAction, UniswapAddressHolder {
 
     function encodeOutputs(OutputStruct memory outputs) internal pure returns (bytes memory outputBytes) {
         outputBytes = abi.encode(outputs);
-    }
-
-    //TODO: when we have a helper, this function should be removed
-    function getPool(
-        address token0,
-        address token1,
-        uint24 fee
-    ) public view returns (IUniswapV3Pool) {
-        PoolAddress.PoolKey memory key = PoolAddress.getPoolKey(token0, token1, fee);
-
-        address poolAddress = PoolAddress.computeAddress(uniswapV3FactoryAddress, key);
-
-        return IUniswapV3Pool(poolAddress);
     }
 }
