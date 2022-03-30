@@ -5,24 +5,17 @@ const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/Unisw
 const NonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json');
 const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json');
 const PositionManagerjson = require('../../artifacts/contracts/PositionManager.sol/PositionManager.json');
+const SwapRouterjson = require('@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json');
 const FixturesConst = require('../shared/fixtures');
 const hre = require('hardhat');
-const Mintjson = require('../../artifacts/contracts/actions/Mint.sol/Mint.json');
+import { AbiCoder } from 'ethers/lib/utils';
 
 import { ethers } from 'hardhat';
 import { tokensFixture, poolFixture, mintSTDAmount, routerFixture } from '../shared/fixtures';
-import { AbiCoder } from 'ethers/lib/utils';
 
-import {
-  MockToken,
-  IUniswapV3Pool,
-  INonfungiblePositionManager,
-  PositionManager,
-  TestRouter,
-  Mint,
-} from '../../typechain';
+import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager, TestRouter } from '../../typechain';
 
-describe('PositionManager.sol', function () {
+describe('Mint.sol', function () {
   //GLOBAL VARIABLE - USE THIS
   let user: any = ethers.getSigners().then(async (signers) => {
     return signers[0];
@@ -47,8 +40,8 @@ describe('PositionManager.sol', function () {
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
   let PositionManager: PositionManager; //Our smart vault named PositionManager
   let Router: TestRouter; //Our router to perform swap
-  let MintAction: Mint; // MintAction contract to be tested
-  let abiCoder: AbiCoder; //abiCoder to encode inputs and decode outputs
+  let SwapRouter: Contract;
+  let MintAction: Contract;
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
@@ -101,22 +94,29 @@ describe('PositionManager.sol', function () {
       NonFungiblePositionManagerDescriptor.address
     ).then((contract) => contract.deployed())) as INonfungiblePositionManager;
 
+    //deploy router
+    const SwapRouterFactory = new ContractFactory(SwapRouterjson['abi'], SwapRouterjson['bytecode'], user);
+    //Router = await routerFixture().then((RFixture) => RFixture.ruoterDeployFixture);
+    SwapRouter = (await SwapRouterFactory.deploy(Factory.address, tokenEth.address).then((contract) =>
+      contract.deployed()
+    )) as Contract;
+
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactory = await ethers
       .getContractFactory('PositionManagerFactory')
       .then((contract) => contract.deploy().then((deploy) => deploy.deployed()));
 
-    await PositionManagerFactory.create(user.address, NonFungiblePositionManager.address);
+    await PositionManagerFactory.create(user.address, NonFungiblePositionManager.address, SwapRouter.address);
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
 
-    Router = await routerFixture().then((RFixture) => RFixture.ruoterDeployFixture);
-
     //Deploy Mint Action
-    const mintActionFactory = await new ContractFactory(Mintjson['abi'], Mintjson['bytecode'], user);
-    MintAction = (await mintActionFactory.deploy(NonFungiblePositionManager.address, Factory.address)) as Mint;
+    const mintActionFactory = await ethers.getContractFactory('Mint');
+    MintAction = (await mintActionFactory.deploy(NonFungiblePositionManager.address, Factory.address)) as Contract;
     await MintAction.deployed();
+
+    //deploy abicoder
 
     //APPROVE
     //recipient: NonFungiblePositionManager - spender: user
@@ -144,17 +144,23 @@ describe('PositionManager.sol', function () {
     await tokenUsdc.connect(user).approve(PositionManager.address, ethers.utils.parseEther('1000000000000'));
     await tokenDai.connect(user).approve(PositionManager.address, ethers.utils.parseEther('1000000000000'));
     //recipient: Router - spender: trader
-    await tokenEth.connect(trader).approve(Router.address, ethers.utils.parseEther('1000000000000'));
-    await tokenUsdc.connect(trader).approve(Router.address, ethers.utils.parseEther('1000000000000'));
-    await tokenDai.connect(trader).approve(Router.address, ethers.utils.parseEther('1000000000000'));
+    await tokenEth.connect(trader).approve(SwapRouter.address, ethers.utils.parseEther('1000000000000'));
+    await tokenUsdc.connect(trader).approve(SwapRouter.address, ethers.utils.parseEther('1000000000000'));
+    await tokenDai.connect(trader).approve(SwapRouter.address, ethers.utils.parseEther('1000000000000'));
     //recipient: Pool0 - spender: trader
     await tokenEth.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
     await tokenUsdc.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
     await tokenDai.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
-    //approve mintaction
-    await tokenEth.connect(user).approve(MintAction.address, ethers.utils.parseEther('100000000000000'));
-    await tokenUsdc.connect(user).approve(MintAction.address, ethers.utils.parseEther('100000000000000'));
-    await tokenDai.connect(user).approve(MintAction.address, ethers.utils.parseEther('100000000000000'));
+    /* //recipient: NonFungiblePositionManager - spender: PositionManager
+    await tokenEth
+      .connect(PositionManager.address)
+      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'));
+    await tokenUsdc
+      .connect(PositionManager.address)
+      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'));
+    await tokenDai
+      .connect(PositionManager.address)
+      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000')); */
 
     await NonFungiblePositionManager.setApprovalForAll(PositionManager.address, true);
 
@@ -175,8 +181,6 @@ describe('PositionManager.sol', function () {
       },
       { gasLimit: 670000 }
     );
-
-    abiCoder = new AbiCoder();
   });
 
   beforeEach(async function () {
@@ -196,14 +200,12 @@ describe('PositionManager.sol', function () {
       },
       { gasLimit: 670000 }
     );
-
-    tokenId = await txMint
-      .wait()
-      .then((mintReceipt: any) => mintReceipt.events[mintReceipt.events.length - 1].args.tokenId);
   });
 
-  describe('Mint.sol', function () {
+  describe('doAction', function () {
     it('should correctly mint a UNIV3 position', async function () {
+      let abiCoder = ethers.utils.defaultAbiCoder;
+      console.log(Factory.address);
       const inputBytes = await abiCoder.encode(
         ['address', 'address', 'uint24', 'int24', 'int24', 'uint256', 'uint256'],
         [tokenEth.address, tokenUsdc.address, 3000, -720, 3600, '0x' + (5e5).toString(16), '0x' + (5e5).toString(16)]

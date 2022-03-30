@@ -8,6 +8,7 @@ import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import '../helpers/ERC20Helper.sol';
+import '../helpers/UniswapAddressHolder.sol';
 
 //these contracts should be imported from helpers
 import '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol';
@@ -17,7 +18,7 @@ import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.s
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 
 ///@notice action to mint a UniswapV3 position NFT
-contract Mint is BaseAction {
+contract Mint is BaseAction, UniswapAddressHolder {
     event DepositUni(address indexed from, uint256 tokenId);
 
     ///@notice input the decoder expects
@@ -46,15 +47,6 @@ contract Mint is BaseAction {
         uint256 tokenId;
         uint256 amount0Deposited;
         uint256 amount1Deposited;
-    }
-
-    //TODO: these should be in a helper
-    INonfungiblePositionManager public immutable nonfungiblePositionManager;
-    IUniswapV3Factory public immutable factory;
-
-    constructor(INonfungiblePositionManager _nonfungiblePositionManager, IUniswapV3Factory _uniV3Factory) {
-        nonfungiblePositionManager = _nonfungiblePositionManager;
-        factory = _uniV3Factory;
     }
 
     ///@notice executes the action of the contract (mint), should be the only function visible from the outside
@@ -88,24 +80,26 @@ contract Mint is BaseAction {
             liquidity
         );
 
-        ERC20Helper._approveToken(inputs.token0Address, address(nonfungiblePositionManager), amount0);
-        ERC20Helper._approveToken(inputs.token1Address, address(nonfungiblePositionManager), amount1);
+        ERC20Helper._approveToken(inputs.token0Address, nonfungiblePositionManagerAddress, amount0);
+        ERC20Helper._approveToken(inputs.token1Address, nonfungiblePositionManagerAddress, amount1);
 
-        (uint256 tokenId, , uint256 amount0Deposited, uint256 amount1Deposited) = nonfungiblePositionManager.mint(
-            INonfungiblePositionManager.MintParams({
-                token0: inputs.token0Address,
-                token1: inputs.token1Address,
-                fee: inputs.fee,
-                tickLower: inputs.tickLower,
-                tickUpper: inputs.tickUpper,
-                amount0Desired: amount0,
-                amount1Desired: amount1,
-                amount0Min: 0,
-                amount1Min: 0,
-                recipient: msg.sender,
-                deadline: block.timestamp + 1000 //TODO: decide uniform deadlines
-            })
-        );
+        (uint256 tokenId, , uint256 amount0Deposited, uint256 amount1Deposited) = INonfungiblePositionManager(
+            nonfungiblePositionManagerAddress
+        ).mint(
+                INonfungiblePositionManager.MintParams({
+                    token0: inputs.token0Address,
+                    token1: inputs.token1Address,
+                    fee: inputs.fee,
+                    tickLower: inputs.tickLower,
+                    tickUpper: inputs.tickUpper,
+                    amount0Desired: amount0,
+                    amount1Desired: amount1,
+                    amount0Min: 0,
+                    amount1Min: 0,
+                    recipient: msg.sender,
+                    deadline: block.timestamp + 1000 //TODO: decide uniform deadlines
+                })
+            );
 
         //TODO: push TokenID to positon manager's positions list
 
@@ -157,7 +151,7 @@ contract Mint is BaseAction {
     ) public view returns (IUniswapV3Pool) {
         PoolAddress.PoolKey memory key = PoolAddress.getPoolKey(token0, token1, fee);
 
-        address poolAddress = PoolAddress.computeAddress(address(factory), key);
+        address poolAddress = PoolAddress.computeAddress(uniswapV3FactoryAddress, key);
 
         return IUniswapV3Pool(poolAddress);
     }
