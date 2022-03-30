@@ -18,7 +18,7 @@ library SwapHelper {
         int24 tickPool,
         int24 tickLower,
         int24 tickUpper
-    ) public pure returns (uint256 ratioE18) {
+    ) internal pure returns (uint256 ratioE18) {
         require(tickLower < tickPool && tickUpper > tickPool, 'Position should be in range to call this function');
         uint256 amount0 = 1e18;
         uint160 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(tickPool);
@@ -42,7 +42,7 @@ library SwapHelper {
         int24 tickUpper,
         uint256 amount0In,
         uint256 amount1In
-    ) public pure returns (uint256 amountToSwap, bool token0In) {
+    ) internal pure returns (uint256 amountToSwap, bool token0In) {
         require(amount0In > 0 || amount1In > 0);
         if (tickPool <= tickLower) {
             amountToSwap = amount0In;

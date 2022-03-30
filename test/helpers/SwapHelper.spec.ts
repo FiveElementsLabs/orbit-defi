@@ -18,16 +18,7 @@ describe('SwapHelper.sol', function () {
 
     user = await user; //owner of the smart vault, a normal user
 
-    //deploy swapHelper library and contract to test it
-    const SwapHelperFactory = await ethers.getContractFactory('SwapHelper');
-    SwapHelper = await SwapHelperFactory.deploy();
-    await SwapHelper.deployed();
-
-    const MockSwapHelperFactory = await ethers.getContractFactory('MockSwapHelper', {
-      libraries: {
-        SwapHelper: SwapHelper.address,
-      },
-    });
+    const MockSwapHelperFactory = await ethers.getContractFactory('MockSwapHelper');
     MockSwapHelper = await MockSwapHelperFactory.deploy();
     await MockSwapHelper.deployed();
   });
