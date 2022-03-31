@@ -7,6 +7,8 @@ import './BaseAction.sol';
 import '../helpers/UniswapAddressHolder.sol';
 import '../helpers/SwapHelper.sol';
 import '../helpers/NFTHelper.sol';
+import '../helpers/ERC20Helper.sol';
+import '../../interfaces/IUniswapAddressHolder.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 // These contracts should be imported from helpers.
@@ -14,12 +16,12 @@ import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 
-contract SwapToPositionRatio is BaseAction, UniswapAddressHolder {
+contract SwapToPositionRatio is BaseAction {
     event Output(bytes output);
 
     struct InputStruct {
-        address token0;
-        address token1;
+        address token0Address;
+        address token1Address;
         uint24 fee;
         uint256 amount0In;
         uint256 amount1In;
@@ -31,7 +33,11 @@ contract SwapToPositionRatio is BaseAction, UniswapAddressHolder {
         uint256 amountOut;
     }
 
-    ISwapRouter swapRouter = ISwapRouter(swapRouterAddress);
+    IUniswapAddressHolder public uniswapAddressHolder;
+
+    constructor(address _uniswapAddressHolderAddress) {
+        uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolderAddress);
+    }
 
     function doAction(bytes memory inputs) public override returns (bytes memory outputs) {
         InputStruct memory inputsStruct = decodeInputs(inputs);
@@ -41,16 +47,17 @@ contract SwapToPositionRatio is BaseAction, UniswapAddressHolder {
     }
 
     function swapToPositionRatio(InputStruct memory inputs) internal returns (OutputStruct memory outputs) {
+        address uniswapV3FactoryAddress = uniswapAddressHolder.uniswapV3FactoryAddress();
         address poolAddress = NFTHelper._getPoolAddress(
             uniswapV3FactoryAddress,
-            inputs.token0,
-            inputs.token1,
+            inputs.token0Address,
+            inputs.token1Address,
             inputs.fee
         );
         IUniswapV3Pool pool = IUniswapV3Pool(poolAddress);
         (, int24 tickPool, , , , , ) = pool.slot0();
 
-        (uint256 amountToSwap, bool token0In) = SwapHelper.calcAmountToSwap(
+        (uint256 amountToSwap, bool token0AddressIn) = SwapHelper.calcAmountToSwap(
             tickPool,
             inputs.tickLower,
             inputs.tickUpper,
@@ -60,8 +67,8 @@ contract SwapToPositionRatio is BaseAction, UniswapAddressHolder {
 
         if (amountToSwap != 0) {
             uint256 amountOut = swap(
-                token0In ? inputs.token0 : inputs.token1,
-                token0In ? inputs.token1 : inputs.token0,
+                token0AddressIn ? inputs.token0Address : inputs.token1Address,
+                token0AddressIn ? inputs.token1Address : inputs.token0Address,
                 inputs.fee,
                 amountToSwap
             );
@@ -71,31 +78,44 @@ contract SwapToPositionRatio is BaseAction, UniswapAddressHolder {
     }
 
     function swap(
-        address token0,
-        address token1,
+        address token0Address,
+        address token1Address,
         uint24 fee,
         uint256 amount0In
     ) internal returns (uint256 amount1Out) {
-        IERC20(token0).approve(swapRouterAddress, 2**256 - 1);
+        ISwapRouter swapRouter = ISwapRouter(uniswapAddressHolder.swapRouterAddress());
+        // IERC20 token0 = IERC20(token0Address);
+        // ERC20Helper._approveToken(token0Address, address(swapRouter), amount0In);
+        // token0.transferFrom(msg.sender, address(this), amount0In);
 
         ISwapRouter.ExactInputSingleParams memory swapParams = ISwapRouter.ExactInputSingleParams({
-            tokenIn: token0,
-            tokenOut: token1,
+            tokenIn: token0Address,
+            tokenOut: token1Address,
             fee: fee,
-            recipient: address(this),
+            recipient: msg.sender,
             deadline: block.timestamp + 1000,
             amountIn: amount0In,
             amountOutMinimum: 0,
             sqrtPriceLimitX96: 0
         });
 
-        amount1Out = swapRouter.exactInputSingle(swapParams);
+        (bool success, bytes memory data) = address(swapRouter).delegatecall(
+            abi.encodeWithSignature('exactInputSingle(ExactInputSingleParams)', swapParams)
+        );
+
+        if (success) {
+            amount1Out = abi.decode(data, (uint256));
+        } else {
+            revert('Swap failed');
+        }
+
+        // amount1Out = swapRouter.exactInputSingle(swapParams);
     }
 
     function decodeInputs(bytes memory inputBytes) internal pure returns (InputStruct memory input) {
         (
-            address token0,
-            address token1,
+            address token0Address,
+            address token1Address,
             uint24 fee,
             uint256 amount0In,
             uint256 amount1In,
@@ -104,8 +124,8 @@ contract SwapToPositionRatio is BaseAction, UniswapAddressHolder {
         ) = abi.decode(inputBytes, (address, address, uint24, uint256, uint256, int24, int24));
 
         input = InputStruct({
-            token0: token0,
-            token1: token1,
+            token0Address: token0Address,
+            token1Address: token1Address,
             fee: fee,
             amount0In: amount0In,
             amount1In: amount1In,
