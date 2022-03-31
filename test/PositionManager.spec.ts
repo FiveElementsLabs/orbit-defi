@@ -152,6 +152,9 @@ describe('PositionManager.sol', function () {
     await tokenEth.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
     await tokenUsdc.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
     await tokenDai.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
+    //recipient: MintAction - spender: user
+    await tokenEth.connect(user).approve(MintAction.address, ethers.utils.parseEther('100000000000000'));
+    await tokenUsdc.connect(user).approve(MintAction.address, ethers.utils.parseEther('100000000000000'));
 
     await NonFungiblePositionManager.setApprovalForAll(PositionManager.address, true);
 
@@ -245,14 +248,7 @@ describe('PositionManager.sol', function () {
       expect(await user.address).to.equal(await NonFungiblePositionManager.ownerOf(tokenId));
     });
     it('Should revert if token does not exist', async function () {
-      let e;
-      try {
-        await PositionManager.connect(user).withdrawUniNft(user.address, 1000);
-      } catch (error: any) {
-        e = error.message;
-      }
-
-      expect(e.includes('token id not found!')).to.equal(true);
+      await expect(PositionManager.connect(user).withdrawUniNft(user.address, 1000)).to.be.reverted;
     });
   });
 
@@ -568,10 +564,11 @@ describe('PositionManager.sol', function () {
       const amount1In = 2e5;
       const inputBytes = abiCoder.encode(
         ['address', 'address', 'uint24', 'int24', 'int24', 'uint256', 'uint256'],
-        [tokenEth.address, tokenUsdc.address, 450, tickLower, tickUpper, amount0In, amount1In]
+        [tokenEth.address, tokenUsdc.address, 3000, tickLower, tickUpper, amount0In, amount1In]
       );
-
-      const tx = await PositionManager.connect(user).doAction(MintAction.address, inputBytes);
+      await tokenEth.connect(user).transfer(PositionManager.address, 3e5);
+      await tokenUsdc.connect(user).transfer(PositionManager.address, 3e5);
+      await PositionManager.connect(user).doAction(MintAction.address, inputBytes);
     });
 
     it('should revert if the action does not exist', async function () {
@@ -581,10 +578,10 @@ describe('PositionManager.sol', function () {
       const amount1In = 2e5;
       const inputBytes = abiCoder.encode(
         ['address', 'address', 'uint24', 'int24', 'int24', 'uint256', 'uint256'],
-        [tokenEth.address, tokenUsdc.address, 450, tickLower, tickUpper, amount0In, amount1In]
+        [tokenEth.address, tokenUsdc.address, 3000, tickLower, tickUpper, amount0In, amount1In]
       );
 
-      const tx = await PositionManager.connect(user).doAction(Factory.address, inputBytes);
+      await expect(PositionManager.connect(user).doAction(Factory.address, inputBytes)).to.be.reverted;
     });
   });
 });

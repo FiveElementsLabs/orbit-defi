@@ -40,9 +40,9 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@param tokenId ID of the withdrawn NFT
     event WithdrawUni(address to, uint256 tokenId);
 
+    INonfungiblePositionManager public immutable nonfungiblePositionManager;
     uint256[] private uniswapNFTs;
     address public immutable owner;
-    INonfungiblePositionManager public immutable nonfungiblePositionManager;
 
     constructor(
         address userAddress,
@@ -127,8 +127,15 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@param inputs data to send to the action
     ///@return outputs data returned from the action
     function doAction(address actionAddress, bytes memory inputs) public override returns (bytes memory outputs) {
-        BaseAction action = BaseAction(actionAddress);
-        outputs = action.doAction(inputs);
+        console.log('sono arrivato');
+        //BaseAction action = BaseAction(actionAddress);
+        console.log('qui');
+        (bool success, bytes memory data) = actionAddress.delegatecall(
+            abi.encodeWithSignature('doAction(bytes)', inputs)
+        );
+        console.log('!!!');
+        console.log('success', success);
+        outputs = data;
     }
 
     //###########################################################################################

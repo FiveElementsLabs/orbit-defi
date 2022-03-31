@@ -10,6 +10,7 @@ import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.s
 import './BaseAction.sol';
 import '../helpers/ERC20Helper.sol';
 import '../helpers/NFTHelper.sol';
+import 'hardhat/console.sol';
 
 ///@notice action to mint a UniswapV3 position NFT
 contract Mint is BaseAction {
@@ -62,9 +63,13 @@ contract Mint is BaseAction {
     ///@param inputs input bytes to be decoded according to InputStruct
     ///@return outputs outputs encoded according OutputStruct
     function doAction(bytes memory inputs) public override returns (bytes memory outputs) {
+        console.log('### Sono ###');
         InputStruct memory inputsStruct = decodeInputs(inputs);
+        console.log('### Arrivato ###');
         OutputStruct memory outputsStruct = mint(inputsStruct);
+        console.log('### Qui ###');
         outputs = encodeOutputs(outputsStruct);
+        console.log('### !!! ###');
         emit Output(outputs);
     }
 
@@ -80,6 +85,7 @@ contract Mint is BaseAction {
             inputs.fee
         );
 
+        console.log('ho preso address della pool');
         uint128 liquidity = NFTHelper._getLiquidityFromAmount(
             inputs.amount0Desired,
             inputs.amount1Desired,
@@ -87,6 +93,7 @@ contract Mint is BaseAction {
             inputs.tickUpper,
             poolAddress
         );
+        console.log('ho preso la liquidita');
 
         (uint256 amount0, uint256 amount1) = NFTHelper._getAmountFromLiquidity(
             liquidity,
@@ -94,9 +101,11 @@ contract Mint is BaseAction {
             inputs.tickUpper,
             poolAddress
         );
+        console.log('ho scelto gli amount');
 
-        amount0 = ERC20Helper._pullTokensIfNeeded(inputs.token0Address, msg.sender, amount0);
+        /*  amount0 = ERC20Helper._pullTokensIfNeeded(inputs.token0Address, msg.sender, amount0);
         amount1 = ERC20Helper._pullTokensIfNeeded(inputs.token1Address, msg.sender, amount1);
+        console.log('ho pullato gli amount');*/
 
         ERC20Helper._approveToken(inputs.token0Address, address(nonfungiblePositionManager), amount0);
         ERC20Helper._approveToken(inputs.token1Address, address(nonfungiblePositionManager), amount1);
@@ -116,6 +125,8 @@ contract Mint is BaseAction {
                 deadline: block.timestamp + 1000 //TODO: decide uniform deadlines
             })
         );
+
+        console.log('ho mintato');
 
         //TODO: push TokenID to positon manager's positions list
         emit DepositUni(msg.sender, tokenId);
