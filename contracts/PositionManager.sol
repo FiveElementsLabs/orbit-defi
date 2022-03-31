@@ -28,8 +28,16 @@ import './actions/BaseAction.sol';
  */
 
 contract PositionManager is IPositionManager, ERC721Holder {
-    //What should remain inside the PositionManager after refactoring
+    //################### What should remain inside the PositionManager after refactoring ######################
+
+    ///@notice emitted when a position is created
+    ///@param from address of the user
+    ///@param tokenId ID of the minted NFT
     event DepositUni(address indexed from, uint256 tokenId);
+
+    ///@notice emitted when a position is withdrawn
+    ///@param to address of the user
+    ///@param tokenId ID of the withdrawn NFT
     event WithdrawUni(address to, uint256 tokenId);
 
     uint256[] private uniswapNFTs;
@@ -54,9 +62,9 @@ contract PositionManager is IPositionManager, ERC721Holder {
         bool activated;
     }
 
-    /**
-     * @notice add uniswap position NFT to the position manager
-     */
+    ///@notice add uniswap position NFT to the position manager
+    ///@param from address of the user
+    ///@param tokenIds IDs of deposited tokens
     function depositUniNft(address from, uint256[] calldata tokenIds) external override onlyOwner {
         for (uint32 i = 0; i < tokenIds.length; i++) {
             nonfungiblePositionManager.safeTransferFrom(from, address(this), tokenIds[i], '0x0');
@@ -65,9 +73,9 @@ contract PositionManager is IPositionManager, ERC721Holder {
         }
     }
 
-    /**
-     * @notice withdraw uniswap position NFT from the position manager
-     */
+    ///@notice withdraw uniswap position NFT from the position manager
+    ///@param to address of the user
+    ///@param tokenId ID of withdrawn token
     function withdrawUniNft(address to, uint256 tokenId) public override onlyOwner {
         uint256 index = uniswapNFTs.length;
         for (uint256 i = 0; i < uniswapNFTs.length; i++) {
@@ -78,44 +86,54 @@ contract PositionManager is IPositionManager, ERC721Holder {
         }
         require(index < uniswapNFTs.length, 'token id not found!');
         nonfungiblePositionManager.safeTransferFrom(address(this), to, tokenId, '0x0');
-        removeNFTFromList(index);
+        removePositionId(index);
         emit WithdrawUni(to, tokenId);
     }
 
-    //remove awareness of nft at index
-    function removeNFTFromList(uint256 index) internal {
+    ///@notice remove awareness of NFT at index
+    ///@param index index of the NFT in the uniswapNFTs array
+    function removePositionId(uint256 index) internal {
         uniswapNFTs[index] = uniswapNFTs[uniswapNFTs.length - 1];
         uniswapNFTs.pop();
     }
 
+    ///@notice add tokenId in the uniswapNFTs array
+    ///@param tokenId ID of the added NFT
     function pushPositionId(uint256 tokenId) public {
         uniswapNFTs.push(tokenId);
     }
 
+    ///@notice return the IDs of the uniswap positions
+    ///@return array of IDs
     function _getAllUniPosition() external view override returns (uint256[] memory) {
         uint256[] memory uniswapNFTsMemory = uniswapNFTs;
         return uniswapNFTsMemory;
     }
 
-    // Modules activation modifier
+    ///@notice modifier to check if the msg.sender is the owner
     modifier onlyOwner() {
         require(msg.sender == owner, 'Only owner');
         _;
     }
 
+    ///@notice modifier to check if the msg.sender is the owner or a module
     modifier onlyOwnerOrModule() {
         require((msg.sender == owner) || (registry.isApproved(msg.sender)), 'Only owner or module');
         _;
     }
 
-    function doAction(address actionAddress, bytes memory inputs) public returns (bytes memory outputs) {
+    ///@notice call an action
+    ///@param actionAddress address of action to call
+    ///@param inputs data to send to the action
+    ///@return outputs data returned from the action
+    function doAction(address actionAddress, bytes memory inputs) public override returns (bytes memory outputs) {
         BaseAction action = BaseAction(actionAddress);
         outputs = action.doAction(inputs);
     }
 
     //###########################################################################################
 
-    //What should be deleted after refactoring
+    //################## What should be deleted after refactoring ###############################
 
     Registry public immutable registry = Registry(0x59b670e9fA9D0A427751Af201D676719a970857b);
     address public immutable gov;
@@ -250,7 +268,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
             //delete NFT burned from list
             for (uint32 j = 0; j < uniswapNFTs.length; j++) {
                 if (uniswapNFTs[j] == tokenIds[i]) {
-                    removeNFTFromList(j);
+                    removePositionId(j);
                 }
             }
         }

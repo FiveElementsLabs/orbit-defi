@@ -1,6 +1,7 @@
 import '@nomiclabs/hardhat-ethers';
 import { expect } from 'chai';
 import { ContractFactory, Contract } from 'ethers';
+import { AbiCoder } from 'ethers/lib/utils';
 const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json');
 const NonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json');
 const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json');
@@ -40,6 +41,8 @@ describe('PositionManager.sol', function () {
   let PositionManager: PositionManager; //Our smart vault named PositionManager
   let Router: TestRouter; //Our router to perform swap
   let SwapRouter: Contract;
+  let MintAction: Contract;
+  let abiCoder: AbiCoder;
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
@@ -109,6 +112,14 @@ describe('PositionManager.sol', function () {
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
 
+    //deploy an action to test
+    const ActionFactory = await ethers.getContractFactory('Mint');
+    MintAction = await ActionFactory.deploy(NonFungiblePositionManager.address, Factory.address);
+    await MintAction.deployed();
+
+    //select standard abicoder
+    abiCoder = ethers.utils.defaultAbiCoder;
+
     //APPROVE
     //recipient: NonFungiblePositionManager - spender: user
     await tokenEth
@@ -142,16 +153,6 @@ describe('PositionManager.sol', function () {
     await tokenEth.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
     await tokenUsdc.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
     await tokenDai.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
-    /* //recipient: NonFungiblePositionManager - spender: PositionManager
-    await tokenEth
-      .connect(PositionManager.address)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'));
-    await tokenUsdc
-      .connect(PositionManager.address)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'));
-    await tokenDai
-      .connect(PositionManager.address)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000')); */
 
     await NonFungiblePositionManager.setApprovalForAll(PositionManager.address, true);
 
@@ -559,6 +560,34 @@ describe('PositionManager.sol', function () {
 
       expect(positionBalance0.toNumber()).to.be.closeTo(amount0Desired, 5e3);
       expect(positionBalance1.toNumber()).to.be.closeTo(amount1Desired, 5e3);
+    });
+  });
+
+  describe('doAction', function () {
+    it('should be able to call an action', async function () {
+      const tickLower = -300;
+      const tickUpper = 600;
+      const amount0In = 1e5;
+      const amount1In = 2e5;
+      const inputBytes = abiCoder.encode(
+        ['address', 'address', 'uint24', 'int24', 'int24', 'uint256', 'uint256'],
+        [tokenEth.address, tokenUsdc.address, 450, tickLower, tickUpper, amount0In, amount1In]
+      );
+
+      const tx = await PositionManager.connect(user).doAction(MintAction.address, inputBytes);
+    });
+
+    it('should revert if the action does not exist', async function () {
+      const tickLower = -300;
+      const tickUpper = 600;
+      const amount0In = 1e5;
+      const amount1In = 2e5;
+      const inputBytes = abiCoder.encode(
+        ['address', 'address', 'uint24', 'int24', 'int24', 'uint256', 'uint256'],
+        [tokenEth.address, tokenUsdc.address, 450, tickLower, tickUpper, amount0In, amount1In]
+      );
+
+      const tx = await PositionManager.connect(user).doAction(Factory.address, inputBytes);
     });
   });
 });
