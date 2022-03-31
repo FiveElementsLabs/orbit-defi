@@ -2,17 +2,15 @@ import '@nomiclabs/hardhat-ethers';
 import { expect } from 'chai';
 import { ContractFactory, Contract } from 'ethers';
 import { AbiCoder } from 'ethers/lib/utils';
+import { ethers } from 'hardhat';
+const hre = require('hardhat');
 const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json');
 const NonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json');
 const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json');
 const PositionManagerjson = require('../artifacts/contracts/PositionManager.sol/PositionManager.json');
 const SwapRouterjson = require('@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json');
 const FixturesConst = require('./shared/fixtures');
-const hre = require('hardhat');
-
-import { ethers } from 'hardhat';
 import { tokensFixture, poolFixture, mintSTDAmount, routerFixture } from './shared/fixtures';
-
 import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager, TestRouter } from '../typechain';
 
 describe('PositionManager.sol', function () {
@@ -52,9 +50,9 @@ describe('PositionManager.sol', function () {
     trader = await trader; //used for swap
 
     //deploy first 3 token - ETH, USDC, DAI
-    tokenEth = await tokensFixture('ETH', 18).then((tokenFix) => tokenFix.tokenFixture);
-    tokenUsdc = await tokensFixture('USDC', 6).then((tokenFix) => tokenFix.tokenFixture);
-    tokenDai = await tokensFixture('DAI', 18).then((tokenFix) => tokenFix.tokenFixture);
+    tokenEth = (await tokensFixture('ETH', 18)).tokenFixture;
+    tokenUsdc = (await tokensFixture('USDC', 6)).tokenFixture;
+    tokenDai = (await tokensFixture('DAI', 18)).tokenFixture;
 
     //deploy factory, used for pools
     const uniswapFactoryFactory = new ContractFactory(
@@ -62,11 +60,12 @@ describe('PositionManager.sol', function () {
       UniswapV3Factoryjson['bytecode'],
       user
     );
-    Factory = (await uniswapFactoryFactory.deploy().then((contract) => contract.deployed())) as Contract;
+    Factory = await uniswapFactoryFactory.deploy();
+    await Factory.deployed();
 
     //deploy first 2 pools
-    Pool0 = await poolFixture(tokenEth, tokenUsdc, 3000, Factory).then((poolFix) => poolFix.pool);
-    Pool1 = await poolFixture(tokenEth, tokenDai, 3000, Factory).then((poolFix) => poolFix.pool);
+    Pool0 = (await poolFixture(tokenEth, tokenUsdc, 3000, Factory)).pool;
+    Pool1 = (await poolFixture(tokenEth, tokenDai, 3000, Factory)).pool;
 
     //mint 1e30 token, you can call with arbitrary amount
     await mintSTDAmount(tokenEth);
@@ -82,7 +81,8 @@ describe('PositionManager.sol', function () {
     const NonFungiblePositionManagerDescriptor = await NonFungiblePositionManagerDescriptorFactory.deploy(
       tokenEth.address,
       ethers.utils.formatBytes32String('www.google.com')
-    ).then((contract) => contract.deployed());
+    );
+    await NonFungiblePositionManagerDescriptor.deployed();
 
     const NonFungiblePositionManagerFactory = new ContractFactory(
       NonFungiblePositionManagerjson['abi'],
@@ -93,19 +93,18 @@ describe('PositionManager.sol', function () {
       Factory.address,
       tokenEth.address,
       NonFungiblePositionManagerDescriptor.address
-    ).then((contract) => contract.deployed())) as INonfungiblePositionManager;
+    )) as INonfungiblePositionManager;
+    await NonFungiblePositionManager.deployed();
 
     //deploy router
     const SwapRouterFactory = new ContractFactory(SwapRouterjson['abi'], SwapRouterjson['bytecode'], user);
-    //Router = await routerFixture().then((RFixture) => RFixture.ruoterDeployFixture);
-    SwapRouter = (await SwapRouterFactory.deploy(Factory.address, tokenEth.address).then((contract) =>
-      contract.deployed()
-    )) as Contract;
+    SwapRouter = await SwapRouterFactory.deploy(Factory.address, tokenEth.address);
+    await SwapRouter.deployed();
 
     //deploy the PositionManagerFactory => deploy PositionManager
-    const PositionManagerFactory = await ethers
-      .getContractFactory('PositionManagerFactory')
-      .then((contract) => contract.deploy().then((deploy) => deploy.deployed()));
+    const PositionManagerFactoryFactory = await ethers.getContractFactory('PositionManagerFactory');
+    const PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
+    await PositionManagerFactory.deployed();
 
     await PositionManagerFactory.create(user.address, NonFungiblePositionManager.address, SwapRouter.address);
 
@@ -193,9 +192,8 @@ describe('PositionManager.sol', function () {
       { gasLimit: 670000 }
     );
 
-    tokenId = await txMint
-      .wait()
-      .then((mintReceipt: any) => mintReceipt.events[mintReceipt.events.length - 1].args.tokenId);
+    const mintReceipt = (await txMint.wait()) as any;
+    tokenId = mintReceipt.events[mintReceipt.events.length - 1].args.tokenId;
   });
 
   describe('PositionManager - depositUniNft', function () {
@@ -226,17 +224,16 @@ describe('PositionManager.sol', function () {
         { gasLimit: 670000 }
       );
 
-      const newtokenId = await txMint
-        .wait()
-        .then((mintReceipt: any) => mintReceipt.events[mintReceipt.events.length - 1].args.tokenId);
+      const mintReceipt = (await txMint.wait()) as any;
+      const newTokenId = mintReceipt.events[mintReceipt.events.length - 1].args.tokenId;
 
       await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [
         tokenId,
-        newtokenId,
+        newTokenId,
       ]);
 
       expect(PositionManager.address).to.be.equal(await NonFungiblePositionManager.ownerOf(tokenId));
-      expect(PositionManager.address).to.be.equal(await NonFungiblePositionManager.ownerOf(newtokenId));
+      expect(PositionManager.address).to.be.equal(await NonFungiblePositionManager.ownerOf(newTokenId));
     });
   });
   describe('PositionManager - withdrawUniNft', function () {

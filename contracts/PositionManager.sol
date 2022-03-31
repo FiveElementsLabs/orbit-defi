@@ -84,7 +84,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
                 i = uniswapNFTs.length;
             }
         }
-        require(index < uniswapNFTs.length, 'token id not found!');
+        require(index < uniswapNFTs.length, 'token ID not found!');
         nonfungiblePositionManager.safeTransferFrom(address(this), to, tokenId, '0x0');
         removePositionId(index);
         emit WithdrawUni(to, tokenId);
