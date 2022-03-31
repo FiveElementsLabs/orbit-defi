@@ -3,6 +3,7 @@
 pragma solidity 0.7.6;
 
 import './PositionManager.sol';
+import '../interfaces/IUniswapAddressHolder.sol';
 
 contract PositionManagerFactory {
     address[] public positionManagers;
@@ -16,9 +17,15 @@ contract PositionManagerFactory {
     function create(
         address userAddress,
         INonfungiblePositionManager _nonfungiblePositionManager,
-        ISwapRouter _swapRouter
+        ISwapRouter _swapRouter,
+        IUniswapAddressHolder _uniswapAddressHolder
     ) public returns (address[] memory) {
-        PositionManager manager = new PositionManager(userAddress, _nonfungiblePositionManager, _swapRouter);
+        PositionManager manager = new PositionManager(
+            userAddress,
+            _nonfungiblePositionManager,
+            _swapRouter,
+            _uniswapAddressHolder
+        );
         positionManagers.push(address(manager));
         emit PositionManagerCreated(
             address(manager),

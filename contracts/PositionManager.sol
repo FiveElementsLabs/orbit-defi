@@ -14,8 +14,11 @@ import '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol';
 import 'hardhat/console.sol';
 import './Registry.sol';
 import '../interfaces/IPositionManager.sol';
+import '../interfaces/IUniswapAddressHolder.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '@uniswap/v3-core/contracts/libraries/FixedPoint96.sol';
+
+import './helpers/ERC20Helper.sol';
 
 /**
  * @title   Position Manager
@@ -29,6 +32,10 @@ import '@uniswap/v3-core/contracts/libraries/FixedPoint96.sol';
 contract PositionManager is IPositionManager, ERC721Holder {
     event DepositUni(address indexed from, uint256 tokenId);
     event WithdrawUni(address to, uint256 tokenId);
+
+    // THese variables need to stay on top of the file.
+    IUniswapAddressHolder public uniswapAddressHolder;
+
     Registry public immutable registry = Registry(0x59b670e9fA9D0A427751Af201D676719a970857b);
     address public immutable owner;
     address public immutable gov;
@@ -66,13 +73,15 @@ contract PositionManager is IPositionManager, ERC721Holder {
     constructor(
         address userAddress,
         INonfungiblePositionManager _nonfungiblePositionManager,
-        ISwapRouter _swapRouter
+        ISwapRouter _swapRouter,
+        IUniswapAddressHolder _uniswapAddressHolder
     ) {
         owner = userAddress;
         nonfungiblePositionManager = _nonfungiblePositionManager;
         factory = IUniswapV3Factory(_nonfungiblePositionManager.factory());
         gov = msg.sender;
         swapRouter = _swapRouter;
+        uniswapAddressHolder = _uniswapAddressHolder;
     }
 
     /**
@@ -444,6 +453,28 @@ contract PositionManager is IPositionManager, ERC721Holder {
         );
         token0 = IERC20(token0address);
         token1 = IERC20(token1address);
+    }
+
+    function delegateAction(
+        address token0Address,
+        address token1Address,
+        address actionAddress,
+        bytes memory inputs
+    ) public returns (bytes memory outputs) {
+        ERC20Helper._approveToken(token0Address, address(swapRouter), 2**256 - 1);
+        ERC20Helper._approveToken(token1Address, address(swapRouter), 2**256 - 1);
+
+        console.log('UniswapAddressHolder: ', address(uniswapAddressHolder));
+
+        (bool success, bytes memory data) = actionAddress.delegatecall(
+            abi.encodeWithSignature('doAction(bytes)', inputs)
+        );
+
+        if (success) {
+            outputs = data;
+        } else {
+            revert('Delegate Action Failed');
+        }
     }
 
     // Modules activation modifier
