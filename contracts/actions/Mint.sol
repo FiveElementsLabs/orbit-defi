@@ -79,7 +79,6 @@ contract Mint is BaseAction {
     ///@param inputs input parameters for minting
     ///@param outputs output parameters
     function mint(InputStruct memory inputs) internal returns (OutputStruct memory outputs) {
-        // TODO: use helper to get pool price
         address poolAddress = NFTHelper._getPoolAddress(
             uniswapV3FactoryAddress,
             inputs.token0Address,
