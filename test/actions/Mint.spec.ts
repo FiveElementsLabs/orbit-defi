@@ -3,13 +3,13 @@ import { expect } from 'chai';
 import { ContractFactory, Contract } from 'ethers';
 import { AbiCoder } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
-import { tokensFixture, poolFixture, mintSTDAmount } from '../shared/fixtures';
-import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, Mint } from '../../typechain';
+const hre = require('hardhat');
 const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json');
 const NonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json');
 const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json');
 const FixturesConst = require('../shared/fixtures');
-const hre = require('hardhat');
+import { tokensFixture, poolFixture, mintSTDAmount } from '../shared/fixtures';
+import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, Mint } from '../../typechain';
 
 describe('Mint.sol', function () {
   //GLOBAL VARIABLE - USE THIS
@@ -18,9 +18,6 @@ describe('Mint.sol', function () {
   });
   let liquidityProvider: any = ethers.getSigners().then(async (signers) => {
     return signers[1];
-  });
-  let trader: any = ethers.getSigners().then(async (signers) => {
-    return signers[2];
   });
 
   //all the token used globally
@@ -50,10 +47,11 @@ describe('Mint.sol', function () {
       UniswapV3Factoryjson['bytecode'],
       user
     );
-    Factory = (await uniswapFactoryFactory.deploy().then((contract) => contract.deployed())) as Contract;
+    Factory = (await uniswapFactoryFactory.deploy()) as Contract;
+    await Factory.deployed();
 
     //deploy first pool
-    Pool0 = await poolFixture(tokenEth, tokenUsdc, 3000, Factory).then((poolFix) => poolFix.pool);
+    Pool0 = (await poolFixture(tokenEth, tokenUsdc, 3000, Factory)).pool;
 
     //mint 1e30 token, you can call with arbitrary amount
     await mintSTDAmount(tokenEth);
@@ -85,12 +83,8 @@ describe('Mint.sol', function () {
 
     //Deploy Mint Action
     const mintActionFactory = await ethers.getContractFactory('Mint');
-    MintAction = (await mintActionFactory.deploy()) as Mint;
+    MintAction = (await mintActionFactory.deploy(NonFungiblePositionManager.address, Factory.address)) as Mint;
     await MintAction.deployed();
-
-    //set addresses in Mint Action
-    await MintAction.setNonFungibleAddress(NonFungiblePositionManager.address);
-    await MintAction.setFactoryAddress(Factory.address);
 
     //get AbiCoder
     abiCoder = ethers.utils.defaultAbiCoder;
@@ -137,8 +131,7 @@ describe('Mint.sol', function () {
         ['address', 'address', 'uint24', 'int24', 'int24', 'uint256', 'uint256'],
         [tokenEth.address, tokenUsdc.address, 3000, tickLower, tickUpper, amount0In, amount1In]
       );
-
-      const events = (await (await MintAction.connect(user).doAction(inputBytes)).wait()).events;
+      await MintAction.connect(user).doAction(inputBytes);
 
       expect(await NonFungiblePositionManager.balanceOf(user.address)).to.gt(balancePre);
     });
@@ -152,8 +145,8 @@ describe('Mint.sol', function () {
         ['address', 'address', 'uint24', 'int24', 'int24', 'uint256', 'uint256'],
         [tokenEth.address, tokenUsdc.address, 3000, tickLower, tickUpper, amount0In, amount1In]
       );
-
-      const events = (await (await MintAction.connect(user).doAction(inputBytes)).wait()).events as any;
+      const tx = await MintAction.connect(user).doAction(inputBytes);
+      const events = (await tx.wait()).events as any;
 
       const outputEvent = events[events.length - 1];
 
@@ -174,7 +167,7 @@ describe('Mint.sol', function () {
         [tokenEth.address, tokenUsdc.address, 3000, tickLower, tickUpper, amount0In, amount1In]
       );
 
-      const events = (await (await MintAction.connect(user).doAction(inputBytes)).wait()).events;
+      await MintAction.connect(user).doAction(inputBytes);
 
       expect(await tokenEth.balanceOf(MintAction.address)).to.equal(0);
     });
