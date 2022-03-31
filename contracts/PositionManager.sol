@@ -127,14 +127,9 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@param inputs data to send to the action
     ///@return outputs data returned from the action
     function doAction(address actionAddress, bytes memory inputs) public override returns (bytes memory outputs) {
-        console.log('sono arrivato');
-        //BaseAction action = BaseAction(actionAddress);
-        console.log('qui');
         (bool success, bytes memory data) = actionAddress.delegatecall(
             abi.encodeWithSignature('doAction(bytes)', inputs)
         );
-        console.log('!!!');
-        console.log('success', success);
         outputs = data;
     }
 

@@ -14,6 +14,9 @@ import 'hardhat/console.sol';
 
 ///@notice action to mint a UniswapV3 position NFT
 contract Mint is BaseAction {
+    INonfungiblePositionManager nonfungiblePositionManager;
+    address uniswapV3FactoryAddress;
+
     ///@notice emitted when a UniswapNFT is deposited in PositionManager
     ///@param from address of PositionManager
     ///@param tokenId Id of deposited token
@@ -22,9 +25,6 @@ contract Mint is BaseAction {
     ///@notice emitted to pass outputs to test file
     ///@param output output bytes
     event Output(bytes output);
-
-    INonfungiblePositionManager nonfungiblePositionManager;
-    address uniswapV3FactoryAddress;
 
     ///@notice input the decoder expects
     ///@param token0Address address of first token of the pool
@@ -54,8 +54,15 @@ contract Mint is BaseAction {
         uint256 amount1Deposited;
     }
 
-    constructor(address _nonfungiblePositionManagerAddress, address _uniswapV3FactoryAddress) {
-        nonfungiblePositionManager = INonfungiblePositionManager(_nonfungiblePositionManagerAddress);
+    ///@notice set nonfungiblePositionManager
+    ///@param _nonfungiblePositionManager address of nonfungiblePositionManager
+    function setNonfungiblePositionManager(address _nonfungiblePositionManager) public {
+        nonfungiblePositionManager = INonfungiblePositionManager(_nonfungiblePositionManager);
+    }
+
+    ///@notice set uniswapV3FactoryAddress
+    ///@param _uniswapV3FactoryAddress address of uniswapV3Factory
+    function setUniswapV3FactoryAddress(address _uniswapV3FactoryAddress) public {
         uniswapV3FactoryAddress = _uniswapV3FactoryAddress;
     }
 
@@ -77,7 +84,6 @@ contract Mint is BaseAction {
     ///@param inputs input parameters for minting
     ///@param outputs output parameters
     function mint(InputStruct memory inputs) internal returns (OutputStruct memory outputs) {
-        // TODO: use helper to get pool price
         address poolAddress = NFTHelper._getPoolAddress(
             uniswapV3FactoryAddress,
             inputs.token0Address,
@@ -103,10 +109,6 @@ contract Mint is BaseAction {
         );
         console.log('ho scelto gli amount');
 
-        /*  amount0 = ERC20Helper._pullTokensIfNeeded(inputs.token0Address, msg.sender, amount0);
-        amount1 = ERC20Helper._pullTokensIfNeeded(inputs.token1Address, msg.sender, amount1);
-        console.log('ho pullato gli amount');*/
-
         ERC20Helper._approveToken(inputs.token0Address, address(nonfungiblePositionManager), amount0);
         ERC20Helper._approveToken(inputs.token1Address, address(nonfungiblePositionManager), amount1);
 
@@ -121,7 +123,7 @@ contract Mint is BaseAction {
                 amount1Desired: amount1,
                 amount0Min: 0,
                 amount1Min: 0,
-                recipient: msg.sender,
+                recipient: address(this),
                 deadline: block.timestamp + 1000 //TODO: decide uniform deadlines
             })
         );
