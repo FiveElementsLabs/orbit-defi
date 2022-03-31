@@ -113,7 +113,7 @@ describe('PositionManager.sol', function () {
 
     //deploy an action to test
     const ActionFactory = await ethers.getContractFactory('Mint');
-    MintAction = await ActionFactory.deploy(NonFungiblePositionManager.address, Factory.address);
+    MintAction = await ActionFactory.deploy();
     await MintAction.deployed();
 
     //select standard abicoder
@@ -152,9 +152,9 @@ describe('PositionManager.sol', function () {
     await tokenEth.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
     await tokenUsdc.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
     await tokenDai.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
-    //recipient: MintAction - spender: user
+    /* //recipient: MintAction - spender: user
     await tokenEth.connect(user).approve(MintAction.address, ethers.utils.parseEther('100000000000000'));
-    await tokenUsdc.connect(user).approve(MintAction.address, ethers.utils.parseEther('100000000000000'));
+    await tokenUsdc.connect(user).approve(MintAction.address, ethers.utils.parseEther('100000000000000')); */
 
     await NonFungiblePositionManager.setApprovalForAll(PositionManager.address, true);
 
@@ -568,7 +568,9 @@ describe('PositionManager.sol', function () {
       );
       await tokenEth.connect(user).transfer(PositionManager.address, 3e5);
       await tokenUsdc.connect(user).transfer(PositionManager.address, 3e5);
+      const positionsPre = await NonFungiblePositionManager.balanceOf(PositionManager.address);
       await PositionManager.connect(user).doAction(MintAction.address, inputBytes);
+      expect(await NonFungiblePositionManager.balanceOf(PositionManager.address)).to.be.equal(positionsPre.add(1));
     });
 
     it('should revert if the action does not exist', async function () {
@@ -581,7 +583,12 @@ describe('PositionManager.sol', function () {
         [tokenEth.address, tokenUsdc.address, 3000, tickLower, tickUpper, amount0In, amount1In]
       );
 
-      await expect(PositionManager.connect(user).doAction(Factory.address, inputBytes)).to.be.reverted;
+      await tokenEth.connect(user).transfer(PositionManager.address, 3e5);
+      await tokenUsdc.connect(user).transfer(PositionManager.address, 3e5);
+      const tx = await PositionManager.connect(user).doAction(Factory.address, inputBytes);
+      const events = (await tx.wait()).events as any;
+      const successEvent = events[events.length - 1];
+      expect(successEvent.args.success).to.equal(false);
     });
   });
 });

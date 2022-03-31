@@ -29,6 +29,8 @@ import './actions/BaseAction.sol';
 
 contract PositionManager is IPositionManager, ERC721Holder {
     //################### What should remain inside the PositionManager after refactoring ######################
+    INonfungiblePositionManager nonfungiblePositionManager;
+    address uniswapV3FactoryAddress;
 
     ///@notice emitted when a position is created
     ///@param from address of the user
@@ -40,7 +42,8 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@param tokenId ID of the withdrawn NFT
     event WithdrawUni(address to, uint256 tokenId);
 
-    INonfungiblePositionManager public immutable nonfungiblePositionManager;
+    event Success(bool success);
+
     uint256[] private uniswapNFTs;
     address public immutable owner;
 
@@ -51,7 +54,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ) {
         owner = userAddress;
         nonfungiblePositionManager = _nonfungiblePositionManager;
-        factory = IUniswapV3Factory(_nonfungiblePositionManager.factory()); //this will be in the actions
+        uniswapV3FactoryAddress = _nonfungiblePositionManager.factory(); //this will be in the actions
         gov = msg.sender; //TODO: hardcode in another contract
         swapRouter = _swapRouter; //this will be in the actions
     }
@@ -131,6 +134,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
             abi.encodeWithSignature('doAction(bytes)', inputs)
         );
         outputs = data;
+        emit Success(success);
     }
 
     //###########################################################################################
@@ -139,7 +143,6 @@ contract PositionManager is IPositionManager, ERC721Holder {
 
     Registry public immutable registry = Registry(0x59b670e9fA9D0A427751Af201D676719a970857b);
     address public immutable gov;
-    IUniswapV3Factory public immutable factory;
     ISwapRouter public immutable swapRouter;
 
     // details about the uniswap position
@@ -461,7 +464,10 @@ contract PositionManager is IPositionManager, ERC721Holder {
         }
 
         IUniswapV3Pool pool = IUniswapV3Pool(
-            PoolAddress.computeAddress(address(factory), PoolAddress.getPoolKey(address(token0), address(token1), fee))
+            PoolAddress.computeAddress(
+                uniswapV3FactoryAddress,
+                PoolAddress.getPoolKey(address(token0), address(token1), fee)
+            )
         );
         (, int24 tickPool, , , , , ) = pool.slot0();
         (uint256 amountToSwap, bool token0In) = _calcAmountToSwap(tickPool, tickLower, tickUpper, amount0In, amount1In);
@@ -477,7 +483,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
 
         PoolAddress.PoolKey memory key = PoolAddress.getPoolKey(token0, token1, fee);
 
-        address poolAddress = PoolAddress.computeAddress(address(factory), key);
+        address poolAddress = PoolAddress.computeAddress(uniswapV3FactoryAddress, key);
 
         return IUniswapV3Pool(poolAddress);
     }
