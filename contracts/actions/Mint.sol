@@ -149,11 +149,4 @@ contract Mint {
             amount1Desired: amount1Desired
         });
     }
-
-    ///@notice encode the outputs to bytes
-    ///@param outputs outputs to be encoded
-    ///@return outputBytes encoded outputs
-    function encodeOutputs(OutputStruct memory outputs) internal pure returns (bytes memory outputBytes) {
-        outputBytes = abi.encode(outputs, uint256(1));
-    }
 }

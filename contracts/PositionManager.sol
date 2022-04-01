@@ -17,6 +17,7 @@ import './Registry.sol';
 import '../interfaces/IPositionManager.sol';
 import './actions/BaseAction.sol';
 import '../interfaces/IUniswapAddressHolder.sol';
+import 'hardhat/console.sol';
 
 /**
  * @title   Position Manager
@@ -95,15 +96,18 @@ contract PositionManager is IPositionManager, ERC721Holder {
             tokenId,
             '0x0'
         );
-        _removePositionId(index);
         emit WithdrawUni(to, tokenId);
     }
 
     ///@notice remove awareness of NFT at index
     ///@param index index of the NFT in the uniswapNFTs array
-    function _removePositionId(uint256 index) internal {
-        uniswapNFTs[index] = uniswapNFTs[uniswapNFTs.length - 1];
-        uniswapNFTs.pop();
+    function removePositionId(uint256 index) external override {
+        if (uniswapNFTs.length > 1) {
+            uniswapNFTs[index] = uniswapNFTs[uniswapNFTs.length - 1];
+            uniswapNFTs.pop();
+        } else {
+            delete uniswapNFTs;
+        }
     }
 
     ///@notice add tokenId in the uniswapNFTs array
@@ -282,9 +286,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
 
             //delete NFT burned from list
             for (uint32 j = 0; j < uniswapNFTs.length; j++) {
-                if (uniswapNFTs[j] == tokenIds[i]) {
-                    _removePositionId(j);
-                }
+                if (uniswapNFTs[j] == tokenIds[i]) {}
             }
         }
     }

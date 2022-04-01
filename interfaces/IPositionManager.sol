@@ -24,6 +24,8 @@ interface IPositionManager {
 
     function closeUniPositions(uint256[] memory tokenId, bool returnTokensToUser) external payable;
 
+    function removePositionId(uint256 index) external;
+
     function updateUncollectedFees(uint256 tokenId) external;
 
     function collectPositionFee(uint256 tokenId, address recipient) external returns (uint256 amount0, uint256 amount1);
