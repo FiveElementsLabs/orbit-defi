@@ -11,11 +11,11 @@ import './BaseAction.sol';
 import '../helpers/ERC20Helper.sol';
 import '../helpers/NFTHelper.sol';
 import 'hardhat/console.sol';
+import '../../interfaces/IUniswapAddressHolder.sol';
 
 ///@notice action to mint a UniswapV3 position NFT
 contract Mint is BaseAction {
-    INonfungiblePositionManager nonfungiblePositionManager;
-    address uniswapV3FactoryAddress;
+    IUniswapAddressHolder public uniswapAddressHolder;
 
     ///@notice emitted when a UniswapNFT is deposited in PositionManager
     ///@param from address of PositionManager
@@ -54,16 +54,8 @@ contract Mint is BaseAction {
         uint256 amount1Deposited;
     }
 
-    ///@notice set nonfungiblePositionManager
-    ///@param _nonfungiblePositionManager address of nonfungiblePositionManager
-    function setNonfungiblePositionManager(address _nonfungiblePositionManager) public {
-        nonfungiblePositionManager = INonfungiblePositionManager(_nonfungiblePositionManager);
-    }
-
-    ///@notice set uniswapV3FactoryAddress
-    ///@param _uniswapV3FactoryAddress address of uniswapV3Factory
-    function setUniswapV3FactoryAddress(address _uniswapV3FactoryAddress) public {
-        uniswapV3FactoryAddress = _uniswapV3FactoryAddress;
+    constructor(address _uniswapAddressHolder) {
+        uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
     }
 
     ///@notice executes the action of the contract (mint), should be the only function visible from the outside
@@ -81,7 +73,7 @@ contract Mint is BaseAction {
     ///@param outputs output parameters
     function mint(InputStruct memory inputs) internal returns (OutputStruct memory outputs) {
         address poolAddress = NFTHelper._getPoolAddress(
-            uniswapV3FactoryAddress,
+            uniswapAddressHolder.uniswapV3FactoryAddress(),
             inputs.token0Address,
             inputs.token1Address,
             inputs.fee
@@ -102,24 +94,34 @@ contract Mint is BaseAction {
             poolAddress
         );
 
-        ERC20Helper._approveToken(inputs.token0Address, address(nonfungiblePositionManager), amount0);
-        ERC20Helper._approveToken(inputs.token1Address, address(nonfungiblePositionManager), amount1);
-
-        (uint256 tokenId, , uint256 amount0Deposited, uint256 amount1Deposited) = nonfungiblePositionManager.mint(
-            INonfungiblePositionManager.MintParams({
-                token0: inputs.token0Address,
-                token1: inputs.token1Address,
-                fee: inputs.fee,
-                tickLower: inputs.tickLower,
-                tickUpper: inputs.tickUpper,
-                amount0Desired: amount0,
-                amount1Desired: amount1,
-                amount0Min: 0,
-                amount1Min: 0,
-                recipient: address(this),
-                deadline: block.timestamp + 1000 //TODO: decide uniform deadlines
-            })
+        ERC20Helper._approveToken(
+            inputs.token0Address,
+            uniswapAddressHolder.nonfungiblePositionManagerAddress(),
+            amount0
         );
+        ERC20Helper._approveToken(
+            inputs.token1Address,
+            uniswapAddressHolder.nonfungiblePositionManagerAddress(),
+            amount1
+        );
+
+        (uint256 tokenId, , uint256 amount0Deposited, uint256 amount1Deposited) = INonfungiblePositionManager(
+            uniswapAddressHolder.nonfungiblePositionManagerAddress()
+        ).mint(
+                INonfungiblePositionManager.MintParams({
+                    token0: inputs.token0Address,
+                    token1: inputs.token1Address,
+                    fee: inputs.fee,
+                    tickLower: inputs.tickLower,
+                    tickUpper: inputs.tickUpper,
+                    amount0Desired: amount0,
+                    amount1Desired: amount1,
+                    amount0Min: 0,
+                    amount1Min: 0,
+                    recipient: address(this),
+                    deadline: block.timestamp + 1000 //TODO: decide uniform deadlines
+                })
+            );
 
         //TODO: push TokenID to positon manager's positions list
         emit DepositUni(msg.sender, tokenId);

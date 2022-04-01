@@ -81,13 +81,19 @@ describe('Mint.sol', function () {
     )) as INonfungiblePositionManager;
     await NonFungiblePositionManager.deployed();
 
+    //deploy uniswapAddressHolder
+    const uniswapAddressHolderFactory = await ethers.getContractFactory('UniswapAddressHolder');
+    const uniswapAddressHolder = await uniswapAddressHolderFactory.deploy(
+      NonFungiblePositionManager.address,
+      Factory.address,
+      NonFungiblePositionManagerDescriptor.address //random address because we don't need it
+    );
+    await uniswapAddressHolder.deployed();
+
     //Deploy Mint Action
     const mintActionFactory = await ethers.getContractFactory('Mint');
-    MintAction = (await mintActionFactory.deploy()) as Mint;
+    MintAction = (await mintActionFactory.deploy(uniswapAddressHolder.address)) as Mint;
     await MintAction.deployed();
-
-    await MintAction.setNonfungiblePositionManager(NonFungiblePositionManager.address);
-    await MintAction.setUniswapV3FactoryAddress(Factory.address);
 
     //get AbiCoder
     abiCoder = ethers.utils.defaultAbiCoder;
