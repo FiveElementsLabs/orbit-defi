@@ -594,10 +594,7 @@ describe('PositionManager.sol', function () {
 
       await tokenEth.connect(user).transfer(PositionManager.address, 3e5);
       await tokenUsdc.connect(user).transfer(PositionManager.address, 3e5);
-      const tx = await PositionManager.connect(user).doAction(Factory.address, inputBytes);
-      const events = (await tx.wait()).events as any;
-      const successEvent = events[events.length - 1];
-      expect(successEvent.args.success).to.equal(false);
+      await expect(PositionManager.connect(user).doAction(Factory.address, inputBytes)).to.be.reverted;
     });
 
     it('should be able to decode outputs', async function () {
