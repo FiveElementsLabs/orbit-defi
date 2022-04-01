@@ -3,7 +3,7 @@ import '@nomiclabs/hardhat-ethers';
 import { Contract, ContractFactory } from 'ethers';
 import { ethers } from 'hardhat';
 import { tokensFixture, poolFixture, routerFixture } from './shared/fixtures';
-import { MockToken, INonfungiblePositionManager, ISwapRouter } from '../typechain';
+import { MockToken, INonfungiblePositionManager, ISwapRouter, UniswapAddressHolder } from '../typechain';
 
 const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json');
 const PositionManagerContract = require('../artifacts/contracts/PositionManager.sol/PositionManager.json');
@@ -20,8 +20,9 @@ describe('PositionManagerFactory.sol', function () {
   let signers: any;
   let NonFungiblePositionManager: INonfungiblePositionManager;
   let token0: MockToken, token1: MockToken;
-  let poolI: any;
+  let uniswapAddressHolder: UniswapAddressHolder;
   let Router: ISwapRouter;
+  let poolI: any;
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
@@ -68,6 +69,15 @@ describe('PositionManagerFactory.sol', function () {
     //deploy router
     Router = await routerFixture().then((RFixture: any) => RFixture.ruoterDeployFixture);
 
+    //deploy uniswapAddressHolder
+    const uniswapAddressHolderFactory = await ethers.getContractFactory('UniswapAddressHolder');
+    uniswapAddressHolder = (await uniswapAddressHolderFactory.deploy(
+      NonFungiblePositionManager.address,
+      Factory.address,
+      Router.address
+    )) as UniswapAddressHolder;
+    await uniswapAddressHolder.deployed();
+
     await token0
       .connect(signers[0])
       .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'));
@@ -86,7 +96,7 @@ describe('PositionManagerFactory.sol', function () {
 
       [owner] = await ethers.getSigners();
 
-      await PositionManagerFactoryInstance.create(owner.address, NonFungiblePositionManager.address, Router.address);
+      await PositionManagerFactoryInstance.create(owner.address, uniswapAddressHolder.address);
 
       const deployedContract = await PositionManagerFactoryInstance.positionManagers(0);
       const PositionManagerInstance = await ethers.getContractAt(PositionManagerContract.abi, deployedContract);
