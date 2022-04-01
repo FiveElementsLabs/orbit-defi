@@ -217,7 +217,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
     /**
      * @notice get balance token0 and token1 in a position
      */
-    function getPositionBalance(uint256 tokenId) external override returns (uint256, uint256) {
+    function getPositionBalance(uint256 tokenId) external view override returns (uint256, uint256) {
         (, , , , , int24 tickLower, int24 tickUpper, uint128 liquidity, , , , ) = INonfungiblePositionManager(
             uniswapAddressHolder.nonfungiblePositionManagerAddress()
         ).positions(tokenId);
@@ -237,7 +237,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
     /**
      * @notice get fee of token0 and token1 in a position
      */
-    function getPositionFee(uint256 tokenId) external override returns (uint128 tokensOwed0, uint128 tokensOwed1) {
+    function getPositionFee(uint256 tokenId) external view override returns (uint128 tokensOwed0, uint128 tokensOwed1) {
         (, , , , , , , , , , tokensOwed0, tokensOwed1) = INonfungiblePositionManager(
             uniswapAddressHolder.nonfungiblePositionManagerAddress()
         ).positions(tokenId);
@@ -492,7 +492,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
     }
 
     /*Get pool address from token ID*/
-    function getPoolFromTokenId(uint256 tokenId) public returns (IUniswapV3Pool) {
+    function getPoolFromTokenId(uint256 tokenId) public view returns (IUniswapV3Pool) {
         (, , address token0, address token1, uint24 fee, , , , , , , ) = INonfungiblePositionManager(
             uniswapAddressHolder.nonfungiblePositionManagerAddress()
         ).positions(tokenId);
@@ -509,7 +509,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
             token.approve(uniswapAddressHolder.nonfungiblePositionManagerAddress(), 2**256 - 1);
     }
 
-    function _getTokenAddress(uint256 tokenId) private returns (IERC20 token0, IERC20 token1) {
+    function _getTokenAddress(uint256 tokenId) private view returns (IERC20 token0, IERC20 token1) {
         (, , address token0address, address token1address, , , , , , , , ) = INonfungiblePositionManager(
             uniswapAddressHolder.nonfungiblePositionManagerAddress()
         ).positions(tokenId);

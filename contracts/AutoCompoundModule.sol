@@ -21,8 +21,7 @@ contract AutoCompoundModule {
         uint128 feeToken1;
     }
 
-    constructor() {
-    }
+    constructor() {}
 
     function checkForAllUncollectedFees(IPositionManager positionManager) public view returns (VaultFee[] memory) {
         uint256[] memory allTokenId = positionManager._getAllUniPosition();

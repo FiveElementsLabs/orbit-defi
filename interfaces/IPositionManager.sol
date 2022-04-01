@@ -18,9 +18,9 @@ interface IPositionManager {
         bool _usingPositionManagerBalance
     ) external;
 
-    function getPositionBalance(uint256 tokenId) external returns (uint256, uint256);
+    function getPositionBalance(uint256 tokenId) external view returns (uint256, uint256);
 
-    function getPositionFee(uint256 tokenId) external returns (uint128 tokensOwed0, uint128 tokensOwed1);
+    function getPositionFee(uint256 tokenId) external view returns (uint128 tokensOwed0, uint128 tokensOwed1);
 
     function closeUniPositions(uint256[] memory tokenId, bool returnTokensToUser) external payable;
 
