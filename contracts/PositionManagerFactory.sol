@@ -3,7 +3,6 @@
 pragma solidity 0.7.6;
 
 import './PositionManager.sol';
-import '../interfaces/IUniswapAddressHolder.sol';
 
 contract PositionManagerFactory {
     address[] public positionManagers;
