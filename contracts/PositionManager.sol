@@ -143,8 +143,12 @@ contract PositionManager is IPositionManager, ERC721Holder {
         (bool success, bytes memory data) = actionAddress.delegatecall(
             abi.encodeWithSignature('doAction(bytes)', inputs)
         );
-        emit Output(success, data);
-        return data;
+        if (success) {
+            emit Output(true, data);
+            return data;
+        } else {
+            revert('Action failed');
+        }
     }
 
     //###########################################################################################
