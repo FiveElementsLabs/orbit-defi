@@ -43,15 +43,9 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@param tokenId ID of the withdrawn NFT
     event WithdrawUni(address to, uint256 tokenId);
 
-<<<<<<< HEAD
-    ///@notice emitted when an action is called
-    ///@param success boolean indicating if the action was successful
-    ///@param data output of the action in bytes (according to each action's OutputStruct)
-=======
     ///@notice emitted to return the output of doAction transaction
     ///@param success delegate call was a success
     ///@param data data returned by the delegate call
->>>>>>> aecba16c0cd026f456ccf6059e6362cd1662e437
     event Output(bool success, bytes data);
 
     uint256[] private uniswapNFTs;
