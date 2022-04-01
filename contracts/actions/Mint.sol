@@ -49,10 +49,6 @@ contract Mint {
         uint256 amount1Deposited;
     }
 
-    constructor(address _uniswapAddressHolder) {
-        uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
-    }
-
     ///@notice executes the action of the contract (mint), should be the only function visible from the outside
     ///@param inputs input bytes to be decoded according to InputStruct
     ///@return outputs outputs encoded according OutputStruct
