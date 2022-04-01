@@ -1,6 +1,6 @@
 import '@nomiclabs/hardhat-ethers';
 import { expect } from 'chai';
-import { ContractFactory, Contract } from 'ethers';
+import { ContractFactory, Contract, BigNumber } from 'ethers';
 import { AbiCoder } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 const hre = require('hardhat');
@@ -29,7 +29,7 @@ describe('SwapToPositionRatio.sol', function () {
   });
 
   //all the token used globally
-  let tokenEth: MockToken, tokenUsdc: MockToken;
+  let tokenEth: MockToken, tokenUsdc: MockToken, tokenDai: MockToken;
 
   //all the pools used globally
   let Pool0: IUniswapV3Pool;
@@ -48,9 +48,10 @@ describe('SwapToPositionRatio.sol', function () {
     user = await user; //owner of the smart vault, a normal user
     liquidityProvider = await liquidityProvider;
 
-    //deploy first 2 tokens - ETH, USDC
+    //deploy first 3 tokens - ETH, USDC, DAI
     tokenEth = (await tokensFixture('ETH', 18)).tokenFixture;
     tokenUsdc = (await tokensFixture('USDC', 6)).tokenFixture;
+    tokenDai = (await tokensFixture('DAI', 18)).tokenFixture;
 
     //deploy factory, used for pools
     const uniswapFactoryFactory = new ContractFactory(
@@ -67,6 +68,7 @@ describe('SwapToPositionRatio.sol', function () {
     //mint 1e30 token, you can call with arbitrary amount
     await mintSTDAmount(tokenEth);
     await mintSTDAmount(tokenUsdc);
+    await mintSTDAmount(tokenDai);
 
     //deploy NonFungiblePositionManagerDescriptor and NonFungiblePositionManager
     const NonFungiblePositionManagerDescriptorFactory = new ContractFactory(
@@ -140,9 +142,9 @@ describe('SwapToPositionRatio.sol', function () {
       .connect(liquidityProvider)
       .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
 
-    //give swapToPositionRatio action some tokens
-    await tokenEth.connect(user).transfer(SwapToPositionRatioAction.address, ethers.utils.parseEther('1000000000000'));
-    await tokenUsdc.connect(user).transfer(SwapToPositionRatioAction.address, ethers.utils.parseEther('1000000000000'));
+    //give PositionManager some tokens
+    await tokenEth.connect(user).transfer(PositionManager.address, ethers.utils.parseEther('1000000000000'));
+    await tokenUsdc.connect(user).transfer(PositionManager.address, ethers.utils.parseEther('1000000000000'));
 
     // give pool some liquidity
     await NonFungiblePositionManager.connect(liquidityProvider).mint(
@@ -174,16 +176,13 @@ describe('SwapToPositionRatio.sol', function () {
         [tokenEth.address, tokenUsdc.address, 3000, amount0In, amount1In, tickLower, tickUpper]
       );
 
-      await tokenEth.connect(user).transfer(PositionManager.address, 2e5);
-      await tokenUsdc.connect(user).transfer(PositionManager.address, 2e5);
-
       const events = (
         await (await PositionManager.connect(user).doAction(SwapToPositionRatioAction.address, inputBytes)).wait()
       ).events as any;
 
-      const actionEvent = events[events.length - 1];
-      const amountOut = actionEvent.args[0].toNumber();
-      expect(amountOut).to.equal(99202);
+      const outputEvent = events[events.length - 1];
+      const success = outputEvent.args[0];
+      expect(success).to.be.true;
     });
 
     it('should correctly return bytes output', async function () {
@@ -196,16 +195,13 @@ describe('SwapToPositionRatio.sol', function () {
         [tokenEth.address, tokenUsdc.address, 3000, amount0In, amount1In, tickLower, tickUpper]
       );
 
-      await tokenEth.connect(user).transfer(PositionManager.address, 3e5);
-      await tokenUsdc.connect(user).transfer(PositionManager.address, 3e5);
-
       const tx = await PositionManager.connect(user).doAction(SwapToPositionRatioAction.address, inputBytes);
 
       const events = (await tx.wait()).events as any;
       const outputEvent = events[events.length - 1];
-      const outputs = abiCoder.decode(['uint256'], outputEvent.args[0]);
+      const amountOut = abiCoder.decode(['uint256'], outputEvent.args[1]);
 
-      expect(await outputs[0].toNumber()).to.equal(99202);
+      expect(amountOut[0].toNumber()).to.equal(99202);
     });
 
     it('should revert if the action does not exist', async function () {
@@ -247,7 +243,7 @@ describe('SwapToPositionRatio.sol', function () {
       const amount1In = 5e5;
       const inputBytes = abiCoder.encode(
         ['address', 'address', 'uint24', 'uint256', 'uint256', 'int24', 'int24'],
-        [tokenEth.address, tokenUsdc.address, 3000, amount0In, amount1In, tickLower, tickUpper]
+        [tokenEth.address, tokenDai.address, 3000, amount0In, amount1In, tickLower, tickUpper]
       );
 
       await expect(PositionManager.connect(user).doAction(SwapToPositionRatioAction.address, inputBytes)).to.be

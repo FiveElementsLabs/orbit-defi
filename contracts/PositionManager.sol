@@ -43,6 +43,9 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@param tokenId ID of the withdrawn NFT
     event WithdrawUni(address to, uint256 tokenId);
 
+    ///@notice emitted when an action is called
+    ///@param success boolean indicating if the action was successful
+    ///@param data output of the action in bytes (according to each action's OutputStruct)
     event Output(bool success, bytes data);
 
     uint256[] private uniswapNFTs;
@@ -138,8 +141,12 @@ contract PositionManager is IPositionManager, ERC721Holder {
         (bool success, bytes memory data) = actionAddress.delegatecall(
             abi.encodeWithSignature('doAction(bytes)', inputs)
         );
-        outputs = data;
-        emit Output(success, data);
+        if (success) {
+            outputs = data;
+            emit Output(true, data);
+        } else {
+            revert('Action failed');
+        }
     }
 
     //###########################################################################################
