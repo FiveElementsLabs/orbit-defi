@@ -142,8 +142,8 @@ contract PositionManager is IPositionManager, ERC721Holder {
             abi.encodeWithSignature('doAction(bytes)', inputs)
         );
         if (success) {
-            outputs = data;
             emit Output(true, data);
+            return data;
         } else {
             revert('Action failed');
         }
