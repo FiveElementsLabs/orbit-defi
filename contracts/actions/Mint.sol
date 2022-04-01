@@ -10,7 +10,6 @@ import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.s
 import './BaseAction.sol';
 import '../helpers/ERC20Helper.sol';
 import '../helpers/NFTHelper.sol';
-import 'hardhat/console.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
 
 ///@notice action to mint a UniswapV3 position NFT
@@ -21,10 +20,6 @@ contract Mint {
     ///@param from address of PositionManager
     ///@param tokenId Id of deposited token
     event DepositUni(address indexed from, uint256 tokenId);
-
-    ///@notice emitted to pass outputs to test file
-    ///@param output output bytes
-    event Output(bytes output);
 
     ///@notice input the decoder expects
     ///@param token0Address address of first token of the pool
@@ -64,8 +59,6 @@ contract Mint {
     function doAction(bytes memory inputs) public returns (OutputStruct memory outputs) {
         InputStruct memory inputsStruct = decodeInputs(inputs);
         outputs = mint(inputsStruct);
-        //outputs = encodeOutputs(outputsStruct);
-        emit Output(encodeOutputs(outputs));
     }
 
     ///@notice mints a UniswapV3 position NFT
