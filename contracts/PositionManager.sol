@@ -9,15 +9,16 @@ import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.s
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
+import '@uniswap/v3-core/contracts/libraries/FixedPoint96.sol';
 import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol';
+import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import './Registry.sol';
 import './helpers/ERC20Helper.sol';
 import 'hardhat/console.sol';
 import '../interfaces/IPositionManager.sol';
+import './actions/BaseAction.sol';
 import '../interfaces/IUniswapAddressHolder.sol';
-import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
-import '@uniswap/v3-core/contracts/libraries/FixedPoint96.sol';
 
 /**
  * @title   Position Manager
@@ -29,25 +30,124 @@ import '@uniswap/v3-core/contracts/libraries/FixedPoint96.sol';
  */
 
 contract PositionManager is IPositionManager, ERC721Holder {
-    event DepositUni(address indexed from, uint256 tokenId);
-    event WithdrawUni(address to, uint256 tokenId);
-    event Action(uint256 amountOut);
-
-    // THese variables need to stay on top of the file.
+    //################### What should remain inside the PositionManager after refactoring ######################
     IUniswapAddressHolder public uniswapAddressHolder;
 
-    Registry public immutable registry = Registry(0x59b670e9fA9D0A427751Af201D676719a970857b);
-    address public immutable owner;
-    address public immutable gov;
-    uint256[] private uniswapNFTs;
-    INonfungiblePositionManager public immutable nonfungiblePositionManager;
-    IUniswapV3Factory public immutable factory;
-    ISwapRouter public immutable swapRouter;
+    ///@notice emitted when a position is created
+    ///@param from address of the user
+    ///@param tokenId ID of the minted NFT
+    event DepositUni(address indexed from, uint256 tokenId);
 
+    ///@notice emitted when a position is withdrawn
+    ///@param to address of the user
+    ///@param tokenId ID of the withdrawn NFT
+    event WithdrawUni(address to, uint256 tokenId);
+
+    event Output(bool success, bytes data);
+
+    uint256[] private uniswapNFTs;
+    address public immutable owner;
+
+    constructor(address userAddress, address _uniswapAddressHolder) {
+        owner = userAddress;
+        uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
+        gov = msg.sender; //TODO: hardcode in another contract
+    }
+
+    //TODO: refactor of user parameters
     struct Module {
         address moduleAddress;
         bool activated;
     }
+
+    ///@notice add uniswap position NFT to the position manager
+    ///@param from address of the user
+    ///@param tokenIds IDs of deposited tokens
+    function depositUniNft(address from, uint256[] calldata tokenIds) external override onlyOwner {
+        for (uint32 i = 0; i < tokenIds.length; i++) {
+            INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).safeTransferFrom(
+                from,
+                address(this),
+                tokenIds[i],
+                '0x0'
+            );
+            uniswapNFTs.push(tokenIds[i]);
+            emit DepositUni(from, tokenIds[i]);
+        }
+    }
+
+    ///@notice withdraw uniswap position NFT from the position manager
+    ///@param to address of the user
+    ///@param tokenId ID of withdrawn token
+    function withdrawUniNft(address to, uint256 tokenId) public override onlyOwner {
+        uint256 index = uniswapNFTs.length;
+        for (uint256 i = 0; i < uniswapNFTs.length; i++) {
+            if (uniswapNFTs[i] == tokenId) {
+                index = i;
+                i = uniswapNFTs.length;
+            }
+        }
+        require(index < uniswapNFTs.length, 'token ID not found!');
+        INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).safeTransferFrom(
+            address(this),
+            to,
+            tokenId,
+            '0x0'
+        );
+        removePositionId(index);
+        emit WithdrawUni(to, tokenId);
+    }
+
+    ///@notice remove awareness of NFT at index
+    ///@param index index of the NFT in the uniswapNFTs array
+    function removePositionId(uint256 index) internal {
+        uniswapNFTs[index] = uniswapNFTs[uniswapNFTs.length - 1];
+        uniswapNFTs.pop();
+    }
+
+    ///@notice add tokenId in the uniswapNFTs array
+    ///@param tokenId ID of the added NFT
+    function pushPositionId(uint256 tokenId) public {
+        uniswapNFTs.push(tokenId);
+    }
+
+    ///@notice return the IDs of the uniswap positions
+    ///@return array of IDs
+    function _getAllUniPosition() external view override returns (uint256[] memory) {
+        uint256[] memory uniswapNFTsMemory = uniswapNFTs;
+        return uniswapNFTsMemory;
+    }
+
+    ///@notice modifier to check if the msg.sender is the owner
+    modifier onlyOwner() {
+        require(msg.sender == owner, 'Only owner');
+        _;
+    }
+
+    ///@notice modifier to check if the msg.sender is the owner or a module
+    modifier onlyOwnerOrModule() {
+        require((msg.sender == owner) || (registry.isApproved(msg.sender)), 'Only owner or module');
+        _;
+    }
+
+    ///@notice call an action
+    ///@param actionAddress address of action to call
+    ///@param inputs data to send to the action
+    ///@return outputs data returned from the action
+    function doAction(address actionAddress, bytes memory inputs) public override returns (bytes memory outputs) {
+        (bool success, bytes memory data) = actionAddress.delegatecall(
+            abi.encodeWithSignature('doAction(bytes)', inputs)
+        );
+        outputs = data;
+        emit Output(success, data);
+    }
+
+    //###########################################################################################
+
+    //################## What should be deleted after refactoring ###############################
+
+    Registry public immutable registry = Registry(0x59b670e9fA9D0A427751Af201D676719a970857b);
+    address public immutable gov;
 
     // details about the uniswap position
     struct Position {
@@ -68,54 +168,6 @@ contract PositionManager is IPositionManager, ERC721Holder {
         // how many uncollected tokens are owed to the position, as of the last computation
         uint128 tokensOwed0;
         uint128 tokensOwed1;
-    }
-
-    constructor(
-        address userAddress,
-        INonfungiblePositionManager _nonfungiblePositionManager,
-        ISwapRouter _swapRouter,
-        IUniswapAddressHolder _uniswapAddressHolder
-    ) {
-        owner = userAddress;
-        nonfungiblePositionManager = _nonfungiblePositionManager;
-        factory = IUniswapV3Factory(_nonfungiblePositionManager.factory());
-        gov = msg.sender;
-        swapRouter = _swapRouter;
-        uniswapAddressHolder = _uniswapAddressHolder;
-    }
-
-    /**
-     * @notice add uniswap position NFT to the position manager
-     */
-    function depositUniNft(address from, uint256[] calldata tokenIds) external override onlyOwner {
-        for (uint32 i = 0; i < tokenIds.length; i++) {
-            nonfungiblePositionManager.safeTransferFrom(from, address(this), tokenIds[i], '0x0');
-            uniswapNFTs.push(tokenIds[i]);
-            emit DepositUni(from, tokenIds[i]);
-        }
-    }
-
-    /**
-     * @notice withdraw uniswap position NFT from the position manager
-     */
-    function withdrawUniNft(address to, uint256 tokenId) public override onlyOwner {
-        uint256 index = uniswapNFTs.length;
-        for (uint256 i = 0; i < uniswapNFTs.length; i++) {
-            if (uniswapNFTs[i] == tokenId) {
-                index = i;
-                i = uniswapNFTs.length;
-            }
-        }
-        require(index < uniswapNFTs.length, 'token id not found!');
-        nonfungiblePositionManager.safeTransferFrom(address(this), to, tokenId, '0x0');
-        removeNFTFromList(index);
-        emit WithdrawUni(to, tokenId);
-    }
-
-    //remove awareness of nft at index
-    function removeNFTFromList(uint256 index) internal {
-        uniswapNFTs[index] = uniswapNFTs[uniswapNFTs.length - 1];
-        uniswapNFTs.pop();
     }
 
     //wrapper for withdraw of all univ3positions in manager
@@ -147,9 +199,9 @@ contract PositionManager is IPositionManager, ERC721Holder {
             _approveToken(token0);
             _approveToken(token1);
 
-            (uint256 tokenId, , uint256 amount0Deposited, uint256 amount1Deposited) = nonfungiblePositionManager.mint(
-                mintParams[i]
-            );
+            (uint256 tokenId, , uint256 amount0Deposited, uint256 amount1Deposited) = INonfungiblePositionManager(
+                uniswapAddressHolder.nonfungiblePositionManagerAddress()
+            ).mint(mintParams[i]);
 
             uniswapNFTs.push(tokenId);
             emit DepositUni(msg.sender, tokenId);
@@ -167,9 +219,9 @@ contract PositionManager is IPositionManager, ERC721Holder {
      * @notice get balance token0 and token1 in a position
      */
     function getPositionBalance(uint256 tokenId) external view override returns (uint256, uint256) {
-        (, , , , , int24 tickLower, int24 tickUpper, uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(
-            tokenId
-        );
+        (, , , , , int24 tickLower, int24 tickUpper, uint128 liquidity, , , , ) = INonfungiblePositionManager(
+            uniswapAddressHolder.nonfungiblePositionManagerAddress()
+        ).positions(tokenId);
 
         IUniswapV3Pool pool = getPoolFromTokenId(tokenId);
 
@@ -187,7 +239,9 @@ contract PositionManager is IPositionManager, ERC721Holder {
      * @notice get fee of token0 and token1 in a position
      */
     function getPositionFee(uint256 tokenId) external view override returns (uint128 tokensOwed0, uint128 tokensOwed1) {
-        (, , , , , , , , , , tokensOwed0, tokensOwed1) = nonfungiblePositionManager.positions(tokenId);
+        (, , , , , , , , , , tokensOwed0, tokensOwed1) = INonfungiblePositionManager(
+            uniswapAddressHolder.nonfungiblePositionManagerAddress()
+        ).positions(tokenId);
     }
 
     /**
@@ -199,6 +253,9 @@ contract PositionManager is IPositionManager, ERC721Holder {
         override
         onlyOwnerOrModule
     {
+        INonfungiblePositionManager nonfungiblePositionManager = INonfungiblePositionManager(
+            uniswapAddressHolder.nonfungiblePositionManagerAddress()
+        );
         for (uint256 i = 0; i < tokenIds.length; i++) {
             (, , , , , , , uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(tokenIds[i]);
 
@@ -225,7 +282,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
             //delete NFT burned from list
             for (uint32 j = 0; j < uniswapNFTs.length; j++) {
                 if (uniswapNFTs[j] == tokenIds[i]) {
-                    removeNFTFromList(j);
+                    removePositionId(j);
                 }
             }
         }
@@ -244,7 +301,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
                 amount1Min: 0,
                 deadline: block.timestamp + 1000
             });
-        nonfungiblePositionManager.decreaseLiquidity(params);
+        INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).decreaseLiquidity(params);
     }
 
     function collectPositionFee(uint256 tokenId, address recipient)
@@ -254,6 +311,9 @@ contract PositionManager is IPositionManager, ERC721Holder {
         returns (uint256 amount0, uint256 amount1)
     {
         updateUncollectedFees(tokenId);
+        INonfungiblePositionManager nonfungiblePositionManager = INonfungiblePositionManager(
+            uniswapAddressHolder.nonfungiblePositionManagerAddress()
+        );
         (, , , , , , , , , , uint128 feesToken0, uint128 feesToken1) = nonfungiblePositionManager.positions(tokenId);
         INonfungiblePositionManager.CollectParams memory params = INonfungiblePositionManager.CollectParams({
             tokenId: tokenId,
@@ -289,7 +349,8 @@ contract PositionManager is IPositionManager, ERC721Holder {
                 amount1Min: 0,
                 deadline: block.timestamp + 1000
             });
-        (, amount0, amount1) = nonfungiblePositionManager.increaseLiquidity(params);
+        (, amount0, amount1) = INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress())
+            .increaseLiquidity(params);
 
         if (amount0 < amount0Desired) token0.transfer(owner, amount0Desired - amount0);
         if (amount1 < amount1Desired) token1.transfer(owner, amount1Desired - amount1);
@@ -301,9 +362,9 @@ contract PositionManager is IPositionManager, ERC721Holder {
         uint256 amount0Desired,
         uint256 amount1Desired
     ) external payable override onlyOwnerOrModule {
-        (, , , , , int24 tickLower, int24 tickUpper, uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(
-            tokenId
-        );
+        (, , , , , int24 tickLower, int24 tickUpper, uint128 liquidity, , , , ) = INonfungiblePositionManager(
+            uniswapAddressHolder.nonfungiblePositionManagerAddress()
+        ).positions(tokenId);
 
         IUniswapV3Pool pool = getPoolFromTokenId(tokenId);
 
@@ -327,7 +388,9 @@ contract PositionManager is IPositionManager, ERC721Holder {
                 amount1Min: 0,
                 deadline: block.timestamp + 1000
             });
-        nonfungiblePositionManager.decreaseLiquidity(decreaseliquidityparams);
+        INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).decreaseLiquidity(
+            decreaseliquidityparams
+        );
     }
 
     //swaps token0 for token1
@@ -341,7 +404,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
         if (!_usingPositionManagerBalance) {
             token0.transferFrom(msg.sender, address(this), amount0In);
         }
-        token0.approve(address(swapRouter), 2**256 - 1);
+        token0.approve(uniswapAddressHolder.swapRouterAddress(), 2**256 - 1);
 
         ISwapRouter.ExactInputSingleParams memory swapParams = ISwapRouter.ExactInputSingleParams({
             tokenIn: address(token0),
@@ -354,7 +417,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
             sqrtPriceLimitX96: 0
         });
 
-        amount1Out = swapRouter.exactInputSingle(swapParams);
+        amount1Out = ISwapRouter(uniswapAddressHolder.swapRouterAddress()).exactInputSingle(swapParams);
     }
 
     function _getRatioFromRange(
@@ -416,7 +479,10 @@ contract PositionManager is IPositionManager, ERC721Holder {
         }
 
         IUniswapV3Pool pool = IUniswapV3Pool(
-            PoolAddress.computeAddress(address(factory), PoolAddress.getPoolKey(address(token0), address(token1), fee))
+            PoolAddress.computeAddress(
+                uniswapAddressHolder.uniswapV3FactoryAddress(),
+                PoolAddress.getPoolKey(address(token0), address(token1), fee)
+            )
         );
         (, int24 tickPool, , , , , ) = pool.slot0();
         (uint256 amountToSwap, bool token0In) = _calcAmountToSwap(tickPool, tickLower, tickUpper, amount0In, amount1In);
@@ -428,64 +494,27 @@ contract PositionManager is IPositionManager, ERC721Holder {
 
     /*Get pool address from token ID*/
     function getPoolFromTokenId(uint256 tokenId) public view returns (IUniswapV3Pool) {
-        (, , address token0, address token1, uint24 fee, , , , , , , ) = nonfungiblePositionManager.positions(tokenId);
+        (, , address token0, address token1, uint24 fee, , , , , , , ) = INonfungiblePositionManager(
+            uniswapAddressHolder.nonfungiblePositionManagerAddress()
+        ).positions(tokenId);
 
         PoolAddress.PoolKey memory key = PoolAddress.getPoolKey(token0, token1, fee);
 
-        address poolAddress = PoolAddress.computeAddress(address(factory), key);
+        address poolAddress = PoolAddress.computeAddress(uniswapAddressHolder.uniswapV3FactoryAddress(), key);
 
         return IUniswapV3Pool(poolAddress);
     }
 
-    function _getAllUniPosition() external view override returns (uint256[] memory) {
-        uint256[] memory uniswapNFTsMemory = uniswapNFTs;
-        return uniswapNFTsMemory;
-    }
-
     function _approveToken(IERC20 token) private {
-        if (token.allowance(address(this), address(nonfungiblePositionManager)) == 0)
-            token.approve(address(nonfungiblePositionManager), 2**256 - 1);
+        if (token.allowance(address(this), uniswapAddressHolder.nonfungiblePositionManagerAddress()) == 0)
+            token.approve(uniswapAddressHolder.nonfungiblePositionManagerAddress(), 2**256 - 1);
     }
 
     function _getTokenAddress(uint256 tokenId) private view returns (IERC20 token0, IERC20 token1) {
-        (, , address token0address, address token1address, , , , , , , , ) = nonfungiblePositionManager.positions(
-            tokenId
-        );
+        (, , address token0address, address token1address, , , , , , , , ) = INonfungiblePositionManager(
+            uniswapAddressHolder.nonfungiblePositionManagerAddress()
+        ).positions(tokenId);
         token0 = IERC20(token0address);
         token1 = IERC20(token1address);
-    }
-
-    // Run action as delegate.
-    function delegateAction(
-        address token0Address,
-        address token1Address,
-        address actionAddress,
-        bytes memory inputs
-    ) public returns (bytes memory outputs) {
-        ERC20Helper._approveToken(token0Address, address(swapRouter), 2**256 - 1);
-        ERC20Helper._approveToken(token1Address, address(swapRouter), 2**256 - 1);
-
-        (bool success, bytes memory data) = actionAddress.delegatecall(
-            abi.encodeWithSignature('doAction(bytes)', inputs)
-        );
-
-        if (success) {
-            uint256 amountOut = abi.decode(data, (uint256));
-            emit Action(amountOut);
-            outputs = data;
-        } else {
-            revert('Delegate Action Failed');
-        }
-    }
-
-    // Modules activation modifier
-    modifier onlyOwner() {
-        require(msg.sender == owner, 'Only owner');
-        _;
-    }
-
-    modifier onlyOwnerOrModule() {
-        require((msg.sender == owner) || (registry.isApproved(msg.sender)), 'Only owner or module');
-        _;
     }
 }

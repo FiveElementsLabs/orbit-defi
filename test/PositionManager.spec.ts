@@ -1,17 +1,16 @@
 import '@nomiclabs/hardhat-ethers';
 import { expect } from 'chai';
 import { ContractFactory, Contract } from 'ethers';
+import { AbiCoder } from 'ethers/lib/utils';
+import { ethers } from 'hardhat';
+const hre = require('hardhat');
 const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json');
 const NonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json');
 const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json');
 const PositionManagerjson = require('../artifacts/contracts/PositionManager.sol/PositionManager.json');
 const SwapRouterjson = require('@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json');
 const FixturesConst = require('./shared/fixtures');
-const hre = require('hardhat');
-
-import { ethers } from 'hardhat';
 import { tokensFixture, poolFixture, mintSTDAmount, routerFixture } from './shared/fixtures';
-
 import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager, TestRouter } from '../typechain';
 
 describe('PositionManager.sol', function () {
@@ -40,6 +39,8 @@ describe('PositionManager.sol', function () {
   let PositionManager: PositionManager; //Our smart vault named PositionManager
   let Router: TestRouter; //Our router to perform swap
   let SwapRouter: Contract;
+  let MintAction: Contract;
+  let abiCoder: AbiCoder;
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
@@ -49,9 +50,9 @@ describe('PositionManager.sol', function () {
     trader = await trader; //used for swap
 
     //deploy first 3 token - ETH, USDC, DAI
-    tokenEth = await tokensFixture('ETH', 18).then((tokenFix) => tokenFix.tokenFixture);
-    tokenUsdc = await tokensFixture('USDC', 6).then((tokenFix) => tokenFix.tokenFixture);
-    tokenDai = await tokensFixture('DAI', 18).then((tokenFix) => tokenFix.tokenFixture);
+    tokenEth = (await tokensFixture('ETH', 18)).tokenFixture;
+    tokenUsdc = (await tokensFixture('USDC', 6)).tokenFixture;
+    tokenDai = (await tokensFixture('DAI', 18)).tokenFixture;
 
     //deploy factory, used for pools
     const uniswapFactoryFactory = new ContractFactory(
@@ -59,11 +60,12 @@ describe('PositionManager.sol', function () {
       UniswapV3Factoryjson['bytecode'],
       user
     );
-    Factory = (await uniswapFactoryFactory.deploy().then((contract) => contract.deployed())) as Contract;
+    Factory = await uniswapFactoryFactory.deploy();
+    await Factory.deployed();
 
     //deploy first 2 pools
-    Pool0 = await poolFixture(tokenEth, tokenUsdc, 3000, Factory).then((poolFix) => poolFix.pool);
-    Pool1 = await poolFixture(tokenEth, tokenDai, 3000, Factory).then((poolFix) => poolFix.pool);
+    Pool0 = (await poolFixture(tokenEth, tokenUsdc, 3000, Factory)).pool;
+    Pool1 = (await poolFixture(tokenEth, tokenDai, 3000, Factory)).pool;
 
     //mint 1e30 token, you can call with arbitrary amount
     await mintSTDAmount(tokenEth);
@@ -79,7 +81,8 @@ describe('PositionManager.sol', function () {
     const NonFungiblePositionManagerDescriptor = await NonFungiblePositionManagerDescriptorFactory.deploy(
       tokenEth.address,
       ethers.utils.formatBytes32String('www.google.com')
-    ).then((contract) => contract.deployed());
+    );
+    await NonFungiblePositionManagerDescriptor.deployed();
 
     const NonFungiblePositionManagerFactory = new ContractFactory(
       NonFungiblePositionManagerjson['abi'],
@@ -90,24 +93,40 @@ describe('PositionManager.sol', function () {
       Factory.address,
       tokenEth.address,
       NonFungiblePositionManagerDescriptor.address
-    ).then((contract) => contract.deployed())) as INonfungiblePositionManager;
+    )) as INonfungiblePositionManager;
+    await NonFungiblePositionManager.deployed();
 
     //deploy router
     const SwapRouterFactory = new ContractFactory(SwapRouterjson['abi'], SwapRouterjson['bytecode'], user);
-    //Router = await routerFixture().then((RFixture) => RFixture.ruoterDeployFixture);
-    SwapRouter = (await SwapRouterFactory.deploy(Factory.address, tokenEth.address).then((contract) =>
-      contract.deployed()
-    )) as Contract;
+    SwapRouter = await SwapRouterFactory.deploy(Factory.address, tokenEth.address);
+    await SwapRouter.deployed();
+
+    //deploy uniswapAddressHolder
+    const uniswapAddressHolderFactory = await ethers.getContractFactory('UniswapAddressHolder');
+    const uniswapAddressHolder = await uniswapAddressHolderFactory.deploy(
+      NonFungiblePositionManager.address,
+      Factory.address,
+      SwapRouter.address
+    );
+    await uniswapAddressHolder.deployed();
 
     //deploy the PositionManagerFactory => deploy PositionManager
-    const PositionManagerFactory = await ethers
-      .getContractFactory('PositionManagerFactory')
-      .then((contract) => contract.deploy().then((deploy) => deploy.deployed()));
+    const PositionManagerFactoryFactory = await ethers.getContractFactory('PositionManagerFactory');
+    const PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
+    await PositionManagerFactory.deployed();
 
-    await PositionManagerFactory.create(user.address, NonFungiblePositionManager.address, SwapRouter.address);
+    await PositionManagerFactory.create(user.address, uniswapAddressHolder.address);
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
+
+    //deploy an action to test
+    const ActionFactory = await ethers.getContractFactory('Mint');
+    MintAction = await ActionFactory.deploy(uniswapAddressHolder.address);
+    await MintAction.deployed();
+
+    //select standard abicoder
+    abiCoder = ethers.utils.defaultAbiCoder;
 
     //APPROVE
     //recipient: NonFungiblePositionManager - spender: user
@@ -142,16 +161,9 @@ describe('PositionManager.sol', function () {
     await tokenEth.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
     await tokenUsdc.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
     await tokenDai.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
-    /* //recipient: NonFungiblePositionManager - spender: PositionManager
-    await tokenEth
-      .connect(PositionManager.address)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'));
-    await tokenUsdc
-      .connect(PositionManager.address)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'));
-    await tokenDai
-      .connect(PositionManager.address)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000')); */
+    /* //recipient: MintAction - spender: user
+    await tokenEth.connect(user).approve(MintAction.address, ethers.utils.parseEther('100000000000000'));
+    await tokenUsdc.connect(user).approve(MintAction.address, ethers.utils.parseEther('100000000000000')); */
 
     await NonFungiblePositionManager.setApprovalForAll(PositionManager.address, true);
 
@@ -192,9 +204,8 @@ describe('PositionManager.sol', function () {
       { gasLimit: 670000 }
     );
 
-    tokenId = await txMint
-      .wait()
-      .then((mintReceipt: any) => mintReceipt.events[mintReceipt.events.length - 1].args.tokenId);
+    const mintReceipt = (await txMint.wait()) as any;
+    tokenId = mintReceipt.events[mintReceipt.events.length - 1].args.tokenId;
   });
 
   describe('PositionManager - depositUniNft', function () {
@@ -225,17 +236,16 @@ describe('PositionManager.sol', function () {
         { gasLimit: 670000 }
       );
 
-      const newtokenId = await txMint
-        .wait()
-        .then((mintReceipt: any) => mintReceipt.events[mintReceipt.events.length - 1].args.tokenId);
+      const mintReceipt = (await txMint.wait()) as any;
+      const newTokenId = mintReceipt.events[mintReceipt.events.length - 1].args.tokenId;
 
       await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [
         tokenId,
-        newtokenId,
+        newTokenId,
       ]);
 
       expect(PositionManager.address).to.be.equal(await NonFungiblePositionManager.ownerOf(tokenId));
-      expect(PositionManager.address).to.be.equal(await NonFungiblePositionManager.ownerOf(newtokenId));
+      expect(PositionManager.address).to.be.equal(await NonFungiblePositionManager.ownerOf(newTokenId));
     });
   });
   describe('PositionManager - withdrawUniNft', function () {
@@ -247,14 +257,7 @@ describe('PositionManager.sol', function () {
       expect(await user.address).to.equal(await NonFungiblePositionManager.ownerOf(tokenId));
     });
     it('Should revert if token does not exist', async function () {
-      let e;
-      try {
-        await PositionManager.connect(user).withdrawUniNft(user.address, 1000);
-      } catch (error: any) {
-        e = error.message;
-      }
-
-      expect(e.includes('token id not found!')).to.equal(true);
+      await expect(PositionManager.connect(user).withdrawUniNft(user.address, 1000)).to.be.reverted;
     });
   });
 
@@ -559,6 +562,65 @@ describe('PositionManager.sol', function () {
 
       expect(positionBalance0.toNumber()).to.be.closeTo(amount0Desired, 5e3);
       expect(positionBalance1.toNumber()).to.be.closeTo(amount1Desired, 5e3);
+    });
+  });
+
+  describe('doAction', function () {
+    it('should be able to call an action', async function () {
+      const tickLower = -300;
+      const tickUpper = 600;
+      const amount0In = 1e5;
+      const amount1In = 2e5;
+      const inputBytes = abiCoder.encode(
+        ['address', 'address', 'uint24', 'int24', 'int24', 'uint256', 'uint256'],
+        [tokenEth.address, tokenUsdc.address, 3000, tickLower, tickUpper, amount0In, amount1In]
+      );
+      await tokenEth.connect(user).transfer(PositionManager.address, 3e5);
+      await tokenUsdc.connect(user).transfer(PositionManager.address, 3e5);
+      const positionsPre = await NonFungiblePositionManager.balanceOf(PositionManager.address);
+      await PositionManager.connect(user).doAction(MintAction.address, inputBytes);
+      expect(await NonFungiblePositionManager.balanceOf(PositionManager.address)).to.be.equal(positionsPre.add(1));
+    });
+
+    it('should revert if the action does not exist', async function () {
+      const tickLower = -300;
+      const tickUpper = 600;
+      const amount0In = 1e5;
+      const amount1In = 2e5;
+      const inputBytes = abiCoder.encode(
+        ['address', 'address', 'uint24', 'int24', 'int24', 'uint256', 'uint256'],
+        [tokenEth.address, tokenUsdc.address, 3000, tickLower, tickUpper, amount0In, amount1In]
+      );
+
+      await tokenEth.connect(user).transfer(PositionManager.address, 3e5);
+      await tokenUsdc.connect(user).transfer(PositionManager.address, 3e5);
+      const tx = await PositionManager.connect(user).doAction(Factory.address, inputBytes);
+      const events = (await tx.wait()).events as any;
+      const successEvent = events[events.length - 1];
+      expect(successEvent.args.success).to.equal(false);
+    });
+
+    it('should be able to decode outputs', async function () {
+      const tickLower = -600;
+      const tickUpper = 600;
+      const amount0In = 1e5;
+      const amount1In = 1e5;
+      const inputBytes = abiCoder.encode(
+        ['address', 'address', 'uint24', 'int24', 'int24', 'uint256', 'uint256'],
+        [tokenEth.address, tokenUsdc.address, 3000, tickLower, tickUpper, amount0In, amount1In]
+      );
+      await tokenEth.connect(user).transfer(PositionManager.address, 3e5);
+      await tokenUsdc.connect(user).transfer(PositionManager.address, 3e5);
+
+      const positionsPre = await NonFungiblePositionManager.balanceOf(PositionManager.address);
+
+      const tx = await PositionManager.connect(user).doAction(MintAction.address, inputBytes);
+
+      expect(await NonFungiblePositionManager.balanceOf(PositionManager.address)).to.be.equal(positionsPre.add(1));
+
+      const events = (await tx.wait()).events as any;
+      const successEvent = events[events.length - 1];
+      const outputs = abiCoder.decode(['uint256', 'uint256', 'uint256'], successEvent.args.data);
     });
   });
 });

@@ -81,9 +81,18 @@ describe('Mint.sol', function () {
     )) as INonfungiblePositionManager;
     await NonFungiblePositionManager.deployed();
 
+    //deploy uniswapAddressHolder
+    const uniswapAddressHolderFactory = await ethers.getContractFactory('UniswapAddressHolder');
+    const uniswapAddressHolder = await uniswapAddressHolderFactory.deploy(
+      NonFungiblePositionManager.address,
+      Factory.address,
+      NonFungiblePositionManagerDescriptor.address //random address because we don't need it
+    );
+    await uniswapAddressHolder.deployed();
+
     //Deploy Mint Action
     const mintActionFactory = await ethers.getContractFactory('Mint');
-    MintAction = (await mintActionFactory.deploy(NonFungiblePositionManager.address, Factory.address)) as Mint;
+    MintAction = (await mintActionFactory.deploy(uniswapAddressHolder.address)) as Mint;
     await MintAction.deployed();
 
     //get AbiCoder
@@ -100,6 +109,10 @@ describe('Mint.sol', function () {
     await tokenUsdc
       .connect(liquidityProvider)
       .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
+
+    //give mint action some tokens
+    await tokenEth.connect(user).transfer(MintAction.address, ethers.utils.parseEther('1000000000000'));
+    await tokenUsdc.connect(user).transfer(MintAction.address, ethers.utils.parseEther('1000000000000'));
 
     // give pool some liquidity
     await NonFungiblePositionManager.connect(liquidityProvider).mint(
@@ -133,7 +146,7 @@ describe('Mint.sol', function () {
       );
       await MintAction.connect(user).doAction(inputBytes);
 
-      expect(await NonFungiblePositionManager.balanceOf(user.address)).to.gt(balancePre);
+      expect(await NonFungiblePositionManager.balanceOf(MintAction.address)).to.gt(balancePre);
     });
 
     it('should correctly return bytes output', async function () {
@@ -155,21 +168,6 @@ describe('Mint.sol', function () {
       expect(await outputs[0].toNumber()).to.equal(3);
       expect(await outputs[1].toNumber()).to.be.closeTo(amount0In, amount0In / 1e5);
       expect(await outputs[2].toNumber()).to.be.closeTo(amount1In, amount1In / 1e5);
-    });
-
-    it('should only take necessary amount of tokens', async function () {
-      const amount0In = 7e5;
-      const amount1In = 5e5;
-      const tickLower = -720;
-      const tickUpper = 720;
-      const inputBytes = abiCoder.encode(
-        ['address', 'address', 'uint24', 'int24', 'int24', 'uint256', 'uint256'],
-        [tokenEth.address, tokenUsdc.address, 3000, tickLower, tickUpper, amount0In, amount1In]
-      );
-
-      await MintAction.connect(user).doAction(inputBytes);
-
-      expect(await tokenEth.balanceOf(MintAction.address)).to.equal(0);
     });
 
     it('should revert if pool does not exist', async function () {
