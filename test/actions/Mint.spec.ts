@@ -94,7 +94,7 @@ describe('Mint.sol', function () {
 
     //Deploy Mint Action
     const mintActionFactory = await ethers.getContractFactory('Mint');
-    MintAction = (await mintActionFactory.deploy(uniswapAddressHolder.address)) as Mint;
+    MintAction = (await mintActionFactory.deploy()) as Mint;
     await MintAction.deployed();
 
     //deploy the PositionManagerFactory => deploy PositionManager

@@ -122,7 +122,7 @@ describe('PositionManager.sol', function () {
 
     //deploy an action to test
     const ActionFactory = await ethers.getContractFactory('Mint');
-    MintAction = await ActionFactory.deploy(uniswapAddressHolder.address);
+    MintAction = await ActionFactory.deploy();
     await MintAction.deployed();
 
     //select standard abicoder

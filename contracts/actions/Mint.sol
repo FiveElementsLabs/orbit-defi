@@ -49,10 +49,6 @@ contract Mint {
         uint256 amount1Deposited;
     }
 
-    constructor(address _uniswapAddressHolder) {
-        uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
-    }
-
     ///@notice executes the action of the contract (mint), should be the only function visible from the outside
     ///@param inputs input bytes to be decoded according to InputStruct
     ///@return outputs outputs encoded according OutputStruct
@@ -148,12 +144,5 @@ contract Mint {
             amount0Desired: amount0Desired,
             amount1Desired: amount1Desired
         });
-    }
-
-    ///@notice encode the outputs to bytes
-    ///@param outputs outputs to be encoded
-    ///@return outputBytes encoded outputs
-    function encodeOutputs(OutputStruct memory outputs) internal pure returns (bytes memory outputBytes) {
-        outputBytes = abi.encode(outputs, uint256(1));
     }
 }
