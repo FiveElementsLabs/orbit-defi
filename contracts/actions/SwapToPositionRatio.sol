@@ -3,24 +3,30 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import './BaseAction.sol';
 import '../helpers/UniswapAddressHolder.sol';
 import '../helpers/SwapHelper.sol';
 import '../helpers/NFTHelper.sol';
 import '../helpers/ERC20Helper.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-
-// These contracts should be imported from helpers.
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
-import '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 
+///@notice action to swap to an exact position ratio
 contract SwapToPositionRatio {
-    event Output(uint256 amountOut);
-
     IUniswapAddressHolder public uniswapAddressHolder;
 
+    ///@notice emitted to pass outputs to test file
+    ///@param output output bytes
+    event Output(bytes output);
+
+    ///@notice input the decoder expects
+    ///@param token0Address address of first token of the pool
+    ///@param token1Address address of second token of the pool
+    ///@param fee fee tier of the pool
+    ///@param amount0In actual token0 amount to be deposited
+    ///@param amount1In actual token1 amount to be deposited
+    ///@param tickLower lower tick of position
+    ///@param tickUpper upper tick of position
     struct InputStruct {
         address token0Address;
         address token1Address;
@@ -31,17 +37,29 @@ contract SwapToPositionRatio {
         int24 tickUpper;
     }
 
+    ///@notice output the encoder produces
+    ///@param amount1Out token1 amount swapped
+    struct OutputStruct {
+        uint256 amount1Out;
+    }
+
     constructor(address _uniswapAddressHolderAddress) {
         uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolderAddress);
     }
 
-    function doAction(bytes memory inputs) public returns (uint256 amountOut) {
+    ///@notice executes the action of the contract (swapToPositionRatio), should be the only function visible from the outside
+    ///@param inputs input bytes to be decoded according to InputStruct
+    ///@return outputs outputs encoded according OutputStruct
+    function doAction(bytes memory inputs) public returns (OutputStruct memory outputs) {
         InputStruct memory inputsStruct = decodeInputs(inputs);
-        amountOut = swapToPositionRatio(inputsStruct);
-        emit Output(amountOut);
+        outputs = swapToPositionRatio(inputsStruct);
+        emit Output(encodeOutputs(outputs));
     }
 
-    function swapToPositionRatio(InputStruct memory inputs) internal returns (uint256 amountOut) {
+    ///@notice performs swap to optimal ratio for the position at tickLower and tickUpper
+    ///@param inputs input bytes to be decoded according to InputStruct
+    ///@return outputs outputs encoded according OutputStruct
+    function swapToPositionRatio(InputStruct memory inputs) internal returns (OutputStruct memory outputs) {
         address uniswapV3FactoryAddress = uniswapAddressHolder.uniswapV3FactoryAddress();
 
         address poolAddress = NFTHelper._getPoolAddress(
@@ -62,15 +80,21 @@ contract SwapToPositionRatio {
         );
 
         if (amountToSwap != 0) {
-            amountOut = swap(
+            uint256 amount1Out = swap(
                 token0AddressIn ? inputs.token0Address : inputs.token1Address,
                 token0AddressIn ? inputs.token1Address : inputs.token0Address,
                 inputs.fee,
                 amountToSwap
             );
+            outputs = OutputStruct({amount1Out: amount1Out});
         }
     }
 
+    ///@notice swaps token0 for token1
+    ///@param token0Address address of first token
+    ///@param token1Address address of second token
+    ///@param fee fee tier of the pool
+    ///@param amount0In amount of token0 to swap
     function swap(
         address token0Address,
         address token1Address,
@@ -78,6 +102,9 @@ contract SwapToPositionRatio {
         uint256 amount0In
     ) internal returns (uint256 amount1Out) {
         ISwapRouter swapRouter = ISwapRouter(uniswapAddressHolder.swapRouterAddress());
+
+        ERC20Helper._approveToken(token0Address, address(swapRouter), 2**256 - 1);
+        ERC20Helper._approveToken(token1Address, address(swapRouter), 2**256 - 1);
 
         ISwapRouter.ExactInputSingleParams memory swapParams = ISwapRouter.ExactInputSingleParams({
             tokenIn: token0Address,
@@ -93,6 +120,9 @@ contract SwapToPositionRatio {
         amount1Out = swapRouter.exactInputSingle(swapParams);
     }
 
+    ///@notice decodes inputs to InputStruct
+    ///@param inputBytes input bytes to be decoded
+    ///@return input decoded input struct
     function decodeInputs(bytes memory inputBytes) internal pure returns (InputStruct memory input) {
         (
             address token0Address,
@@ -113,5 +143,12 @@ contract SwapToPositionRatio {
             tickLower: tickLower,
             tickUpper: tickUpper
         });
+    }
+
+    ///@notice encode the outputs to bytes
+    ///@param outputs outputs to be encoded
+    ///@return outputBytes encoded outputs
+    function encodeOutputs(OutputStruct memory outputs) internal pure returns (bytes memory outputBytes) {
+        outputBytes = abi.encode(outputs, uint256(1));
     }
 }
