@@ -17,7 +17,6 @@ import './Registry.sol';
 import '../interfaces/IPositionManager.sol';
 import './actions/BaseAction.sol';
 import '../interfaces/IUniswapAddressHolder.sol';
-import 'hardhat/console.sol';
 
 /**
  * @title   Position Manager

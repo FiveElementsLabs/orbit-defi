@@ -9,8 +9,6 @@ import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.s
 import '../../interfaces/IPositionManager.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
 
-import 'hardhat/console.sol';
-
 contract ClosePosition {
     ///@notice uniswap address holder
     IUniswapAddressHolder public uniswapAddressHolder;
