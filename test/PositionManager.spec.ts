@@ -305,14 +305,14 @@ describe('PositionManager.sol', function () {
       ];
       await PositionManager.connect(user).mintAndDeposit(mintParams, false);
 
-      const tokens = await PositionManager._getAllUniPosition();
+      const tokens = await PositionManager.getAllUniPosition();
       const beforeBalance = await NonFungiblePositionManager.balanceOf(PositionManager.address);
       const beforeLenght = tokens.length;
 
       await PositionManager.connect(user).closeUniPositions([tokens[beforeLenght - 1], tokens[beforeLenght - 2]], true);
 
       expect(await NonFungiblePositionManager.balanceOf(PositionManager.address)).to.equal(beforeBalance.sub(2));
-      expect((await PositionManager._getAllUniPosition()).length).to.be.equal(beforeLenght - 2);
+      expect((await PositionManager.getAllUniPosition()).length).to.be.equal(beforeLenght - 2);
     });
   });
   describe('PositionManager - collectPositionFee', function () {
@@ -347,7 +347,7 @@ describe('PositionManager.sol', function () {
   });
   describe('PositionManager - mintAndDeposit', function () {
     it('Should mint and deposit an uniV3 NFT', async function () {
-      const tokenIds = (await PositionManager._getAllUniPosition()).length;
+      const tokenIds = (await PositionManager.getAllUniPosition()).length;
 
       await PositionManager.connect(user).mintAndDeposit(
         [
@@ -368,7 +368,7 @@ describe('PositionManager.sol', function () {
         false
       );
 
-      expect(tokenIds).to.be.lt((await PositionManager._getAllUniPosition()).length);
+      expect(tokenIds).to.be.lt((await PositionManager.getAllUniPosition()).length);
     });
     it('Should mint and deposit multiple positions with one call', async function () {
       let mintParams = [
@@ -555,7 +555,7 @@ describe('PositionManager.sol', function () {
         ],
         false
       );
-      const positions = await PositionManager._getAllUniPosition();
+      const positions = await PositionManager.getAllUniPosition();
       const [positionBalance0, positionBalance1] = await PositionManager.getPositionBalance(
         positions[positions.length - 1]
       );
@@ -565,7 +565,7 @@ describe('PositionManager.sol', function () {
     });
   });
 
-  describe('doAction', function () {
+  describe('PositionManager.doAction() - delegate call to actions', function () {
     it('should be able to call an action', async function () {
       const tickLower = -300;
       const tickUpper = 600;

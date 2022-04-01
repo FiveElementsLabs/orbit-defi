@@ -43,9 +43,15 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@param tokenId ID of the withdrawn NFT
     event WithdrawUni(address to, uint256 tokenId);
 
+<<<<<<< HEAD
     ///@notice emitted when an action is called
     ///@param success boolean indicating if the action was successful
     ///@param data output of the action in bytes (according to each action's OutputStruct)
+=======
+    ///@notice emitted to return the output of doAction transaction
+    ///@param success delegate call was a success
+    ///@param data data returned by the delegate call
+>>>>>>> aecba16c0cd026f456ccf6059e6362cd1662e437
     event Output(bool success, bytes data);
 
     uint256[] private uniswapNFTs;
@@ -97,13 +103,13 @@ contract PositionManager is IPositionManager, ERC721Holder {
             tokenId,
             '0x0'
         );
-        removePositionId(index);
+        _removePositionId(index);
         emit WithdrawUni(to, tokenId);
     }
 
     ///@notice remove awareness of NFT at index
     ///@param index index of the NFT in the uniswapNFTs array
-    function removePositionId(uint256 index) internal {
+    function _removePositionId(uint256 index) internal {
         uniswapNFTs[index] = uniswapNFTs[uniswapNFTs.length - 1];
         uniswapNFTs.pop();
     }
@@ -116,7 +122,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
 
     ///@notice return the IDs of the uniswap positions
     ///@return array of IDs
-    function _getAllUniPosition() external view override returns (uint256[] memory) {
+    function getAllUniPosition() external view override returns (uint256[] memory) {
         uint256[] memory uniswapNFTsMemory = uniswapNFTs;
         return uniswapNFTsMemory;
     }
@@ -137,7 +143,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@param actionAddress address of action to call
     ///@param inputs data to send to the action
     ///@return outputs data returned from the action
-    function doAction(address actionAddress, bytes memory inputs) public override returns (bytes memory outputs) {
+    function doAction(address actionAddress, bytes memory inputs) public override returns (bytes memory) {
         (bool success, bytes memory data) = actionAddress.delegatecall(
             abi.encodeWithSignature('doAction(bytes)', inputs)
         );
@@ -289,7 +295,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
             //delete NFT burned from list
             for (uint32 j = 0; j < uniswapNFTs.length; j++) {
                 if (uniswapNFTs[j] == tokenIds[i]) {
-                    removePositionId(j);
+                    _removePositionId(j);
                 }
             }
         }

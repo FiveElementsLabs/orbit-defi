@@ -229,7 +229,7 @@ describe('IdleLiquidityModule.sol', function () {
         false
       );
 
-      const positions = await PositionManager._getAllUniPosition();
+      const positions = await PositionManager.getAllUniPosition();
       const tokenId2 = positions[positions.length - 1];
       const distanceAfterMint = await IdleLiquidityModule.checkDistanceFromRange(tokenId2);
       //position should be out of range
