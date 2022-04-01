@@ -7,9 +7,10 @@ const hre = require('hardhat');
 const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json');
 const NonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json');
 const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json');
+const PositionManagerjson = require('../../artifacts/contracts/PositionManager.sol/PositionManager.json');
 const FixturesConst = require('../shared/fixtures');
 import { tokensFixture, poolFixture, mintSTDAmount } from '../shared/fixtures';
-import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, Mint } from '../../typechain';
+import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager, Mint } from '../../typechain';
 
 describe('Mint.sol', function () {
   //GLOBAL VARIABLE - USE THIS
@@ -30,6 +31,7 @@ describe('Mint.sol', function () {
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
   let MintAction: Mint;
   let abiCoder: AbiCoder;
+  let PositionManager: PositionManager;
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
@@ -95,6 +97,16 @@ describe('Mint.sol', function () {
     MintAction = (await mintActionFactory.deploy(uniswapAddressHolder.address)) as Mint;
     await MintAction.deployed();
 
+    //deploy the PositionManagerFactory => deploy PositionManager
+    const PositionManagerFactoryFactory = await ethers.getContractFactory('PositionManagerFactory');
+    const PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
+    await PositionManagerFactory.deployed();
+
+    await PositionManagerFactory.create(user.address, uniswapAddressHolder.address);
+
+    const contractsDeployed = await PositionManagerFactory.positionManagers(0);
+    PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
+
     //get AbiCoder
     abiCoder = ethers.utils.defaultAbiCoder;
 
@@ -111,8 +123,8 @@ describe('Mint.sol', function () {
       .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
 
     //give mint action some tokens
-    await tokenEth.connect(user).transfer(MintAction.address, ethers.utils.parseEther('1000000000000'));
-    await tokenUsdc.connect(user).transfer(MintAction.address, ethers.utils.parseEther('1000000000000'));
+    await tokenEth.connect(user).transfer(PositionManager.address, ethers.utils.parseEther('1000000000000'));
+    await tokenUsdc.connect(user).transfer(PositionManager.address, ethers.utils.parseEther('1000000000000'));
 
     // give pool some liquidity
     await NonFungiblePositionManager.connect(liquidityProvider).mint(
@@ -135,7 +147,7 @@ describe('Mint.sol', function () {
 
   describe('doAction', function () {
     it('should correctly mint a UNIV3 position', async function () {
-      const balancePre = await NonFungiblePositionManager.balanceOf(user.address);
+      const balancePre = await NonFungiblePositionManager.balanceOf(PositionManager.address);
       const amount0In = 5e5;
       const amount1In = 5e5;
       const tickLower = -720;
@@ -144,9 +156,9 @@ describe('Mint.sol', function () {
         ['address', 'address', 'uint24', 'int24', 'int24', 'uint256', 'uint256'],
         [tokenEth.address, tokenUsdc.address, 3000, tickLower, tickUpper, amount0In, amount1In]
       );
-      await MintAction.connect(user).doAction(inputBytes);
+      await PositionManager.connect(user).doAction(MintAction.address, inputBytes);
 
-      expect(await NonFungiblePositionManager.balanceOf(MintAction.address)).to.gt(balancePre);
+      expect(await NonFungiblePositionManager.balanceOf(PositionManager.address)).to.gt(balancePre);
     });
 
     it('should correctly return bytes output', async function () {
@@ -158,12 +170,12 @@ describe('Mint.sol', function () {
         ['address', 'address', 'uint24', 'int24', 'int24', 'uint256', 'uint256'],
         [tokenEth.address, tokenUsdc.address, 3000, tickLower, tickUpper, amount0In, amount1In]
       );
-      const tx = await MintAction.connect(user).doAction(inputBytes);
+      const tx = await PositionManager.connect(user).doAction(MintAction.address, inputBytes);
       const events = (await tx.wait()).events as any;
 
       const outputEvent = events[events.length - 1];
 
-      const outputs = abiCoder.decode(['uint256', 'uint256', 'uint256'], outputEvent.args[0]);
+      const outputs = abiCoder.decode(['uint256', 'uint256', 'uint256'], outputEvent.args.data);
 
       expect(await outputs[0].toNumber()).to.equal(3);
       expect(await outputs[1].toNumber()).to.be.closeTo(amount0In, amount0In / 1e5);
@@ -180,7 +192,7 @@ describe('Mint.sol', function () {
         [tokenEth.address, tokenUsdc.address, 450, tickLower, tickUpper, amount0In, amount1In]
       );
 
-      await expect(MintAction.connect(user).doAction(inputBytes)).to.be.reverted;
+      await expect(PositionManager.connect(user).doAction(MintAction.address, inputBytes)).to.be.reverted;
     });
 
     it('should revert if a too high/low tick is passed', async function () {
@@ -193,7 +205,7 @@ describe('Mint.sol', function () {
         [tokenEth.address, tokenUsdc.address, 3000, tickLower, tickUpper, amount0In, amount1In]
       );
 
-      await expect(MintAction.connect(user).doAction(inputBytes)).to.be.reverted;
+      await expect(PositionManager.connect(user).doAction(MintAction.address, inputBytes)).to.be.reverted;
     });
   });
 });
