@@ -95,12 +95,21 @@ describe('IdleLiquidityModule.sol', function () {
     //deploy router
     Router = await routerFixture().then((RFixture) => RFixture.ruoterDeployFixture);
 
+    //deploy uniswapAddressHolder
+    const uniswapAddressHolderFactory = await ethers.getContractFactory('UniswapAddressHolder');
+    const uniswapAddressHolder = await uniswapAddressHolderFactory.deploy(
+      NonFungiblePositionManager.address,
+      Factory.address,
+      Router.address
+    );
+    await uniswapAddressHolder.deployed();
+
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactory = await ethers
       .getContractFactory('PositionManagerFactory')
       .then((contract) => contract.deploy().then((deploy) => deploy.deployed()));
 
-    await PositionManagerFactory.create(user.address, NonFungiblePositionManager.address, Router.address);
+    await PositionManagerFactory.create(user.address, uniswapAddressHolder.address);
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
@@ -220,7 +229,7 @@ describe('IdleLiquidityModule.sol', function () {
         false
       );
 
-      const positions = await PositionManager._getAllUniPosition();
+      const positions = await PositionManager.getAllUniPosition();
       const tokenId2 = positions[positions.length - 1];
       const distanceAfterMint = await IdleLiquidityModule.checkDistanceFromRange(tokenId2);
       //position should be out of range

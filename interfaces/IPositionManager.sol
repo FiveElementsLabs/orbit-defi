@@ -59,5 +59,8 @@ interface IPositionManager {
         bool _usingPositionManagerBalance
     ) external returns (uint256 amountOut);
 
-    function _getAllUniPosition() external view returns (uint256[] memory);
+    //this function will need a modifier onlyModule
+    function doAction(address actionAddress, bytes memory inputs) external returns (bytes memory outputs);
+
+    function getAllUniPosition() external view returns (uint256[] memory);
 }

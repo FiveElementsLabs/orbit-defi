@@ -21,11 +21,10 @@ contract AutoCompoundModule {
         uint128 feeToken1;
     }
 
-    constructor() {
-    }
+    constructor() {}
 
     function checkForAllUncollectedFees(IPositionManager positionManager) public view returns (VaultFee[] memory) {
-        uint256[] memory allTokenId = positionManager._getAllUniPosition();
+        uint256[] memory allTokenId = positionManager.getAllUniPosition();
 
         uint256 size = allTokenId.length;
         VaultFee[] memory allFeeVault = new VaultFee[](size);
