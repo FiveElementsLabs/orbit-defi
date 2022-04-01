@@ -17,6 +17,7 @@ import '../interfaces/IPositionManager.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '@uniswap/v3-core/contracts/libraries/FixedPoint96.sol';
 import './actions/BaseAction.sol';
+import '../interfaces/IUniswapAddressHolder.sol';
 
 /**
  * @title   Position Manager
@@ -29,8 +30,7 @@ import './actions/BaseAction.sol';
 
 contract PositionManager is IPositionManager, ERC721Holder {
     //################### What should remain inside the PositionManager after refactoring ######################
-    INonfungiblePositionManager nonfungiblePositionManager;
-    address uniswapV3FactoryAddress;
+    IUniswapAddressHolder public uniswapAddressHolder;
 
     ///@notice emitted when a position is created
     ///@param from address of the user
@@ -47,16 +47,10 @@ contract PositionManager is IPositionManager, ERC721Holder {
     uint256[] private uniswapNFTs;
     address public immutable owner;
 
-    constructor(
-        address userAddress,
-        INonfungiblePositionManager _nonfungiblePositionManager,
-        ISwapRouter _swapRouter
-    ) {
+    constructor(address userAddress, address _uniswapAddressHolder) {
         owner = userAddress;
-        nonfungiblePositionManager = _nonfungiblePositionManager;
-        uniswapV3FactoryAddress = _nonfungiblePositionManager.factory(); //this will be in the actions
+        uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
         gov = msg.sender; //TODO: hardcode in another contract
-        swapRouter = _swapRouter; //this will be in the actions
     }
 
     //TODO: refactor of user parameters
@@ -70,7 +64,12 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@param tokenIds IDs of deposited tokens
     function depositUniNft(address from, uint256[] calldata tokenIds) external override onlyOwner {
         for (uint32 i = 0; i < tokenIds.length; i++) {
-            nonfungiblePositionManager.safeTransferFrom(from, address(this), tokenIds[i], '0x0');
+            INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).safeTransferFrom(
+                from,
+                address(this),
+                tokenIds[i],
+                '0x0'
+            );
             uniswapNFTs.push(tokenIds[i]);
             emit DepositUni(from, tokenIds[i]);
         }
@@ -88,7 +87,12 @@ contract PositionManager is IPositionManager, ERC721Holder {
             }
         }
         require(index < uniswapNFTs.length, 'token ID not found!');
-        nonfungiblePositionManager.safeTransferFrom(address(this), to, tokenId, '0x0');
+        INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).safeTransferFrom(
+            address(this),
+            to,
+            tokenId,
+            '0x0'
+        );
         removePositionId(index);
         emit WithdrawUni(to, tokenId);
     }
@@ -143,7 +147,6 @@ contract PositionManager is IPositionManager, ERC721Holder {
 
     Registry public immutable registry = Registry(0x59b670e9fA9D0A427751Af201D676719a970857b);
     address public immutable gov;
-    ISwapRouter public immutable swapRouter;
 
     // details about the uniswap position
     struct Position {
@@ -195,9 +198,9 @@ contract PositionManager is IPositionManager, ERC721Holder {
             _approveToken(token0);
             _approveToken(token1);
 
-            (uint256 tokenId, , uint256 amount0Deposited, uint256 amount1Deposited) = nonfungiblePositionManager.mint(
-                mintParams[i]
-            );
+            (uint256 tokenId, , uint256 amount0Deposited, uint256 amount1Deposited) = INonfungiblePositionManager(
+                uniswapAddressHolder.nonfungiblePositionManagerAddress()
+            ).mint(mintParams[i]);
 
             uniswapNFTs.push(tokenId);
             emit DepositUni(msg.sender, tokenId);
@@ -214,10 +217,10 @@ contract PositionManager is IPositionManager, ERC721Holder {
     /**
      * @notice get balance token0 and token1 in a position
      */
-    function getPositionBalance(uint256 tokenId) external view override returns (uint256, uint256) {
-        (, , , , , int24 tickLower, int24 tickUpper, uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(
-            tokenId
-        );
+    function getPositionBalance(uint256 tokenId) external override returns (uint256, uint256) {
+        (, , , , , int24 tickLower, int24 tickUpper, uint128 liquidity, , , , ) = INonfungiblePositionManager(
+            uniswapAddressHolder.nonfungiblePositionManagerAddress()
+        ).positions(tokenId);
 
         IUniswapV3Pool pool = getPoolFromTokenId(tokenId);
 
@@ -234,8 +237,10 @@ contract PositionManager is IPositionManager, ERC721Holder {
     /**
      * @notice get fee of token0 and token1 in a position
      */
-    function getPositionFee(uint256 tokenId) external view override returns (uint128 tokensOwed0, uint128 tokensOwed1) {
-        (, , , , , , , , , , tokensOwed0, tokensOwed1) = nonfungiblePositionManager.positions(tokenId);
+    function getPositionFee(uint256 tokenId) external override returns (uint128 tokensOwed0, uint128 tokensOwed1) {
+        (, , , , , , , , , , tokensOwed0, tokensOwed1) = INonfungiblePositionManager(
+            uniswapAddressHolder.nonfungiblePositionManagerAddress()
+        ).positions(tokenId);
     }
 
     /**
@@ -247,6 +252,9 @@ contract PositionManager is IPositionManager, ERC721Holder {
         override
         onlyOwnerOrModule
     {
+        INonfungiblePositionManager nonfungiblePositionManager = INonfungiblePositionManager(
+            uniswapAddressHolder.nonfungiblePositionManagerAddress()
+        );
         for (uint256 i = 0; i < tokenIds.length; i++) {
             (, , , , , , , uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(tokenIds[i]);
 
@@ -292,7 +300,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
                 amount1Min: 0,
                 deadline: block.timestamp + 1000
             });
-        nonfungiblePositionManager.decreaseLiquidity(params);
+        INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).decreaseLiquidity(params);
     }
 
     function collectPositionFee(uint256 tokenId, address recipient)
@@ -302,6 +310,9 @@ contract PositionManager is IPositionManager, ERC721Holder {
         returns (uint256 amount0, uint256 amount1)
     {
         updateUncollectedFees(tokenId);
+        INonfungiblePositionManager nonfungiblePositionManager = INonfungiblePositionManager(
+            uniswapAddressHolder.nonfungiblePositionManagerAddress()
+        );
         (, , , , , , , , , , uint128 feesToken0, uint128 feesToken1) = nonfungiblePositionManager.positions(tokenId);
         INonfungiblePositionManager.CollectParams memory params = INonfungiblePositionManager.CollectParams({
             tokenId: tokenId,
@@ -337,7 +348,8 @@ contract PositionManager is IPositionManager, ERC721Holder {
                 amount1Min: 0,
                 deadline: block.timestamp + 1000
             });
-        (, amount0, amount1) = nonfungiblePositionManager.increaseLiquidity(params);
+        (, amount0, amount1) = INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress())
+            .increaseLiquidity(params);
 
         if (amount0 < amount0Desired) token0.transfer(owner, amount0Desired - amount0);
         if (amount1 < amount1Desired) token1.transfer(owner, amount1Desired - amount1);
@@ -349,9 +361,9 @@ contract PositionManager is IPositionManager, ERC721Holder {
         uint256 amount0Desired,
         uint256 amount1Desired
     ) external payable override onlyOwnerOrModule {
-        (, , , , , int24 tickLower, int24 tickUpper, uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(
-            tokenId
-        );
+        (, , , , , int24 tickLower, int24 tickUpper, uint128 liquidity, , , , ) = INonfungiblePositionManager(
+            uniswapAddressHolder.nonfungiblePositionManagerAddress()
+        ).positions(tokenId);
 
         IUniswapV3Pool pool = getPoolFromTokenId(tokenId);
 
@@ -375,7 +387,9 @@ contract PositionManager is IPositionManager, ERC721Holder {
                 amount1Min: 0,
                 deadline: block.timestamp + 1000
             });
-        nonfungiblePositionManager.decreaseLiquidity(decreaseliquidityparams);
+        INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).decreaseLiquidity(
+            decreaseliquidityparams
+        );
     }
 
     //swaps token0 for token1
@@ -389,7 +403,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
         if (!_usingPositionManagerBalance) {
             token0.transferFrom(msg.sender, address(this), amount0In);
         }
-        token0.approve(address(swapRouter), 2**256 - 1);
+        token0.approve(uniswapAddressHolder.swapRouterAddress(), 2**256 - 1);
 
         ISwapRouter.ExactInputSingleParams memory swapParams = ISwapRouter.ExactInputSingleParams({
             tokenIn: address(token0),
@@ -402,7 +416,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
             sqrtPriceLimitX96: 0
         });
 
-        amount1Out = swapRouter.exactInputSingle(swapParams);
+        amount1Out = ISwapRouter(uniswapAddressHolder.swapRouterAddress()).exactInputSingle(swapParams);
     }
 
     function _getRatioFromRange(
@@ -465,7 +479,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
 
         IUniswapV3Pool pool = IUniswapV3Pool(
             PoolAddress.computeAddress(
-                uniswapV3FactoryAddress,
+                uniswapAddressHolder.uniswapV3FactoryAddress(),
                 PoolAddress.getPoolKey(address(token0), address(token1), fee)
             )
         );
@@ -478,25 +492,27 @@ contract PositionManager is IPositionManager, ERC721Holder {
     }
 
     /*Get pool address from token ID*/
-    function getPoolFromTokenId(uint256 tokenId) public view returns (IUniswapV3Pool) {
-        (, , address token0, address token1, uint24 fee, , , , , , , ) = nonfungiblePositionManager.positions(tokenId);
+    function getPoolFromTokenId(uint256 tokenId) public returns (IUniswapV3Pool) {
+        (, , address token0, address token1, uint24 fee, , , , , , , ) = INonfungiblePositionManager(
+            uniswapAddressHolder.nonfungiblePositionManagerAddress()
+        ).positions(tokenId);
 
         PoolAddress.PoolKey memory key = PoolAddress.getPoolKey(token0, token1, fee);
 
-        address poolAddress = PoolAddress.computeAddress(uniswapV3FactoryAddress, key);
+        address poolAddress = PoolAddress.computeAddress(uniswapAddressHolder.uniswapV3FactoryAddress(), key);
 
         return IUniswapV3Pool(poolAddress);
     }
 
     function _approveToken(IERC20 token) private {
-        if (token.allowance(address(this), address(nonfungiblePositionManager)) == 0)
-            token.approve(address(nonfungiblePositionManager), 2**256 - 1);
+        if (token.allowance(address(this), uniswapAddressHolder.nonfungiblePositionManagerAddress()) == 0)
+            token.approve(uniswapAddressHolder.nonfungiblePositionManagerAddress(), 2**256 - 1);
     }
 
-    function _getTokenAddress(uint256 tokenId) private view returns (IERC20 token0, IERC20 token1) {
-        (, , address token0address, address token1address, , , , , , , , ) = nonfungiblePositionManager.positions(
-            tokenId
-        );
+    function _getTokenAddress(uint256 tokenId) private returns (IERC20 token0, IERC20 token1) {
+        (, , address token0address, address token1address, , , , , , , , ) = INonfungiblePositionManager(
+            uniswapAddressHolder.nonfungiblePositionManagerAddress()
+        ).positions(tokenId);
         token0 = IERC20(token0address);
         token1 = IERC20(token1address);
     }

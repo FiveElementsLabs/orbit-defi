@@ -6,26 +6,12 @@ import './PositionManager.sol';
 
 contract PositionManagerFactory {
     address[] public positionManagers;
-    event PositionManagerCreated(
-        address indexed contractAddress,
-        address userAddress,
-        address nonfungiblePositionManager,
-        address swapRouter
-    );
+    event PositionManagerCreated(address indexed contractAddress, address userAddress, address uniswapAddressHolder);
 
-    function create(
-        address userAddress,
-        INonfungiblePositionManager _nonfungiblePositionManager,
-        ISwapRouter _swapRouter
-    ) public returns (address[] memory) {
-        PositionManager manager = new PositionManager(userAddress, _nonfungiblePositionManager, _swapRouter);
+    function create(address userAddress, address _uniswapAddressHolderAddress) public returns (address[] memory) {
+        PositionManager manager = new PositionManager(userAddress, _uniswapAddressHolderAddress);
         positionManagers.push(address(manager));
-        emit PositionManagerCreated(
-            address(manager),
-            userAddress,
-            address(_nonfungiblePositionManager),
-            address(_swapRouter)
-        );
+        emit PositionManagerCreated(address(manager), userAddress, _uniswapAddressHolderAddress);
 
         return positionManagers;
     }
