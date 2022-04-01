@@ -11,14 +11,13 @@ import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol';
-import 'hardhat/console.sol';
 import './Registry.sol';
+import './helpers/ERC20Helper.sol';
+import 'hardhat/console.sol';
 import '../interfaces/IPositionManager.sol';
 import '../interfaces/IUniswapAddressHolder.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '@uniswap/v3-core/contracts/libraries/FixedPoint96.sol';
-
-import './helpers/ERC20Helper.sol';
 
 /**
  * @title   Position Manager
@@ -32,6 +31,7 @@ import './helpers/ERC20Helper.sol';
 contract PositionManager is IPositionManager, ERC721Holder {
     event DepositUni(address indexed from, uint256 tokenId);
     event WithdrawUni(address to, uint256 tokenId);
+    event Action(uint256 amountOut);
 
     // THese variables need to stay on top of the file.
     IUniswapAddressHolder public uniswapAddressHolder;
@@ -455,6 +455,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
         token1 = IERC20(token1address);
     }
 
+    // Run action as delegate.
     function delegateAction(
         address token0Address,
         address token1Address,
@@ -464,13 +465,13 @@ contract PositionManager is IPositionManager, ERC721Holder {
         ERC20Helper._approveToken(token0Address, address(swapRouter), 2**256 - 1);
         ERC20Helper._approveToken(token1Address, address(swapRouter), 2**256 - 1);
 
-        console.log('UniswapAddressHolder: ', address(uniswapAddressHolder));
-
         (bool success, bytes memory data) = actionAddress.delegatecall(
             abi.encodeWithSignature('doAction(bytes)', inputs)
         );
 
         if (success) {
+            uint256 amountOut = abi.decode(data, (uint256));
+            emit Action(amountOut);
             outputs = data;
         } else {
             revert('Delegate Action Failed');

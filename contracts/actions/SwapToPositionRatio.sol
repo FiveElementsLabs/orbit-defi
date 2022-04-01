@@ -16,10 +16,8 @@ import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 
-import 'hardhat/console.sol';
-
-contract SwapToPositionRatio is BaseAction {
-    event Output(bytes output);
+contract SwapToPositionRatio {
+    event Output(uint256 amountOut);
 
     IUniswapAddressHolder public uniswapAddressHolder;
 
@@ -33,30 +31,18 @@ contract SwapToPositionRatio is BaseAction {
         int24 tickUpper;
     }
 
-    struct OutputStruct {
-        uint256 amountOut;
-    }
-
     constructor(address _uniswapAddressHolderAddress) {
         uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolderAddress);
     }
 
-    function doAction(bytes memory inputs) public override returns (bytes memory outputs) {
-        console.log('decode input');
+    function doAction(bytes memory inputs) public returns (uint256 amountOut) {
         InputStruct memory inputsStruct = decodeInputs(inputs);
-        console.log('swap');
-        OutputStruct memory outputsStruct = swapToPositionRatio(inputsStruct);
-        console.log('decode output');
-        outputs = encodeOutputs(outputsStruct);
-        emit Output(outputs);
+        amountOut = swapToPositionRatio(inputsStruct);
+        emit Output(amountOut);
     }
 
-    function swapToPositionRatio(InputStruct memory inputs) internal returns (OutputStruct memory outputs) {
-        console.log('uniswapAddressHolder: ', address(uniswapAddressHolder));
+    function swapToPositionRatio(InputStruct memory inputs) internal returns (uint256 amountOut) {
         address uniswapV3FactoryAddress = uniswapAddressHolder.uniswapV3FactoryAddress();
-        console.log('pre library');
-        // console.log('token0: ', inputs.token0Address);
-        // console.log('token1: ', inputs.token1Address);
 
         address poolAddress = NFTHelper._getPoolAddress(
             uniswapV3FactoryAddress,
@@ -76,14 +62,12 @@ contract SwapToPositionRatio is BaseAction {
         );
 
         if (amountToSwap != 0) {
-            uint256 amountOut = swap(
+            amountOut = swap(
                 token0AddressIn ? inputs.token0Address : inputs.token1Address,
                 token0AddressIn ? inputs.token1Address : inputs.token0Address,
                 inputs.fee,
                 amountToSwap
             );
-
-            outputs = OutputStruct({amountOut: amountOut});
         }
     }
 
@@ -94,9 +78,6 @@ contract SwapToPositionRatio is BaseAction {
         uint256 amount0In
     ) internal returns (uint256 amount1Out) {
         ISwapRouter swapRouter = ISwapRouter(uniswapAddressHolder.swapRouterAddress());
-
-        // ERC20Helper._approveToken(token0Address, address(swapRouter), amount0In);
-        // token0.transferFrom(msg.sender, address(this), amount0In);
 
         ISwapRouter.ExactInputSingleParams memory swapParams = ISwapRouter.ExactInputSingleParams({
             tokenIn: token0Address,
@@ -109,9 +90,7 @@ contract SwapToPositionRatio is BaseAction {
             sqrtPriceLimitX96: 0
         });
 
-        console.log('Before exactInputSingle');
         amount1Out = swapRouter.exactInputSingle(swapParams);
-        console.log(amount1Out);
     }
 
     function decodeInputs(bytes memory inputBytes) internal pure returns (InputStruct memory input) {
@@ -134,9 +113,5 @@ contract SwapToPositionRatio is BaseAction {
             tickLower: tickLower,
             tickUpper: tickUpper
         });
-    }
-
-    function encodeOutputs(OutputStruct memory outputs) internal pure returns (bytes memory outputBytes) {
-        outputBytes = abi.encode(outputs);
     }
 }

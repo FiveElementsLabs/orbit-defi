@@ -124,7 +124,6 @@ describe('SwapToPositionRatio.sol', function () {
       .getContractFactory('PositionManagerFactory')
       .then((contract) => contract.deploy().then((deploy) => deploy.deployed()));
 
-    console.log('Uniswapaddressholder test - ', UniswapAddressHolder.address);
     await PositionManagerFactory.create(
       user.address,
       NonFungiblePositionManager.address,
@@ -149,8 +148,6 @@ describe('SwapToPositionRatio.sol', function () {
 
     //get AbiCoder
     abiCoder = ethers.utils.defaultAbiCoder;
-
-    console.log('factory: ', SwapRouter.address);
 
     //APPROVE
     //recipient: NonFungiblePositionManager - spender: user
@@ -233,46 +230,8 @@ describe('SwapToPositionRatio.sol', function () {
     );
   });
 
-  /*   describe('doAction', function () {
-    it('should correctly swap to optimal ratio for the position', async function () {
-      const balancePre = await NonFungiblePositionManager.balanceOf(user.address);
-      const amount0In = 5e5;
-      const amount1In = 5e5;
-      const tickLower = -720;
-      const tickUpper = 3600;
-      const inputBytes = abiCoder.encode(
-        ['address', 'address', 'uint24', 'uint256', 'uint256', 'int24', 'int24'],
-        [tokenEth.address, tokenUsdc.address, 3000, amount0In, amount1In, tickLower, tickUpper]
-      );
-
-      const events = (await (await SwapToPositionRatioAction.connect(user).doAction(inputBytes)).wait()).events;
-
-      console.log(await NonFungiblePositionManager.balanceOf(user.address));
-      // expect(await NonFungiblePositionManager.balanceOf(user.address)).to.gt(balancePre);
-    });
-
-    it('should correctly return bytes output', async function () {
-      const amount0In = 5e5;
-      const amount1In = 5e5;
-      const tickLower = -720;
-      const tickUpper = 720;
-      const inputBytes = abiCoder.encode(
-        ['address', 'address', 'uint24', 'uint256', 'uint256', 'int24', 'int24'],
-        [tokenEth.address, tokenUsdc.address, 3000, amount0In, amount1In, tickLower, tickUpper]
-      );
-
-      const events = (await (await SwapToPositionRatioAction.connect(user).doAction(inputBytes)).wait()).events as any;
-
-      const outputEvent = events[events.length - 1];
-
-      const outputs = abiCoder.decode(['uint256'], outputEvent.args[0]);
-
-      expect(await outputs[0].toNumber()).to.equal(5);
-    });
-  }); */
-
   describe('doAction', function () {
-    it('should be able to call an action', async function () {
+    it('should perform the action call correctly', async function () {
       const tickLower = -300;
       const tickUpper = 600;
       const amount0In = 1e5;
@@ -282,33 +241,66 @@ describe('SwapToPositionRatio.sol', function () {
         [tokenEth.address, tokenUsdc.address, 3000, amount0In, amount1In, tickLower, tickUpper]
       );
 
-      console.log('ETH ADDY: ', tokenEth.address);
-      console.log('USDC ADDY: ', tokenUsdc.address);
+      await tokenEth.connect(user).transfer(PositionManager.address, 3e5);
+      await tokenUsdc.connect(user).transfer(PositionManager.address, 3e5);
+
+      await expect(
+        PositionManager.connect(user).delegateAction(
+          tokenEth.address,
+          tokenUsdc.address,
+          SwapToPositionRatioAction.address,
+          inputBytes
+        )
+      ).to.not.be.reverted;
+    });
+
+    it('should correctly swap to exact position ratio', async function () {
+      const tickLower = -300;
+      const tickUpper = 600;
+      const amount0In = 1e5;
+      const amount1In = 2e5;
+      const inputBytes = abiCoder.encode(
+        ['address', 'address', 'uint24', 'uint256', 'uint256', 'int24', 'int24'],
+        [tokenEth.address, tokenUsdc.address, 3000, amount0In, amount1In, tickLower, tickUpper]
+      );
 
       await tokenEth.connect(user).transfer(PositionManager.address, 3e5);
       await tokenUsdc.connect(user).transfer(PositionManager.address, 3e5);
-      console.log('User: ', user.address);
-      console.log('PositionManager: ', PositionManager.address);
-      console.log('SwaptoPosition: ', SwapToPositionRatioAction.address);
-      const amount1InBytes = await PositionManager.connect(user).delegateAction(
-        tokenEth.address,
-        tokenUsdc.address,
-        SwapToPositionRatioAction.address,
-        inputBytes
-      );
+
+      const events = (
+        await (
+          await PositionManager.connect(user).delegateAction(
+            tokenEth.address,
+            tokenUsdc.address,
+            SwapToPositionRatioAction.address,
+            inputBytes
+          )
+        ).wait()
+      ).events as any;
+
+      const actionEvent = events[events.length - 1];
+      const amountOut = actionEvent.args[0].toNumber();
+      expect(amountOut).to.equal(99202);
     });
 
-    // it('should revert if the action does not exist', async function () {
-    //   const tickLower = -300;
-    //   const tickUpper = 600;
-    //   const amount0In = 1e5;
-    //   const amount1In = 2e5;
-    //   const inputBytes = abiCoder.encode(
-    //     ['address', 'address', 'uint24', 'uint256', 'uint256', 'int24', 'int24'],
-    //     [tokenEth.address, tokenUsdc.address, 3000, amount0In, amount1In, tickLower, tickUpper]
-    //   );
+    it('should revert if the action does not exist', async function () {
+      const tickLower = -300;
+      const tickUpper = 600;
+      const amount0In = 1e5;
+      const amount1In = 2e5;
+      const inputBytes = abiCoder.encode(
+        ['address', 'address', 'uint24', 'uint256', 'uint256', 'int24', 'int24'],
+        [tokenEth.address, tokenUsdc.address, 3000, amount0In, amount1In, tickLower, tickUpper]
+      );
 
-    //   await expect(PositionManager.connect(user).delegateAction(Factory.address, inputBytes)).to.be.reverted;
-    // });
+      await expect(
+        PositionManager.connect(user).delegateAction(
+          tokenEth.address,
+          tokenUsdc.address,
+          '0x0000000000000000000000000000000000000000', // Invalid action address
+          inputBytes
+        )
+      ).to.be.reverted;
+    });
   });
 });
