@@ -14,10 +14,6 @@ import '../../interfaces/IUniswapAddressHolder.sol';
 contract SwapToPositionRatio {
     IUniswapAddressHolder public uniswapAddressHolder;
 
-    ///@notice emitted to pass outputs to test file
-    ///@param output output bytes
-    event Output(bytes output);
-
     ///@notice input the decoder expects
     ///@param token0Address address of first token of the pool
     ///@param token1Address address of second token of the pool
@@ -42,17 +38,12 @@ contract SwapToPositionRatio {
         uint256 amount1Out;
     }
 
-    constructor(address _uniswapAddressHolderAddress) {
-        uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolderAddress);
-    }
-
     ///@notice executes the action of the contract (swapToPositionRatio), should be the only function visible from the outside
     ///@param inputs input bytes to be decoded according to InputStruct
     ///@return outputs outputs encoded according OutputStruct
     function doAction(bytes memory inputs) public returns (OutputStruct memory outputs) {
         InputStruct memory inputsStruct = decodeInputs(inputs);
         outputs = swapToPositionRatio(inputsStruct);
-        emit Output(encodeOutputs(outputs));
     }
 
     ///@notice performs swap to optimal ratio for the position at tickLower and tickUpper
@@ -142,12 +133,5 @@ contract SwapToPositionRatio {
             tickLower: tickLower,
             tickUpper: tickUpper
         });
-    }
-
-    ///@notice encode the outputs to bytes
-    ///@param outputs outputs to be encoded
-    ///@return outputBytes encoded outputs
-    function encodeOutputs(OutputStruct memory outputs) internal pure returns (bytes memory outputBytes) {
-        outputBytes = abi.encode(outputs, uint256(1));
     }
 }

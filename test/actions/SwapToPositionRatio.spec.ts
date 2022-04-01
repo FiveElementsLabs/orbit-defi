@@ -120,9 +120,7 @@ describe('SwapToPositionRatio.sol', function () {
 
     //Deploy SwapToPositionRatio Action
     const swapToPositionRatioActionFactory = await ethers.getContractFactory('SwapToPositionRatio');
-    SwapToPositionRatioAction = (await swapToPositionRatioActionFactory.deploy(
-      UniswapAddressHolder.address
-    )) as SwapToPositionRatio;
+    SwapToPositionRatioAction = (await swapToPositionRatioActionFactory.deploy()) as SwapToPositionRatio;
     await SwapToPositionRatioAction.deployed();
 
     //get AbiCoder
