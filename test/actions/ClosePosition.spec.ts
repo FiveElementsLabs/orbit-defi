@@ -45,9 +45,9 @@ describe('ClosePosition.sol', function () {
     user = await user; //owner of the smart vault, a normal user
     liquidityProvider = await liquidityProvider;
 
-    //deploy first 3 token - ETH, USDC, DAI
-    tokenEth = await tokensFixture('ETH', 18).then((tokenFix) => tokenFix.tokenFixture);
-    tokenUsdc = await tokensFixture('USDC', 6).then((tokenFix) => tokenFix.tokenFixture);
+    //deploy the tokens - ETH, USDC
+    tokenEth = (await tokensFixture('ETH', 18)).tokenFixture;
+    tokenUsdc = (await tokensFixture('USDC', 6)).tokenFixture;
 
     //deploy factory, used for pools
     const uniswapFactoryFactory = new ContractFactory(
@@ -89,12 +89,10 @@ describe('ClosePosition.sol', function () {
     )) as INonfungiblePositionManager;
     await NonFungiblePositionManager.deployed();
 
-    //deploy router
+    //deploy swap router
     const SwapRouterFactory = new ContractFactory(SwapRouterjson['abi'], SwapRouterjson['bytecode'], user);
-    //Router = await routerFixture().then((RFixture) => RFixture.ruoterDeployFixture);
-    SwapRouter = (await SwapRouterFactory.deploy(Factory.address, tokenEth.address).then((contract) =>
-      contract.deployed()
-    )) as Contract;
+    SwapRouter = (await SwapRouterFactory.deploy(Factory.address, tokenEth.address)) as Contract;
+    await SwapRouter.deployed();
 
     //deploy uniswapAddressHolder
     const uniswapAddressHolderFactory = await ethers.getContractFactory('UniswapAddressHolder');
@@ -106,9 +104,9 @@ describe('ClosePosition.sol', function () {
     await uniswapAddressHolder.deployed();
 
     //deploy the PositionManagerFactory => deploy PositionManager
-    const PositionManagerFactory = await ethers
-      .getContractFactory('PositionManagerFactory')
-      .then((contract) => contract.deploy().then((deploy) => deploy.deployed()));
+    const PositionManagerFactoryFactory = await ethers.getContractFactory('PositionManagerFactory');
+    const PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
+    await PositionManagerFactory.deployed();
 
     await PositionManagerFactory.create(user.address, uniswapAddressHolder.address);
 
@@ -190,7 +188,6 @@ describe('ClosePosition.sol', function () {
   describe('doAction', function () {
     it('should close a uni position', async function () {
       const inputBytes = abiCoder.encode(['uint256', 'bool'], [tokenId, true]);
-      console.log(await NonFungiblePositionManager.balanceOf(PositionManager.address));
 
       await PositionManager.connect(user).doAction(ClosePositionAction.address, inputBytes);
       let e;

@@ -39,9 +39,9 @@ describe('Mint.sol', function () {
     user = await user; //owner of the smart vault, a normal user
     liquidityProvider = await liquidityProvider;
 
-    //deploy first 3 token - ETH, USDC, DAI
-    tokenEth = await tokensFixture('ETH', 18).then((tokenFix) => tokenFix.tokenFixture);
-    tokenUsdc = await tokensFixture('USDC', 6).then((tokenFix) => tokenFix.tokenFixture);
+    //deploy the tokens - ETH, USDC
+    tokenEth = (await tokensFixture('ETH', 18)).tokenFixture;
+    tokenUsdc = (await tokensFixture('USDC', 6)).tokenFixture;
 
     //deploy factory, used for pools
     const uniswapFactoryFactory = new ContractFactory(

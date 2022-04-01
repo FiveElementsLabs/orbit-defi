@@ -109,9 +109,9 @@ describe('SwapToPositionRatio.sol', function () {
     await UniswapAddressHolder.deployed();
 
     //deploy the PositionManagerFactory => deploy PositionManager
-    const PositionManagerFactory = await ethers
-      .getContractFactory('PositionManagerFactory')
-      .then((contract) => contract.deploy().then((deploy) => deploy.deployed()));
+    const PositionManagerFactoryFactory = await ethers.getContractFactory('PositionManagerFactory');
+    const PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
+    await PositionManagerFactory.deployed();
 
     await PositionManagerFactory.create(user.address, UniswapAddressHolder.address);
 
