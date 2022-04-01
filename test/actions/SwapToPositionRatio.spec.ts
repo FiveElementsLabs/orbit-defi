@@ -216,7 +216,7 @@ describe('SwapToPositionRatio.sol', function () {
 
       await expect(
         PositionManager.connect(user).doAction(
-          '0x0000000000000000000000000000000000000000', // Invalid action address on purpose
+          Factory.address, // Invalid action address on purpose
           inputBytes
         )
       ).to.be.reverted;
