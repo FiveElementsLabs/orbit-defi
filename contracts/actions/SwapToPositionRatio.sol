@@ -3,13 +3,12 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import '../helpers/UniswapAddressHolder.sol';
+import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
+import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import '../helpers/SwapHelper.sol';
 import '../helpers/NFTHelper.sol';
 import '../helpers/ERC20Helper.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
-import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
-import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 
 ///@notice action to swap to an exact position ratio
 contract SwapToPositionRatio {
