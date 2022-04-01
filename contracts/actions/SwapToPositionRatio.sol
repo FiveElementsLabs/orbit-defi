@@ -3,7 +3,6 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import '../helpers/UniswapAddressHolder.sol';
 import '../helpers/SwapHelper.sol';
 import '../helpers/NFTHelper.sol';
 import '../helpers/ERC20Helper.sol';
