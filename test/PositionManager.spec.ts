@@ -599,5 +599,28 @@ describe('PositionManager.sol', function () {
       const successEvent = events[events.length - 1];
       expect(successEvent.args.success).to.equal(false);
     });
+
+    it('should be able to decode outputs', async function () {
+      const tickLower = -600;
+      const tickUpper = 600;
+      const amount0In = 1e5;
+      const amount1In = 1e5;
+      const inputBytes = abiCoder.encode(
+        ['address', 'address', 'uint24', 'int24', 'int24', 'uint256', 'uint256'],
+        [tokenEth.address, tokenUsdc.address, 3000, tickLower, tickUpper, amount0In, amount1In]
+      );
+      await tokenEth.connect(user).transfer(PositionManager.address, 3e5);
+      await tokenUsdc.connect(user).transfer(PositionManager.address, 3e5);
+
+      const positionsPre = await NonFungiblePositionManager.balanceOf(PositionManager.address);
+
+      const tx = await PositionManager.connect(user).doAction(MintAction.address, inputBytes);
+
+      expect(await NonFungiblePositionManager.balanceOf(PositionManager.address)).to.be.equal(positionsPre.add(1));
+
+      const events = (await tx.wait()).events as any;
+      const successEvent = events[events.length - 1];
+      const outputs = abiCoder.decode(['uint256', 'uint256', 'uint256'], successEvent.args.data);
+    });
   });
 });

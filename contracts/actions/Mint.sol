@@ -14,7 +14,7 @@ import 'hardhat/console.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
 
 ///@notice action to mint a UniswapV3 position NFT
-contract Mint is BaseAction {
+contract Mint {
     IUniswapAddressHolder public uniswapAddressHolder;
 
     ///@notice emitted when a UniswapNFT is deposited in PositionManager
@@ -61,11 +61,11 @@ contract Mint is BaseAction {
     ///@notice executes the action of the contract (mint), should be the only function visible from the outside
     ///@param inputs input bytes to be decoded according to InputStruct
     ///@return outputs outputs encoded according OutputStruct
-    function doAction(bytes memory inputs) public override returns (bytes memory outputs) {
+    function doAction(bytes memory inputs) public returns (OutputStruct memory outputs) {
         InputStruct memory inputsStruct = decodeInputs(inputs);
-        OutputStruct memory outputsStruct = mint(inputsStruct);
-        outputs = encodeOutputs(outputsStruct);
-        emit Output(outputs);
+        outputs = mint(inputsStruct);
+        //outputs = encodeOutputs(outputsStruct);
+        emit Output(encodeOutputs(outputs));
     }
 
     ///@notice mints a UniswapV3 position NFT
@@ -161,6 +161,6 @@ contract Mint is BaseAction {
     ///@param outputs outputs to be encoded
     ///@return outputBytes encoded outputs
     function encodeOutputs(OutputStruct memory outputs) internal pure returns (bytes memory outputBytes) {
-        outputBytes = abi.encode(outputs);
+        outputBytes = abi.encode(outputs, uint256(1));
     }
 }
