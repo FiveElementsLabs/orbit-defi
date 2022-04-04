@@ -13,7 +13,7 @@ const FixturesConst = require('../shared/fixtures');
 import { tokensFixture, poolFixture, mintSTDAmount } from '../shared/fixtures';
 import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager } from '../../typechain';
 
-describe('Mint.sol', function () {
+describe('CollectFees.sol', function () {
   //GLOBAL VARIABLE - USE THIS
   let user: any = ethers.getSigners().then(async (signers) => {
     return signers[0];
@@ -37,13 +37,14 @@ describe('Mint.sol', function () {
   let abiCoder: AbiCoder;
   let PositionManager: PositionManager;
   let swapRouter: Contract;
-  let mint: Contract; //Mint contract
+  let mintAction: Contract; //Mint contract
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
 
     user = await user; //owner of the smart vault, a normal user
-    liquidityProvider = await liquidityProvider;
+    liquidityProvider = await liquidityProvider; //liquidity provider for the pool
+    trader = await trader; //who executes trades
 
     //deploy first 3 token - ETH, USDC, DAI
     tokenEth = await tokensFixture('ETH', 18).then((tokenFix) => tokenFix.tokenFixture);
@@ -105,8 +106,8 @@ describe('Mint.sol', function () {
 
     //deploy Mint action
     const MintFactory = await ethers.getContractFactory('Mint');
-    const mint = await MintFactory.deploy();
-    await mint.deployed();
+    mintAction = await MintFactory.deploy();
+    await mintAction.deployed();
 
     //deploy CollectFees action
     const CollectFeesFactory = await ethers.getContractFactory('CollectFees');
@@ -140,7 +141,6 @@ describe('Mint.sol', function () {
     //recipient: Router - spender: trader
     await tokenEth.connect(trader).approve(swapRouter.address, ethers.utils.parseEther('1000000000000'));
     await tokenUsdc.connect(trader).approve(swapRouter.address, ethers.utils.parseEther('1000000000000'));
-    await tokenDai.connect(trader).approve(swapRouter.address, ethers.utils.parseEther('1000000000000'));
 
     // give pool some liquidity
     await NonFungiblePositionManager.connect(liquidityProvider).mint(
@@ -150,8 +150,8 @@ describe('Mint.sol', function () {
         fee: 3000,
         tickLower: 0 - 60 * 1000,
         tickUpper: 0 + 60 * 1000,
-        amount0Desired: '0x' + (1e26).toString(16),
-        amount1Desired: '0x' + (1e26).toString(16),
+        amount0Desired: '0x' + (1e5).toString(16),
+        amount1Desired: '0x' + (1e5).toString(16),
         amount0Min: 0,
         amount1Min: 0,
         recipient: liquidityProvider.address,
@@ -164,21 +164,25 @@ describe('Mint.sol', function () {
   describe('CollectFees.doAction()', function () {
     it('should collect fees', async function () {
       const fee = 3000;
-      const amount0In = 5e5;
-      const amount1In = 5e5;
       const tickLower = -720;
       const tickUpper = 720;
+      const amount0In = 5e5;
+      const amount1In = 5e5;
       let inputBytes = abiCoder.encode(
         ['address', 'address', 'uint24', 'int24', 'int24', 'uint256', 'uint256'],
         [tokenEth.address, tokenUsdc.address, fee, tickLower, tickUpper, amount0In, amount1In]
       );
 
-      const mintTx = await PositionManager.connect(user).doAction(mint.address, inputBytes);
-      const mintEvents = (await mintTx.wait()).events as any;
+      //give positionManager some funds
+      await tokenEth.connect(user).transfer(PositionManager.address, 6e5);
+      await tokenUsdc.connect(user).transfer(PositionManager.address, 6e5);
 
-      const mintEvent = mintEvents[mintEvents.length - 1];
-      console.log(mintEvent.data);
-      const tokenId = abiCoder.decode(['address', 'uint256'], mintEvent.data)[1];
+      //mint a position
+      let tx = await PositionManager.connect(user).doAction(mintAction.address, inputBytes);
+      let events = (await tx.wait()).events as any;
+
+      const mintEvent = events[events.length - 1];
+      const tokenId = abiCoder.decode(['uint256', 'uint256', 'uint256'], mintEvent.args.data)[0];
       console.log(tokenId);
 
       // Do some trades to accrue fees
@@ -191,7 +195,7 @@ describe('Mint.sol', function () {
             3000,
             trader.address,
             Date.now() + 1000,
-            1e15,
+            1e4,
             0,
             0,
           ]);
@@ -199,7 +203,14 @@ describe('Mint.sol', function () {
 
       // collect fees
       inputBytes = abiCoder.encode(['uint256'], [tokenId]);
-      await PositionManager.connect(user).doAction(collectFees.address, inputBytes);
+
+      tx = await PositionManager.connect(user).doAction(collectFees.address, inputBytes);
+      events = (await tx.wait()).events as any;
+      const collectEvent = events[events.length - 1];
+      const feesCollected = abiCoder.decode(['uint256', 'uint256'], collectEvent.args.data);
+
+      expect(feesCollected[0]).to.gt(0);
+      expect(feesCollected[1]).to.gt(0);
     });
   });
 });
