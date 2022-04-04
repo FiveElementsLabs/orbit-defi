@@ -7,7 +7,6 @@ import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
-import './BaseAction.sol';
 import '../helpers/ERC20Helper.sol';
 import '../helpers/NFTHelper.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
@@ -39,7 +38,7 @@ contract Mint {
         uint256 amount1Desired;
     }
 
-    ///@notice output the encoder produces
+    ///@notice output struct returned by the contract
     ///@param tokenId ID of the minted NFT
     ///@param amount0Deposited token0 amount deposited
     ///@param amount1Deposited token1 amount deposited
@@ -47,10 +46,6 @@ contract Mint {
         uint256 tokenId;
         uint256 amount0Deposited;
         uint256 amount1Deposited;
-    }
-
-    constructor(address _uniswapAddressHolder) {
-        uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
     }
 
     ///@notice executes the action of the contract (mint), should be the only function visible from the outside
@@ -148,12 +143,5 @@ contract Mint {
             amount0Desired: amount0Desired,
             amount1Desired: amount1Desired
         });
-    }
-
-    ///@notice encode the outputs to bytes
-    ///@param outputs outputs to be encoded
-    ///@return outputBytes encoded outputs
-    function encodeOutputs(OutputStruct memory outputs) internal pure returns (bytes memory outputBytes) {
-        outputBytes = abi.encode(outputs, uint256(1));
     }
 }
