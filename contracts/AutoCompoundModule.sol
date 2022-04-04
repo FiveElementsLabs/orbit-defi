@@ -3,11 +3,10 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import '../interfaces/IPositionManager.sol'; //interface for PositionManager to be done
-import 'hardhat/console.sol';
 import '@openzeppelin/contracts/math/Math.sol';
 import '@openzeppelin/contracts/math/SafeMath.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import '../interfaces/IPositionManager.sol';
 
 contract AutoCompoundModule {
     using SafeMath for uint256;
@@ -20,8 +19,6 @@ contract AutoCompoundModule {
         uint128 feeToken0;
         uint128 feeToken1;
     }
-
-    constructor() {}
 
     function checkForAllUncollectedFees(IPositionManager positionManager) public view returns (VaultFee[] memory) {
         uint256[] memory allTokenId = positionManager.getAllUniPosition();
