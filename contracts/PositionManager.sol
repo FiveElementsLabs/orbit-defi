@@ -95,15 +95,19 @@ contract PositionManager is IPositionManager, ERC721Holder {
             tokenId,
             '0x0'
         );
-        _removePositionId(index);
         emit WithdrawUni(to, tokenId);
     }
 
     ///@notice remove awareness of NFT at index
     ///@param index index of the NFT in the uniswapNFTs array
-    function _removePositionId(uint256 index) internal {
-        uniswapNFTs[index] = uniswapNFTs[uniswapNFTs.length - 1];
-        uniswapNFTs.pop();
+    function removePositionId(uint256 index) external override {
+        require(msg.sender == address(this), 'only position manager can remove position');
+        if (uniswapNFTs.length > 1) {
+            uniswapNFTs[index] = uniswapNFTs[uniswapNFTs.length - 1];
+            uniswapNFTs.pop();
+        } else {
+            delete uniswapNFTs;
+        }
     }
 
     ///@notice add tokenId in the uniswapNFTs array
@@ -247,50 +251,6 @@ contract PositionManager is IPositionManager, ERC721Holder {
         (, , , , , , , , , , tokensOwed0, tokensOwed1) = INonfungiblePositionManager(
             uniswapAddressHolder.nonfungiblePositionManagerAddress()
         ).positions(tokenId);
-    }
-
-    /**
-     * @notice close and burn uniswap position; liquidity must be 0,
-     */
-    function closeUniPositions(uint256[] memory tokenIds, bool returnTokensToUser)
-        external
-        payable
-        override
-        onlyOwnerOrModule
-    {
-        INonfungiblePositionManager nonfungiblePositionManager = INonfungiblePositionManager(
-            uniswapAddressHolder.nonfungiblePositionManagerAddress()
-        );
-        for (uint256 i = 0; i < tokenIds.length; i++) {
-            (, , , , , , , uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(tokenIds[i]);
-
-            INonfungiblePositionManager.DecreaseLiquidityParams
-                memory decreaseliquidityparams = INonfungiblePositionManager.DecreaseLiquidityParams({
-                    tokenId: tokenIds[i],
-                    liquidity: liquidity,
-                    amount0Min: 0,
-                    amount1Min: 0,
-                    deadline: block.timestamp + 1000
-                });
-            nonfungiblePositionManager.decreaseLiquidity(decreaseliquidityparams);
-
-            INonfungiblePositionManager.CollectParams memory collectparams = INonfungiblePositionManager.CollectParams({
-                tokenId: tokenIds[i],
-                recipient: returnTokensToUser ? owner : address(this),
-                amount0Max: 2**128 - 1,
-                amount1Max: 2**128 - 1
-            });
-            nonfungiblePositionManager.collect(collectparams);
-
-            nonfungiblePositionManager.burn(tokenIds[i]);
-
-            //delete NFT burned from list
-            for (uint32 j = 0; j < uniswapNFTs.length; j++) {
-                if (uniswapNFTs[j] == tokenIds[i]) {
-                    _removePositionId(j);
-                }
-            }
-        }
     }
 
     /**
