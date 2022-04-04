@@ -7,7 +7,6 @@ import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
-import './BaseAction.sol';
 import '../helpers/ERC20Helper.sol';
 import '../helpers/NFTHelper.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
@@ -39,7 +38,7 @@ contract Mint {
         uint256 amount1Desired;
     }
 
-    ///@notice output the encoder produces
+    ///@notice output struct returned by the contract
     ///@param tokenId ID of the minted NFT
     ///@param amount0Deposited token0 amount deposited
     ///@param amount1Deposited token1 amount deposited
