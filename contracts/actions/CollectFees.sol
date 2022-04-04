@@ -5,7 +5,6 @@ pragma abicoder v2;
 
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
-import '../helpers/NFTHelper.sol';
 
 ///@notice collect fees from a uniswapV3 position
 contract CollectFees {
