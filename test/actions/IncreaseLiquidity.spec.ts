@@ -147,6 +147,9 @@ describe('IncreaseLiquidity.sol', function () {
     await tokenUsdc
       .connect(user)
       .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
+    //recipient: PositionManager - spender: user
+    await tokenEth.connect(user).approve(PositionManager.address, ethers.utils.parseEther('100000000000000'));
+    await tokenUsdc.connect(user).approve(PositionManager.address, ethers.utils.parseEther('100000000000000'));
 
     //give PositionManager some tokens
     await tokenEth.connect(user).transfer(PositionManager.address, ethers.utils.parseEther('10000000'));
@@ -208,7 +211,6 @@ describe('IncreaseLiquidity.sol', function () {
         [poolTokenId, amount0Desired, amount1Desired]
       );
 
-      console.log('pre-action');
       const events = (
         await (await PositionManager.connect(user).doAction(IncreaseLiquidityAction.address, inputBytes)).wait()
       ).events as any;
@@ -267,8 +269,8 @@ describe('IncreaseLiquidity.sol', function () {
       ).to.be.reverted;
     });
 
-    it('should revert if pool does not exist', async function () {
-      const poolTokenId = 1;
+    it('should revert if the pool does not exist', async function () {
+      const poolTokenId = 30;
       const amount0Desired = 1e4;
       const amount1Desired = 1e6;
       const inputBytes = abiCoder.encode(

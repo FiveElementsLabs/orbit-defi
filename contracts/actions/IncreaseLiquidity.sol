@@ -11,8 +11,6 @@ import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 
-import 'hardhat/console.sol';
-
 ///@notice action to increase the liquidity of a V3 position
 contract IncreaseLiquidity {
     IUniswapAddressHolder public uniswapAddressHolder;
@@ -50,14 +48,10 @@ contract IncreaseLiquidity {
     function increaseLiquidity(InputStruct memory inputs) internal returns (OutputStruct memory outputs) {
         require(inputs.amount0Desired > 0 || inputs.amount1Desired > 0, 'send some tokens to increase liquidity');
 
-        console.log(inputs.tokenId, inputs.amount0Desired, inputs.amount1Desired);
-
         (address token0Address, address token1Address) = NFTHelper._getTokenAddress(
             inputs.tokenId,
             INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress())
         );
-
-        console.log(token0Address, token1Address);
 
         ERC20Helper._approveToken(token0Address, uniswapAddressHolder.nonfungiblePositionManagerAddress(), 2**256 - 1);
         ERC20Helper._approveToken(token1Address, uniswapAddressHolder.nonfungiblePositionManagerAddress(), 2**256 - 1);
@@ -65,13 +59,8 @@ contract IncreaseLiquidity {
         IERC20 token0 = IERC20(token0Address);
         IERC20 token1 = IERC20(token1Address);
 
-        console.log(token0.allowance(address(this), uniswapAddressHolder.nonfungiblePositionManagerAddress()));
-        console.log(token1.allowance(address(this), uniswapAddressHolder.nonfungiblePositionManagerAddress()));
-
         token0.transferFrom(msg.sender, address(this), inputs.amount0Desired);
         token1.transferFrom(msg.sender, address(this), inputs.amount1Desired);
-
-        console.log('Post transfer');
 
         INonfungiblePositionManager.IncreaseLiquidityParams memory params = INonfungiblePositionManager
             .IncreaseLiquidityParams({
@@ -86,8 +75,6 @@ contract IncreaseLiquidity {
         (, uint256 amount0, uint256 amount1) = INonfungiblePositionManager(
             uniswapAddressHolder.nonfungiblePositionManagerAddress()
         ).increaseLiquidity(params);
-
-        console.log(amount0, amount1);
 
         if (amount0 < inputs.amount0Desired) token0.transfer(owner, inputs.amount0Desired - amount0);
         if (amount1 < inputs.amount1Desired) token1.transfer(owner, inputs.amount1Desired - amount1);
