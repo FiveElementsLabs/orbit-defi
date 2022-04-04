@@ -101,6 +101,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@notice remove awareness of NFT at index
     ///@param index index of the NFT in the uniswapNFTs array
     function removePositionId(uint256 index) external override {
+        require(msg.sender == address(this), 'only position manager can remove position');
         if (uniswapNFTs.length > 1) {
             uniswapNFTs[index] = uniswapNFTs[uniswapNFTs.length - 1];
             uniswapNFTs.pop();
