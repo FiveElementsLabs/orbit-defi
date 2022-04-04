@@ -203,9 +203,14 @@ describe('DecreaseLiquidity.sol', function () {
     it('should correctly perform the decrease liquidity action', async function () {
       await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
 
+      const tokenOwnedBefore: any = await PositionManager.connect(user).getPositionBalance(tokenId);
+      const liquidityBefore: any = await NonFungiblePositionManager.positions(tokenId);
+
       const poolTokenId = 1;
-      const amount0Desired = 1e4;
-      const amount1Desired = 1e6;
+      const amount0Desired = '0x' + Math.ceil(tokenOwnedBefore[0] / 2).toString(16);
+      const amount1Desired = '0x' + Math.ceil(tokenOwnedBefore[1] / 2).toString(16);
+
+      console.log(amount0Desired, amount1Desired);
       const inputBytes = abiCoder.encode(
         ['uint256', 'uint256', 'uint256'],
         [poolTokenId, amount0Desired, amount1Desired]
@@ -214,6 +219,9 @@ describe('DecreaseLiquidity.sol', function () {
       const events = (
         await (await PositionManager.connect(user).doAction(DecreaseLiquidityAction.address, inputBytes)).wait()
       ).events as any;
+
+      // const liquidityAfter: any = await NonFungiblePositionManager.positions(tokenId);
+      // expect(liquidityAfter.liquidity).to.be.lt(liquidityBefore.liquidity);
 
       const outputEvent = events[events.length - 1];
       const success = outputEvent.args[0];

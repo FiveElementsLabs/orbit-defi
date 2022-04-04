@@ -12,6 +12,8 @@ import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 
+import 'hardhat/console.sol';
+
 ///@notice action to decrease liquidity of an NFT position
 contract DecreaseLiquidity {
     IUniswapAddressHolder public uniswapAddressHolder;
@@ -29,12 +31,12 @@ contract DecreaseLiquidity {
 
     ///@notice output the encoder produces
     ///@param liquidityToDecrease the amount of liquidity to decrease
-    ///@param tokensOwed0 the uncollected amount of token0 owed to the position as of the last computation
-    ///@param tokensOwed1 the uncollected amount of token1 owed to the position as of the last computation
+    ///@param amount0 the amount of token0 removed
+    ///@param amount1 the amount of token1 removed
     struct OutputStruct {
         uint128 liquidityToDecrease;
-        uint128 tokensOwed0;
-        uint128 tokensOwed1;
+        uint256 amount0;
+        uint256 amount1;
     }
 
     ///@notice executes the action of the contract (decrease liquidity), should be the only function visible from the outside
@@ -49,22 +51,9 @@ contract DecreaseLiquidity {
     ///@param inputs input parameters for minting
     ///@param outputs output parameters
     function decreaseLiquidity(InputStruct memory inputs) internal returns (OutputStruct memory outputs) {
-        (
-            ,
-            ,
-            ,
-            ,
-            ,
-            int24 tickLower,
-            int24 tickUpper,
-            uint128 liquidity,
-            ,
-            ,
-            uint128 tokensOwed0,
-            uint128 tokensOwed1
-        ) = INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).positions(
-                inputs.tokenId
-            );
+        (, , , , , int24 tickLower, int24 tickUpper, uint128 liquidity, , , , ) = INonfungiblePositionManager(
+            uniswapAddressHolder.nonfungiblePositionManagerAddress()
+        ).positions(inputs.tokenId);
 
         IUniswapV3Pool pool = IUniswapV3Pool(
             NFTHelper._getPoolFromTokenId(
@@ -94,15 +83,28 @@ contract DecreaseLiquidity {
                 amount1Min: 0,
                 deadline: block.timestamp + 1000
             });
-        INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).decreaseLiquidity(
-            decreaseliquidityparams
+
+        (address token0Address, address token1Address) = NFTHelper._getTokenAddress(
+            inputs.tokenId,
+            INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress())
         );
 
-        outputs = OutputStruct({
-            liquidityToDecrease: liquidityToDecrease,
-            tokensOwed0: tokensOwed0,
-            tokensOwed1: tokensOwed1
-        });
+        ERC20Helper._approveToken(token0Address, uniswapAddressHolder.nonfungiblePositionManagerAddress(), 2**256 - 1);
+        ERC20Helper._approveToken(token1Address, uniswapAddressHolder.nonfungiblePositionManagerAddress(), 2**256 - 1);
+
+        IERC20(token0Address).transferFrom(msg.sender, address(this), inputs.amount0Desired);
+        IERC20(token1Address).transferFrom(msg.sender, address(this), inputs.amount1Desired);
+
+        console.log('token0After: ', IERC20(token0Address).balanceOf(address(this)));
+        console.log('token1After: ', IERC20(token1Address).balanceOf(address(this)));
+
+        (uint256 amount0, uint256 amount1) = INonfungiblePositionManager(
+            uniswapAddressHolder.nonfungiblePositionManagerAddress()
+        ).decreaseLiquidity(decreaseliquidityparams);
+
+        console.log('Done');
+
+        outputs = OutputStruct({liquidityToDecrease: liquidityToDecrease, amount0: amount0, amount1: amount1});
     }
 
     ///@notice decodes inputs to InputStruct
