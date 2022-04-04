@@ -254,48 +254,6 @@ contract PositionManager is IPositionManager, ERC721Holder {
     }
 
     /**
-     * @notice close and burn uniswap position; liquidity must be 0,
-     */
-    function closeUniPositions(uint256[] memory tokenIds, bool returnTokensToUser)
-        external
-        payable
-        override
-        onlyOwnerOrModule
-    {
-        INonfungiblePositionManager nonfungiblePositionManager = INonfungiblePositionManager(
-            uniswapAddressHolder.nonfungiblePositionManagerAddress()
-        );
-        for (uint256 i = 0; i < tokenIds.length; i++) {
-            (, , , , , , , uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(tokenIds[i]);
-
-            INonfungiblePositionManager.DecreaseLiquidityParams
-                memory decreaseliquidityparams = INonfungiblePositionManager.DecreaseLiquidityParams({
-                    tokenId: tokenIds[i],
-                    liquidity: liquidity,
-                    amount0Min: 0,
-                    amount1Min: 0,
-                    deadline: block.timestamp + 1000
-                });
-            nonfungiblePositionManager.decreaseLiquidity(decreaseliquidityparams);
-
-            INonfungiblePositionManager.CollectParams memory collectparams = INonfungiblePositionManager.CollectParams({
-                tokenId: tokenIds[i],
-                recipient: returnTokensToUser ? owner : address(this),
-                amount0Max: 2**128 - 1,
-                amount1Max: 2**128 - 1
-            });
-            nonfungiblePositionManager.collect(collectparams);
-
-            nonfungiblePositionManager.burn(tokenIds[i]);
-
-            //delete NFT burned from list
-            for (uint32 j = 0; j < uniswapNFTs.length; j++) {
-                if (uniswapNFTs[j] == tokenIds[i]) {}
-            }
-        }
-    }
-
-    /**
      * @notice for fees to be updated need to interact with NFT
      * not public!
      */
