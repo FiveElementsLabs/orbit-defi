@@ -41,7 +41,7 @@ describe('IncreaseLiquidity.sol', function () {
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
   let PositionManager: PositionManager; // PositionManager contract by UniswapV3
   let SwapRouter: Contract; // SwapRouter contract by UniswapV3
-  let IncreaseLiquidityAction: IncreaseLiquidity; // SwapToPositionRatio contract
+  let IncreaseLiquidityAction: IncreaseLiquidity; // IncreaseLiquidity contract
   let abiCoder: AbiCoder;
   let UniswapAddressHolder: Contract; // address holder for UniswapV3 contracts
 
@@ -121,18 +121,16 @@ describe('IncreaseLiquidity.sol', function () {
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
 
-    //Deploy SwapToPositionRatio Action
+    //Deploy IncreaseLiquidity Action
     const IncreaseLiquidityActionFactory = await ethers.getContractFactory('IncreaseLiquidity');
-    IncreaseLiquidityAction = (await IncreaseLiquidityActionFactory.deploy(
-      UniswapAddressHolder.address
-    )) as IncreaseLiquidity;
+    IncreaseLiquidityAction = (await IncreaseLiquidityActionFactory.deploy()) as IncreaseLiquidity;
     await IncreaseLiquidityAction.deployed();
 
     //get AbiCoder
     abiCoder = ethers.utils.defaultAbiCoder;
 
     //APPROVE
-    //recipient: SwapToPositionRatio action - spender: user
+    //recipient: IncreaseLiquidity action - spender: user
     await tokenEth.connect(user).approve(IncreaseLiquidityAction.address, ethers.utils.parseEther('100000000000000'));
     await tokenUsdc.connect(user).approve(IncreaseLiquidityAction.address, ethers.utils.parseEther('100000000000000'));
     //recipient: NonFungiblePositionManager - spender: liquidityProvider
@@ -142,10 +140,19 @@ describe('IncreaseLiquidity.sol', function () {
     await tokenUsdc
       .connect(liquidityProvider)
       .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
+    //recipient: NonFungiblePositionManager - spender: user
+    await tokenEth
+      .connect(user)
+      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
+    await tokenUsdc
+      .connect(user)
+      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
 
     //give PositionManager some tokens
-    await tokenEth.connect(user).transfer(PositionManager.address, ethers.utils.parseEther('1000000000000'));
-    await tokenUsdc.connect(user).transfer(PositionManager.address, ethers.utils.parseEther('1000000000000'));
+    await tokenEth.connect(user).transfer(PositionManager.address, ethers.utils.parseEther('10000000'));
+    await tokenUsdc.connect(user).transfer(PositionManager.address, ethers.utils.parseEther('10000000'));
+
+    await NonFungiblePositionManager.setApprovalForAll(PositionManager.address, true);
 
     // give pool some liquidity
     await NonFungiblePositionManager.connect(liquidityProvider).mint(
@@ -166,7 +173,7 @@ describe('IncreaseLiquidity.sol', function () {
     );
   });
 
-  // Mint an liquidity position for the user in order to test the action.
+  // Mint a liquidity position for the user in order to test the action.
   beforeEach(async function () {
     const txMint = await NonFungiblePositionManager.connect(user).mint(
       {
@@ -175,8 +182,8 @@ describe('IncreaseLiquidity.sol', function () {
         fee: 3000,
         tickLower: 0 - 60 * 1000,
         tickUpper: 0 + 60 * 1000,
-        amount0Desired: '0x' + (1e18).toString(16),
-        amount1Desired: '0x' + (1e18).toString(16),
+        amount0Desired: '0x' + (1e10).toString(16),
+        amount1Desired: '0x' + (1e10).toString(16),
         amount0Min: 0,
         amount1Min: 0,
         recipient: user.address,
@@ -192,16 +199,16 @@ describe('IncreaseLiquidity.sol', function () {
   describe('doAction', function () {
     it('should correctly perform the add liquidity action', async function () {
       await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
-      const liquidityBefore = await Pool0.liquidity();
 
       const poolTokenId = 1;
-      const amount0Desired = 1e10;
+      const amount0Desired = 1e4;
       const amount1Desired = 1e6;
       const inputBytes = abiCoder.encode(
         ['uint256', 'uint256', 'uint256'],
         [poolTokenId, amount0Desired, amount1Desired]
       );
 
+      console.log('pre-action');
       const events = (
         await (await PositionManager.connect(user).doAction(IncreaseLiquidityAction.address, inputBytes)).wait()
       ).events as any;
@@ -216,7 +223,7 @@ describe('IncreaseLiquidity.sol', function () {
       const liquidityBefore = await Pool0.liquidity();
 
       const poolTokenId = 1;
-      const amount0Desired = 1e10;
+      const amount0Desired = 1e4;
       const amount1Desired = 1e6;
       const inputBytes = abiCoder.encode(
         ['uint256', 'uint256', 'uint256'],
@@ -227,11 +234,25 @@ describe('IncreaseLiquidity.sol', function () {
       expect(await Pool0.liquidity()).to.be.gt(liquidityBefore);
     });
 
+    it('should revert if no tokens are sent', async function () {
+      await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
+
+      const poolTokenId = 1;
+      const amount0Desired = 0;
+      const amount1Desired = 0;
+      const inputBytes = abiCoder.encode(
+        ['uint256', 'uint256', 'uint256'],
+        [poolTokenId, amount0Desired, amount1Desired]
+      );
+
+      await expect(PositionManager.connect(user).doAction(IncreaseLiquidityAction.address, inputBytes)).to.be.reverted;
+    });
+
     it('should revert if the action does not exist', async function () {
       await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
 
       const poolTokenId = 1;
-      const amount0Desired = 1e10;
+      const amount0Desired = 1e4;
       const amount1Desired = 1e6;
       const inputBytes = abiCoder.encode(
         ['uint256', 'uint256', 'uint256'],
@@ -248,7 +269,7 @@ describe('IncreaseLiquidity.sol', function () {
 
     it('should revert if pool does not exist', async function () {
       const poolTokenId = 1;
-      const amount0Desired = 1e10;
+      const amount0Desired = 1e4;
       const amount1Desired = 1e6;
       const inputBytes = abiCoder.encode(
         ['uint256', 'uint256', 'uint256'],
