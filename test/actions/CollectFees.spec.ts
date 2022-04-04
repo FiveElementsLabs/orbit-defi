@@ -47,8 +47,8 @@ describe('CollectFees.sol', function () {
     trader = await trader; //who executes trades
 
     //deploy first 3 token - ETH, USDC, DAI
-    tokenEth = await tokensFixture('ETH', 18).then((tokenFix) => tokenFix.tokenFixture);
-    tokenUsdc = await tokensFixture('USDC', 6).then((tokenFix) => tokenFix.tokenFixture);
+    tokenEth = (await tokensFixture('ETH', 18)).tokenFixture;
+    tokenUsdc = (await tokensFixture('USDC', 6)).tokenFixture;
 
     //deploy factory, used for pools
     const uniswapFactoryFactory = new ContractFactory(
