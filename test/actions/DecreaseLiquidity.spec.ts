@@ -204,56 +204,44 @@ describe('DecreaseLiquidity.sol', function () {
       await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
 
       const tokenOwnedBefore: any = await PositionManager.connect(user).getPositionBalance(tokenId);
-      const liquidityBefore: any = await NonFungiblePositionManager.positions(tokenId);
 
-      const poolTokenId = 1;
       const amount0Desired = '0x' + Math.ceil(tokenOwnedBefore[0] / 2).toString(16);
       const amount1Desired = '0x' + Math.ceil(tokenOwnedBefore[1] / 2).toString(16);
-
-      console.log(amount0Desired, amount1Desired);
-      const inputBytes = abiCoder.encode(
-        ['uint256', 'uint256', 'uint256'],
-        [poolTokenId, amount0Desired, amount1Desired]
-      );
+      const inputBytes = abiCoder.encode(['uint256', 'uint256', 'uint256'], [tokenId, amount0Desired, amount1Desired]);
 
       const events = (
         await (await PositionManager.connect(user).doAction(DecreaseLiquidityAction.address, inputBytes)).wait()
       ).events as any;
 
-      // const liquidityAfter: any = await NonFungiblePositionManager.positions(tokenId);
-      // expect(liquidityAfter.liquidity).to.be.lt(liquidityBefore.liquidity);
-
       const outputEvent = events[events.length - 1];
-      const success = outputEvent.args[0];
+      const success = outputEvent?.args[0];
       expect(success).to.be.true;
     });
 
     it('should correctly decrease liquidity of the NFT position', async function () {
       await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
-      const liquidityBefore = await Pool0.liquidity();
 
-      const poolTokenId = 1;
-      const amount0Desired = 1e4;
-      const amount1Desired = 1e6;
-      const inputBytes = abiCoder.encode(
-        ['uint256', 'uint256', 'uint256'],
-        [poolTokenId, amount0Desired, amount1Desired]
-      );
+      const tokenOwnedBefore: any = await PositionManager.connect(user).getPositionBalance(tokenId);
+      const liquidityBefore: any = await NonFungiblePositionManager.positions(tokenId);
+
+      const amount0Desired = '0x' + Math.ceil(tokenOwnedBefore[0] / 2).toString(16);
+      const amount1Desired = '0x' + Math.ceil(tokenOwnedBefore[1] / 2).toString(16);
+      const inputBytes = abiCoder.encode(['uint256', 'uint256', 'uint256'], [tokenId, amount0Desired, amount1Desired]);
 
       await PositionManager.connect(user).doAction(DecreaseLiquidityAction.address, inputBytes);
-      expect(await Pool0.liquidity()).to.be.lt(liquidityBefore);
+
+      const liquidityAfter: any = await NonFungiblePositionManager.positions(tokenId);
+      expect(liquidityAfter.liquidity).to.be.lt(liquidityBefore.liquidity);
     });
 
     it('should revert if we try to remove more than the total liquidity', async function () {
       await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
 
-      const poolTokenId = 1;
-      const amount0Desired = 1e20;
-      const amount1Desired = 1e20;
-      const inputBytes = abiCoder.encode(
-        ['uint256', 'uint256', 'uint256'],
-        [poolTokenId, amount0Desired, amount1Desired]
-      );
+      const tokenOwnedBefore: any = await PositionManager.connect(user).getPositionBalance(tokenId);
+
+      const amount0Desired = '0x' + Math.ceil(tokenOwnedBefore[0] + 1e10).toString(16);
+      const amount1Desired = '0x' + Math.ceil(tokenOwnedBefore[1] + 1e10).toString(16);
+      const inputBytes = abiCoder.encode(['uint256', 'uint256', 'uint256'], [tokenId, amount0Desired, amount1Desired]);
 
       await expect(PositionManager.connect(user).doAction(DecreaseLiquidityAction.address, inputBytes)).to.be.reverted;
     });
@@ -261,13 +249,11 @@ describe('DecreaseLiquidity.sol', function () {
     it('should revert if the action does not exist', async function () {
       await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
 
-      const poolTokenId = 1;
-      const amount0Desired = 1e4;
-      const amount1Desired = 1e6;
-      const inputBytes = abiCoder.encode(
-        ['uint256', 'uint256', 'uint256'],
-        [poolTokenId, amount0Desired, amount1Desired]
-      );
+      const tokenOwnedBefore: any = await PositionManager.connect(user).getPositionBalance(tokenId);
+
+      const amount0Desired = '0x' + Math.ceil(tokenOwnedBefore[0] / 2).toString(16);
+      const amount1Desired = '0x' + Math.ceil(tokenOwnedBefore[1] / 2).toString(16);
+      const inputBytes = abiCoder.encode(['uint256', 'uint256', 'uint256'], [tokenId, amount0Desired, amount1Desired]);
 
       await expect(
         PositionManager.connect(user).doAction(
@@ -279,8 +265,8 @@ describe('DecreaseLiquidity.sol', function () {
 
     it('should revert if the pool does not exist', async function () {
       const poolTokenId = 30;
-      const amount0Desired = 1e4;
-      const amount1Desired = 1e6;
+      const amount0Desired = 100;
+      const amount1Desired = 1000;
       const inputBytes = abiCoder.encode(
         ['uint256', 'uint256', 'uint256'],
         [poolTokenId, amount0Desired, amount1Desired]

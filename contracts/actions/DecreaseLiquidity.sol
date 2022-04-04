@@ -12,8 +12,6 @@ import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 
-import 'hardhat/console.sol';
-
 ///@notice action to decrease liquidity of an NFT position
 contract DecreaseLiquidity {
     IUniswapAddressHolder public uniswapAddressHolder;
@@ -92,17 +90,9 @@ contract DecreaseLiquidity {
         ERC20Helper._approveToken(token0Address, uniswapAddressHolder.nonfungiblePositionManagerAddress(), 2**256 - 1);
         ERC20Helper._approveToken(token1Address, uniswapAddressHolder.nonfungiblePositionManagerAddress(), 2**256 - 1);
 
-        IERC20(token0Address).transferFrom(msg.sender, address(this), inputs.amount0Desired);
-        IERC20(token1Address).transferFrom(msg.sender, address(this), inputs.amount1Desired);
-
-        console.log('token0After: ', IERC20(token0Address).balanceOf(address(this)));
-        console.log('token1After: ', IERC20(token1Address).balanceOf(address(this)));
-
         (uint256 amount0, uint256 amount1) = INonfungiblePositionManager(
             uniswapAddressHolder.nonfungiblePositionManagerAddress()
         ).decreaseLiquidity(decreaseliquidityparams);
-
-        console.log('Done');
 
         outputs = OutputStruct({liquidityToDecrease: liquidityToDecrease, amount0: amount0, amount1: amount1});
     }
