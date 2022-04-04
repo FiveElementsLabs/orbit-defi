@@ -261,60 +261,6 @@ describe('PositionManager.sol', function () {
     });
   });
 
-  describe('PositionManager - closeUniPosition', function () {
-    it('Should close and burn a uniPosition', async function () {
-      await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
-
-      await PositionManager.connect(user).closeUniPositions([tokenId], true);
-      let e;
-      try {
-        await NonFungiblePositionManager.ownerOf(tokenId);
-      } catch (err: any) {
-        e = err.message;
-      }
-      expect(e.includes('ERC721: owner query for nonexistent token')).to.equal(true);
-    });
-    it('Should close multiple positions with one call', async function () {
-      let mintParams = [
-        {
-          token0: tokenEth.address,
-          token1: tokenUsdc.address,
-          fee: 3000,
-          tickLower: 0 - 60 * 2,
-          tickUpper: 0 + 60 * 2,
-          amount0Desired: '0x' + (1e13).toString(16),
-          amount1Desired: '0x' + (3e3).toString(16),
-          amount0Min: 0,
-          amount1Min: 0,
-          recipient: PositionManager.address,
-          deadline: Date.now(),
-        },
-        {
-          token0: tokenEth.address,
-          token1: tokenUsdc.address,
-          fee: 3000,
-          tickLower: 0 - 60 * 1,
-          tickUpper: 0 + 60 * 1,
-          amount0Desired: '0x' + (1e13).toString(16),
-          amount1Desired: '0x' + (3e3).toString(16),
-          amount0Min: 0,
-          amount1Min: 0,
-          recipient: PositionManager.address,
-          deadline: Date.now(),
-        },
-      ];
-      await PositionManager.connect(user).mintAndDeposit(mintParams, false);
-
-      const tokens = await PositionManager.getAllUniPosition();
-      const beforeBalance = await NonFungiblePositionManager.balanceOf(PositionManager.address);
-      const beforeLenght = tokens.length;
-
-      await PositionManager.connect(user).closeUniPositions([tokens[beforeLenght - 1], tokens[beforeLenght - 2]], true);
-
-      expect(await NonFungiblePositionManager.balanceOf(PositionManager.address)).to.equal(beforeBalance.sub(2));
-      expect((await PositionManager.getAllUniPosition()).length).to.be.equal(beforeLenght - 2);
-    });
-  });
   describe('PositionManager - collectPositionFee', function () {
     it('Should collect fees', async function () {
       await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
@@ -480,11 +426,6 @@ describe('PositionManager.sol', function () {
           false
         )
       ).to.be.reverted;
-    });
-
-    it('closeUniPosition', async function () {
-      await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
-      await expect(PositionManager.connect(trader).closeUniPositions([tokenId], true)).to.be.reverted;
     });
   });
 
