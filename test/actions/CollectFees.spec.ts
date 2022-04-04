@@ -183,7 +183,6 @@ describe('CollectFees.sol', function () {
 
       const mintEvent = events[events.length - 1];
       const tokenId = abiCoder.decode(['uint256', 'uint256', 'uint256'], mintEvent.args.data)[0];
-      console.log(tokenId);
 
       // Do some trades to accrue fees
       for (let i = 0; i < 10; i++) {
@@ -211,6 +210,16 @@ describe('CollectFees.sol', function () {
 
       expect(feesCollected[0]).to.gt(0);
       expect(feesCollected[1]).to.gt(0);
+    });
+
+    it('should revert if position does not exist', async function () {
+      const inputBytes = abiCoder.encode(['uint256'], [200]);
+      await expect(PositionManager.connect(user).doAction(collectFees.address, inputBytes)).to.be.reverted;
+    });
+
+    it('should revert if position is not owned by user', async function () {
+      const inputBytes = abiCoder.encode(['uint256'], [1]);
+      await expect(PositionManager.connect(user).doAction(collectFees.address, inputBytes)).to.be.reverted;
     });
   });
 });
