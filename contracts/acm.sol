@@ -8,7 +8,7 @@ import '@openzeppelin/contracts/math/SafeMath.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '../interfaces/IPositionManager.sol';
 
-contract AutoCompoundModule {
+contract ACM {
     using SafeMath for uint256;
 
     // TODO: make user choose threshold from pos manager

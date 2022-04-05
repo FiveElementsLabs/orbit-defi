@@ -59,16 +59,13 @@ contract AutoCompoundModule {
     ///@param tokenId token id of the position
     ///@return true if the position needs to be collected
     function checkForPosition(address positionManagerAddress, uint256 tokenId) internal view returns (bool) {
+        bytes memory params = abi.encode(tokenId, 1000, 1000);
         (bool success, bytes memory data) = positionManagerAddress.staticcall(
-            abi.encodeWithSignature(
-                'function doAction(address actionAddress, bytes memory inputs)',
-                decreaseLiquidityAddress,
-                abi.encode(tokenId, 1, 1)
-            )
+            abi.encodeWithSignature('doAction(address,bytes)', decreaseLiquidityAddress, params)
         );
         if (success) {
-            (, uint256 uncollectedFees0, uint256 uncollectedFees1) = abi.decode(data, (uint128, uint256, uint256)); //TBD
-            return feesNeedToBeReinvested(uncollectedFees0, uncollectedFees1, tokenId); //TBD
+            (, uint256 uncollectedFees0, uint256 uncollectedFees1) = abi.decode(data, (uint128, uint256, uint256));
+            return feesNeedToBeReinvested(uncollectedFees0, uncollectedFees1, tokenId);
         } else {
             revert('Failed to update liquidity');
         }
@@ -89,7 +86,14 @@ contract AutoCompoundModule {
             INonfungiblePositionManager(addressHolder.nonfungiblePositionManagerAddress()),
             addressHolder.uniswapV3FactoryAddress()
         );
-
-        return (amount0 / uncollectedFees0 < feesThreshold || amount1 / uncollectedFees1 < feesThreshold);
+        uint256 token0OverFees = 2**256 - 1;
+        uint256 token1OverFees = 2**256 - 1;
+        if (uncollectedFees0 > 0) {
+            token0OverFees = amount0 / uncollectedFees0;
+        }
+        if (uncollectedFees1 > 0) {
+            token1OverFees = amount1 / uncollectedFees1;
+        }
+        return (token0OverFees < feesThreshold || token1OverFees < feesThreshold);
     }
 }
