@@ -234,16 +234,20 @@ describe('DecreaseLiquidity.sol', function () {
       expect(liquidityAfter.liquidity).to.be.lt(liquidityBefore.liquidity);
     });
 
-    it('should revert if we try to remove more than the total liquidity', async function () {
+    it('should remove all the liquidity if we try to remove more than the total amount', async function () {
       await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
 
       const tokenOwnedBefore: any = await PositionManager.connect(user).getPositionBalance(tokenId);
+      const liquidityBefore: any = await NonFungiblePositionManager.positions(tokenId);
 
       const amount0Desired = '0x' + Math.ceil(tokenOwnedBefore[0] + 1e10).toString(16);
       const amount1Desired = '0x' + Math.ceil(tokenOwnedBefore[1] + 1e10).toString(16);
       const inputBytes = abiCoder.encode(['uint256', 'uint256', 'uint256'], [tokenId, amount0Desired, amount1Desired]);
 
-      await expect(PositionManager.connect(user).doAction(DecreaseLiquidityAction.address, inputBytes)).to.be.reverted;
+      await PositionManager.connect(user).doAction(DecreaseLiquidityAction.address, inputBytes);
+
+      const liquidityAfter: any = await NonFungiblePositionManager.positions(tokenId);
+      expect(liquidityAfter.liquidity).to.be.equal(0);
     });
 
     it('should revert if the action does not exist', async function () {

@@ -12,6 +12,8 @@ import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 
+import 'hardhat/console.sol';
+
 ///@notice action to decrease liquidity of an NFT position
 contract DecreaseLiquidity {
     IUniswapAddressHolder public uniswapAddressHolder;
@@ -71,7 +73,10 @@ contract DecreaseLiquidity {
             inputs.amount1Desired
         );
 
-        require(liquidityToDecrease <= liquidity, 'cannot decrease more liquidity than the owned');
+        ///@dev remove all liquidity if the amount to decrease is greater than the amount in the pool
+        if (liquidityToDecrease > liquidity) {
+            liquidityToDecrease = liquidity;
+        }
 
         INonfungiblePositionManager.DecreaseLiquidityParams memory decreaseliquidityparams = INonfungiblePositionManager
             .DecreaseLiquidityParams({
