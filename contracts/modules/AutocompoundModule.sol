@@ -29,6 +29,8 @@ contract AutoCompoundModule {
         decreaseLiquidityAddress = _decreaseLiquidityAddress;
     }
 
+    ///@notice executes our recipe for autocompounding
+    ///@param positionManagerAddress address of the position manager
     function doMyThing(address positionManagerAddress) public {
         IPositionManager positionManager = IPositionManager(positionManagerAddress);
         //check if autocompound is active
@@ -52,6 +54,10 @@ contract AutoCompoundModule {
         }
     }
 
+    ///@notice checks the position status
+    ///@param positionManagerAddress address of the position manager
+    ///@param tokenId token id of the position
+    ///@return true if the position needs to be collected
     function checkForPosition(address positionManagerAddress, uint256 tokenId) internal view returns (bool) {
         (bool success, bytes memory data) = positionManagerAddress.staticcall(
             abi.encodeWithSignature(
@@ -68,6 +74,11 @@ contract AutoCompoundModule {
         }
     }
 
+    ///@notice checks if the fees need to be reinvested
+    ///@param uncollectedFees0 uncollected fees of the first token
+    ///@param uncollectedFees1 uncollected fees of the second token
+    ///@param tokenId token id of the position
+    ///@return needToBeReinvested if the fees need to be reinvested
     function feesNeedToBeReinvested(
         uint256 uncollectedFees0,
         uint256 uncollectedFees1,
