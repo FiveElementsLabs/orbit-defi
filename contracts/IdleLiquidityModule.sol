@@ -8,7 +8,7 @@ import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.s
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol';
 
-contract IdleLiquidityModuleFalse {
+contract IdleLiquidityModuleOld {
     INonfungiblePositionManager public immutable nonFungiblePositionManager;
     address public immutable uniswapV3FactoryAddress;
 
