@@ -21,7 +21,7 @@ contract AutoCompoundModule {
         address _collectFeeAddress,
         address _increaseLiquidityAddress,
         address _decreaseLiquidityAddress
-    ) public {
+    ) {
         addressHolder = IUniswapAddressHolder(_addressHolder);
         feesThreshold = _feesThreshold;
         collectFeeAddress = _collectFeeAddress;
@@ -32,44 +32,36 @@ contract AutoCompoundModule {
     function doMyThing(address positionManagerAddress) public {
         IPositionManager positionManager = IPositionManager(positionManagerAddress);
         //check if autocompound is active
-        if (positionManager.isAutoCompound()) {
+        if (
+            true /*positionManager.isAutoCompound()*/
+        ) {
             //TODO: check if autocompound module is active
             uint256[] memory positions = positionManager.getAllUniPosition();
             for (uint256 i = 0; i < positions.length; i++) {
                 if (checkForPosition(positionManagerAddress, positions[i])) {
-                    (bool success, bytes memory data) = positionManager.doAction(
-                        collectFeeAddress,
-                        abi.encode(positions[i])
+                    bytes memory data = positionManager.doAction(collectFeeAddress, abi.encode(positions[i]));
+                    (uint256 amount0Collected, uint256 amount1Collected) = abi.decode(data, (uint256, uint256));
+                    data = positionManager.doAction(
+                        increaseLiquidityAddress,
+                        abi.encode(positions[i], amount0Collected, amount1Collected)
                     );
-                    if (success) {
-                        (success, data) = positionManager.doAction(
-                            increaseLiquidityAddress,
-                            abi.encode(increaseparams)
-                        );
-                        if (success) {
-                            //do the output thing
-                        } else {
-                            revert('Failed to reinvest fees');
-                        }
-                    } else {
-                        revert('Failed to collect fees');
-                    }
+
+                    //do the output thing
                 }
             }
         }
     }
 
-    function checkForPosition(address positionManagerAddress, uint256 tokenId)
-        internal
-        view
-        returns (uint256 uncollectedFees0, uint256 uncollectedFees1)
-    {
+    function checkForPosition(address positionManagerAddress, uint256 tokenId) internal view returns (bool) {
         (bool success, bytes memory data) = positionManagerAddress.staticcall(
-            decreaseLiquidityAddress, //TBD
-            abi.encode(decreaseparams) //TBD
+            abi.encodeWithSignature(
+                'function doAction(address actionAddress, bytes memory inputs)',
+                decreaseLiquidityAddress,
+                abi.encode(tokenId, 1, 1)
+            )
         );
         if (success) {
-            (uncollectedFees0, uncollectedFees1) = abi.decode(data); //TBD
+            (, uint256 uncollectedFees0, uint256 uncollectedFees1) = abi.decode(data, (uint128, uint256, uint256)); //TBD
             return feesNeedToBeReinvested(uncollectedFees0, uncollectedFees1, tokenId); //TBD
         } else {
             revert('Failed to update liquidity');
@@ -83,7 +75,7 @@ contract AutoCompoundModule {
     ) internal view returns (bool needToBeReinvested) {
         (uint256 amount0, uint256 amount1) = NFTHelper._getAmountsfromTokenId(
             tokenId,
-            addressHolder.nonfungiblePositionManagerAddress(),
+            INonfungiblePositionManager(addressHolder.nonfungiblePositionManagerAddress()),
             addressHolder.uniswapV3FactoryAddress()
         );
 
