@@ -28,8 +28,12 @@ contract ClosePosition {
 
     ///@notice output the encoder produces
     ///@param tokenId ID of the closed token
+    ///@param token0Closed amount of token0 returned
+    ///@param token1Closed amount of token1 returned
     struct OutputStruct {
         uint256 tokenId;
+        uint256 token0Closed;
+        uint256 token1Closed;
     }
 
     ///@notice executes the action of the contract (closePosition), should be the only function visible from the outside
@@ -59,9 +63,13 @@ contract ClosePosition {
             });
         nonfungiblePositionManager.decreaseLiquidity(decreaseliquidityparams);
 
+        (, , , , , , , , , , uint256 token0Closed, uint256 token1Closed) = nonfungiblePositionManager.positions(
+            inputs.tokenId
+        );
+
         INonfungiblePositionManager.CollectParams memory collectparams = INonfungiblePositionManager.CollectParams({
             tokenId: inputs.tokenId,
-            recipient: inputs.returnTokenToUser ? msg.sender : msg.sender,
+            recipient: inputs.returnTokenToUser ? msg.sender : address(this),
             amount0Max: 2**128 - 1,
             amount1Max: 2**128 - 1
         });
@@ -73,7 +81,7 @@ contract ClosePosition {
         IPositionManager(address(this)).removePositionId(inputs.tokenId);
 
         //return the tokenId
-        outputs = OutputStruct({tokenId: inputs.tokenId});
+        outputs = OutputStruct({tokenId: inputs.tokenId, token0Closed: token0Closed, token1Closed: token1Closed});
 
         //delete the position from the position manager
         emit CloseUniPosition(address(this), inputs.tokenId);
