@@ -49,6 +49,7 @@ describe('AutoCompoundModule.sol', function () {
   let collectFeesAction: Contract;
   let increaseLiquidityAction: Contract;
   let decreaseLiquidityAction: Contract;
+  let updateFeesAction: Contract;
   let autoCompound: Contract;
   let abiCoder: AbiCoder;
 
@@ -143,14 +144,19 @@ describe('AutoCompoundModule.sol', function () {
     decreaseLiquidityAction = await decreaseLiquidityActionFactory.deploy();
     await decreaseLiquidityAction.deployed();
 
+    const updateFeesActionFactory = await ethers.getContractFactory('UpdateUncollectedFees');
+    updateFeesAction = await updateFeesActionFactory.deploy();
+    await updateFeesAction.deployed();
+
     //deploy AutoCompound Module
     const AutocompoundFactory = await ethers.getContractFactory('AutoCompoundModule');
     autoCompound = await AutocompoundFactory.deploy(
       uniswapAddressHolder.address,
-      33,
+      100,
       collectFeesAction.address,
       increaseLiquidityAction.address,
-      decreaseLiquidityAction.address
+      decreaseLiquidityAction.address,
+      updateFeesAction.address
     );
     await autoCompound.deployed();
 
@@ -199,10 +205,8 @@ describe('AutoCompoundModule.sol', function () {
       },
       { gasLimit: 670000 }
     );
-  });
 
-  it('should be able to autocompound fees', async function () {
-    await NonFungiblePositionManager.connect(user).mint(
+    const mintTx = await NonFungiblePositionManager.connect(user).mint(
       {
         token0: tokenEth.address,
         token1: tokenUsdc.address,
@@ -219,22 +223,53 @@ describe('AutoCompoundModule.sol', function () {
       { gasLimit: 670000 }
     );
     await PositionManager.connect(user).depositUniNft(user.address, [2]);
+  });
 
+  it('should be able not autocompound if fees are not enough', async function () {
     //do some trades to accrue fees
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 2; i++) {
       await SwapRouter.connect(trader).exactInputSingle([
         i % 2 === 0 ? tokenEth.address : tokenUsdc.address,
         i % 2 === 0 ? tokenUsdc.address : tokenEth.address,
         3000,
         trader.address,
         Date.now() + 1000,
-        5e9,
+        9e9,
         0,
         0,
       ]);
     }
 
+    const position = await NonFungiblePositionManager.positions(2);
     //collect and reinvest fees
     await autoCompound.connect(user).doMyThing(PositionManager.address);
+    const positionPost = await NonFungiblePositionManager.positions(2);
+    expect(positionPost.liquidity).to.lt(position.liquidity);
+  });
+
+  it('should be able to autocompound fees', async function () {
+    //do some trades to accrue fees
+    for (let i = 0; i < 20; i++) {
+      await SwapRouter.connect(trader).exactInputSingle([
+        i % 2 === 0 ? tokenEth.address : tokenUsdc.address,
+        i % 2 === 0 ? tokenUsdc.address : tokenEth.address,
+        3000,
+        trader.address,
+        Date.now() + 1000,
+        9e9,
+        0,
+        0,
+      ]);
+    }
+
+    const position = await NonFungiblePositionManager.positions(2);
+    //collect and reinvest fees
+    await autoCompound.connect(user).doMyThing(PositionManager.address);
+    const positionPost = await NonFungiblePositionManager.positions(2);
+    expect(positionPost.liquidity).to.gt(position.liquidity);
+  });
+
+  it('should revert if position Manager does not exist', async function () {
+    await expect(autoCompound.connect(user).doMyThing(Factory.address));
   });
 });

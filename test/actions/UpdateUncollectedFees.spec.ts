@@ -13,7 +13,7 @@ const FixturesConst = require('../shared/fixtures');
 import { tokensFixture, poolFixture, mintSTDAmount } from '../shared/fixtures';
 import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager } from '../../typechain';
 
-describe('CheckUncollectedFees.sol', function () {
+describe('UpdateUncollectedFees.sol', function () {
   //GLOBAL VARIABLE - USE THIS
   let user: any = ethers.getSigners().then(async (signers) => {
     return signers[0];
@@ -33,7 +33,7 @@ describe('CheckUncollectedFees.sol', function () {
 
   let Factory: Contract; // the factory that will deploy all pools
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
-  let checkUncollectedFees: Contract; // collectFees contract
+  let updateUncollectedFees: Contract; // collectFees contract
   let abiCoder: AbiCoder;
   let PositionManager: PositionManager;
   let swapRouter: Contract;
@@ -110,9 +110,9 @@ describe('CheckUncollectedFees.sol', function () {
     await mintAction.deployed();
 
     //deploy CollectFees action
-    const CheckFeesFactory = await ethers.getContractFactory('CheckUncollectedFees');
-    checkUncollectedFees = await CheckFeesFactory.deploy();
-    await checkUncollectedFees.deployed();
+    const UpdateFeesFactory = await ethers.getContractFactory('UpdateUncollectedFees');
+    updateUncollectedFees = await UpdateFeesFactory.deploy();
+    await updateUncollectedFees.deployed();
 
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactoryFactory = await ethers.getContractFactory('PositionManagerFactory');
@@ -161,7 +161,7 @@ describe('CheckUncollectedFees.sol', function () {
     );
   });
 
-  describe('CheckUncollectedFees.doAction()', function () {
+  describe('UpdateUncollectedFees.doAction()', function () {
     it('should collect fees', async function () {
       const fee = 3000;
       const tickLower = -720;
@@ -203,11 +203,10 @@ describe('CheckUncollectedFees.sol', function () {
       // collect fees
       inputBytes = abiCoder.encode(['uint256'], [tokenId]);
 
-      tx = await PositionManager.connect(user).doAction(checkUncollectedFees.address, inputBytes);
+      tx = await PositionManager.connect(user).doAction(updateUncollectedFees.address, inputBytes);
       events = (await tx.wait()).events as any;
-      const checkEvent = events[events.length - 1];
-      console.log(checkEvent);
-      const feesUncollected = abiCoder.decode(['uint256', 'uint256'], checkEvent.args.data);
+      const updateEvent = events[events.length - 1];
+      const feesUncollected = abiCoder.decode(['uint256', 'uint256'], updateEvent.args.data);
 
       expect(feesUncollected[0]).to.gt(0);
       expect(feesUncollected[1]).to.gt(0);
@@ -215,12 +214,12 @@ describe('CheckUncollectedFees.sol', function () {
 
     it('should revert if position does not exist', async function () {
       const inputBytes = abiCoder.encode(['uint256'], [200]);
-      await expect(PositionManager.connect(user).doAction(checkUncollectedFees.address, inputBytes)).to.be.reverted;
+      await expect(PositionManager.connect(user).doAction(updateUncollectedFees.address, inputBytes)).to.be.reverted;
     });
 
     it('should revert if position is not owned by user', async function () {
       const inputBytes = abiCoder.encode(['uint256'], [1]);
-      await expect(PositionManager.connect(user).doAction(checkUncollectedFees.address, inputBytes)).to.be.reverted;
+      await expect(PositionManager.connect(user).doAction(updateUncollectedFees.address, inputBytes)).to.be.reverted;
     });
   });
 });

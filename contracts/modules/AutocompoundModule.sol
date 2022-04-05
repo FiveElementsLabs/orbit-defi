@@ -6,6 +6,7 @@ pragma abicoder v2;
 import '../../interfaces/IPositionManager.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
 import '../helpers/NFTHelper.sol';
+import '../helpers/ERC20Helper.sol';
 
 contract AutoCompoundModule {
     //TODO: setup registry
@@ -14,19 +15,22 @@ contract AutoCompoundModule {
     address collectFeeAddress;
     address increaseLiquidityAddress;
     address decreaseLiquidityAddress;
+    address updateFeesAddress;
 
     constructor(
         address _addressHolder,
         uint256 _feesThreshold,
         address _collectFeeAddress,
         address _increaseLiquidityAddress,
-        address _decreaseLiquidityAddress
+        address _decreaseLiquidityAddress,
+        address _updateFeesAddress
     ) {
         addressHolder = IUniswapAddressHolder(_addressHolder);
         feesThreshold = _feesThreshold;
         collectFeeAddress = _collectFeeAddress;
         increaseLiquidityAddress = _increaseLiquidityAddress;
         decreaseLiquidityAddress = _decreaseLiquidityAddress;
+        updateFeesAddress = _updateFeesAddress;
     }
 
     ///@notice executes our recipe for autocompounding
@@ -42,13 +46,15 @@ contract AutoCompoundModule {
             for (uint256 i = 0; i < positions.length; i++) {
                 if (checkForPosition(positionManagerAddress, positions[i])) {
                     bytes memory data = positionManager.doAction(collectFeeAddress, abi.encode(positions[i]));
+
                     (uint256 amount0Collected, uint256 amount1Collected) = abi.decode(data, (uint256, uint256));
+
                     data = positionManager.doAction(
                         increaseLiquidityAddress,
                         abi.encode(positions[i], amount0Collected, amount1Collected)
                     );
 
-                    //do the output thing
+                    //do we need an output?
                 }
             }
         }
@@ -58,17 +64,11 @@ contract AutoCompoundModule {
     ///@param positionManagerAddress address of the position manager
     ///@param tokenId token id of the position
     ///@return true if the position needs to be collected
-    function checkForPosition(address positionManagerAddress, uint256 tokenId) internal view returns (bool) {
-        bytes memory params = abi.encode(tokenId, 1000, 1000);
-        (bool success, bytes memory data) = positionManagerAddress.staticcall(
-            abi.encodeWithSignature('doAction(address,bytes)', decreaseLiquidityAddress, params)
-        );
-        if (success) {
-            (, uint256 uncollectedFees0, uint256 uncollectedFees1) = abi.decode(data, (uint128, uint256, uint256));
-            return feesNeedToBeReinvested(uncollectedFees0, uncollectedFees1, tokenId);
-        } else {
-            revert('Failed to update liquidity');
-        }
+    function checkForPosition(address positionManagerAddress, uint256 tokenId) internal returns (bool) {
+        bytes memory data = IPositionManager(positionManagerAddress).doAction(updateFeesAddress, abi.encode(tokenId));
+
+        (uint256 uncollectedFees0, uint256 uncollectedFees1) = abi.decode(data, (uint256, uint256));
+        return feesNeedToBeReinvested(uncollectedFees0, uncollectedFees1, tokenId);
     }
 
     ///@notice checks if the fees need to be reinvested

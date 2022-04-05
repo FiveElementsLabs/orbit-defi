@@ -6,7 +6,7 @@ pragma abicoder v2;
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
 
-contract CheckUncollectedFees {
+contract UpdateUncollectedFees {
     IUniswapAddressHolder public addressHolder;
 
     struct InputStruct {
@@ -20,10 +20,10 @@ contract CheckUncollectedFees {
 
     function doAction(bytes memory inputs) public returns (OutputStruct memory outputs) {
         InputStruct memory inputStruct = decodeInputs(inputs);
-        outputs = checkUncollectedFees(inputStruct);
+        outputs = updateUncollectedFees(inputStruct);
     }
 
-    function checkUncollectedFees(InputStruct memory inputs) internal returns (OutputStruct memory outputs) {
+    function updateUncollectedFees(InputStruct memory inputs) internal returns (OutputStruct memory outputs) {
         INonfungiblePositionManager nonfungiblePositionManager = INonfungiblePositionManager(
             addressHolder.nonfungiblePositionManagerAddress()
         );
