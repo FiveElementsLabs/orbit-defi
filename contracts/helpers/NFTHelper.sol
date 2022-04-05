@@ -54,6 +54,29 @@ library NFTHelper {
         (, , token0address, token1address, , , , , , , , ) = nonfungiblePositionManager.positions(tokenId);
     }
 
+    ///@notice get the amount of tokens in a position
+    ///@param tokenId id of the position (NFT)
+    ///@param nonfungiblePositionManager instance of the nonfungiblePositionManager given by the caller (address)
+    ///@param factory address of the UniswapV3Factory
+    ///@return uint256 amount of token0
+    ///@return uint256 amount of token1
+    function _getAmountsfromTokenId(
+        uint256 tokenId,
+        INonfungiblePositionManager nonfungiblePositionManager,
+        address factory
+    ) internal view returns (uint256, uint256) {
+        (, , , , , int24 tickLower, int24 tickUpper, uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(
+            tokenId
+        );
+        return
+            _getAmountFromLiquidity(
+                liquidity,
+                tickLower,
+                tickUpper,
+                _getPoolFromTokenId(tokenId, nonfungiblePositionManager, factory)
+            );
+    }
+
     ///@notice get the amount of tokens from liquidity and tick ranges
     ///@param liquidity amount of liquidity to convert
     ///@param tickLower lower tick range
