@@ -261,12 +261,7 @@ describe('IncreaseLiquidity.sol', function () {
         [poolTokenId, amount0Desired, amount1Desired]
       );
 
-      await expect(
-        PositionManager.connect(user).doAction(
-          '0x0000000000000000000000000000000000000000', // Invalid action address on purpose
-          inputBytes
-        )
-      ).to.be.reverted;
+      await expect(PositionManager.connect(user).doAction(Factory.address, inputBytes)).to.be.reverted;
     });
 
     it('should revert if the pool does not exist', async function () {

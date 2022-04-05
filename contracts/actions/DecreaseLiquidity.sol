@@ -12,8 +12,6 @@ import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 
-import 'hardhat/console.sol';
-
 ///@notice action to decrease liquidity of an NFT position
 contract DecreaseLiquidity {
     IUniswapAddressHolder public uniswapAddressHolder;

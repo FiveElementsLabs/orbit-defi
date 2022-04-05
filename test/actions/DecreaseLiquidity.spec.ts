@@ -259,12 +259,7 @@ describe('DecreaseLiquidity.sol', function () {
       const amount1Desired = '0x' + Math.ceil(tokenOwnedBefore[1] / 2).toString(16);
       const inputBytes = abiCoder.encode(['uint256', 'uint256', 'uint256'], [tokenId, amount0Desired, amount1Desired]);
 
-      await expect(
-        PositionManager.connect(user).doAction(
-          '0x0000000000000000000000000000000000000000', // Invalid action address on purpose
-          inputBytes
-        )
-      ).to.be.reverted;
+      await expect(PositionManager.connect(user).doAction(Factory.address, inputBytes)).to.be.reverted;
     });
 
     it('should revert if the pool does not exist', async function () {
