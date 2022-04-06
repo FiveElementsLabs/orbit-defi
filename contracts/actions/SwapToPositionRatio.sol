@@ -33,8 +33,10 @@ contract SwapToPositionRatio {
     }
 
     ///@notice output the encoder produces
-    ///@param amount1Out token1 amount swapped
+    ///@param amount0Out the new value of amount0
+    ///@param amount1Out the new value of amount1
     struct OutputStruct {
+        uint256 amount0Out;
         uint256 amount1Out;
     }
 
@@ -60,7 +62,6 @@ contract SwapToPositionRatio {
         );
         IUniswapV3Pool pool = IUniswapV3Pool(poolAddress);
         (, int24 tickPool, , , , , ) = pool.slot0();
-
         (uint256 amountToSwap, bool token0AddressIn) = SwapHelper.calcAmountToSwap(
             tickPool,
             inputs.tickLower,
@@ -70,13 +71,20 @@ contract SwapToPositionRatio {
         );
 
         if (amountToSwap != 0) {
-            uint256 amount1Out = swap(
+            uint256 amountSwapped = swap(
                 token0AddressIn ? inputs.token0Address : inputs.token1Address,
                 token0AddressIn ? inputs.token1Address : inputs.token0Address,
                 inputs.fee,
                 amountToSwap
             );
-            outputs = OutputStruct({amount1Out: amount1Out});
+
+            ///@notice return the new amount of the token swapped and the token returned
+            ///@dev token0AddressIn true amount 0 - amountToSwap  ------ amount 1 + amountSwapped
+            ///@dev token0AddressIn false amount 0 + amountSwapped  ------ amount 1 - amountToSwap
+            outputs = OutputStruct({
+                amount0Out: token0AddressIn ? inputs.amount0In - amountToSwap : inputs.amount0In + amountSwapped,
+                amount1Out: token0AddressIn ? inputs.amount1In + amountSwapped : inputs.amount1In - amountToSwap
+            });
         }
     }
 

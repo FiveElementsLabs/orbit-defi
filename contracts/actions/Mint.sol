@@ -85,31 +85,31 @@ contract Mint {
         ERC20Helper._approveToken(
             inputs.token0Address,
             uniswapAddressHolder.nonfungiblePositionManagerAddress(),
-            amount0
+            2**256 - 1
         );
         ERC20Helper._approveToken(
             inputs.token1Address,
             uniswapAddressHolder.nonfungiblePositionManagerAddress(),
-            amount1
+            2**256 - 1
         );
+
+        INonfungiblePositionManager.MintParams memory params = INonfungiblePositionManager.MintParams({
+            token0: inputs.token0Address,
+            token1: inputs.token1Address,
+            fee: inputs.fee,
+            tickLower: inputs.tickLower,
+            tickUpper: inputs.tickUpper,
+            amount0Desired: amount0,
+            amount1Desired: amount1,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(this),
+            deadline: block.timestamp + 1000 //TODO: decide uniform deadlines
+        });
 
         (uint256 tokenId, , uint256 amount0Deposited, uint256 amount1Deposited) = INonfungiblePositionManager(
             uniswapAddressHolder.nonfungiblePositionManagerAddress()
-        ).mint(
-                INonfungiblePositionManager.MintParams({
-                    token0: inputs.token0Address,
-                    token1: inputs.token1Address,
-                    fee: inputs.fee,
-                    tickLower: inputs.tickLower,
-                    tickUpper: inputs.tickUpper,
-                    amount0Desired: amount0,
-                    amount1Desired: amount1,
-                    amount0Min: 0,
-                    amount1Min: 0,
-                    recipient: address(this),
-                    deadline: block.timestamp + 1000 //TODO: decide uniform deadlines
-                })
-            );
+        ).mint(params);
 
         //TODO: push TokenID to positon manager's positions list
         emit DepositUni(msg.sender, tokenId);
