@@ -22,7 +22,7 @@ library NFTHelper {
         address token0,
         address token1,
         uint24 fee
-    ) internal view returns (address) {
+    ) internal pure returns (address) {
         return PoolAddress.computeAddress(factory, PoolAddress.getPoolKey(token0, token1, fee));
     }
 
