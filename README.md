@@ -1,19 +1,53 @@
-# Uni Optimizer
+<h1 align="center">Orbit: Uni Optimizer</h1>
 
-Uniswap v3 Optimizer project.
+<div align="center">
 
-### Hardhat
+![](https://img.shields.io/badge/Solidity-0.7.6-e6e6e6?style=for-the-badge&logo=solidity&logoColor=black) ![](https://img.shields.io/badge/Node.js-16.x-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
 
-This project uses Hardhat . It comes with a sample contract, a test for that contract, a sample script that deploys that contract, and an example of a task implementation, which simply lists the available accounts.
+[![](https://img.shields.io/badge/Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/WVpsDphE) [![](https://img.shields.io/badge/Twitter-1DA1F2?style=for-the-badge&logo=twitter&logoColor=white)](https://twitter.com/OrbitFi) [![](https://img.shields.io/badge/Website-E34F26?style=for-the-badge&logo=Google-chrome&logoColor=white)](https://orbitdefi.finance/) [![](https://img.shields.io/badge/Docs-7B36ED?style=for-the-badge&logo=gitbook&logoColor=white)](https://fiveelementslabs.gitbook.io/orbit/)
 
-Try running some of the following tasks:
+</div>
 
-```shell
-npx hardhat accounts
-npx hardhat compile
-npx hardhat clean
-npx hardhat test
-npx hardhat node
-node scripts/sample-script.js
-npx hardhat help
+> Orbit is a DeFi smart vault Optimizer that automates and rebalances your LP strategies effortlessly, starting with Uniswap V3.
+
+## Installation
+
+```bash
+git clone https://github.com/FiveElementsLabs/uni-optimizer
+cd uni-optimizer
+yarn install
 ```
+
+## Usage
+
+```bash
+npx hardhat compile
+
+# you can compile specific files by selecting the path
+npx hardhat compile ./contracts/PositionManager.sol
+
+npx hardhat node --network localhost
+```
+
+This project uses `hardhat`, so you can find the compiler configurations in `hardhat.config.ts`.
+
+## Test
+
+```bash
+npx hardhat test
+
+# you can test specific files by selecting the path
+npx hardhat test ./test/actions/Mint.spec.tx
+```
+
+## Security
+
+If you find bugs, please [contact us on Discord](https://discord.gg/WVpsDphE).
+
+## Documentation
+
+You can read more about Orbit DeFi on our [documentation website](https://fiveelementslabs.gitbook.io/orbit/).
+
+## Licensing
+
+The primary license for Orbit Vault is the Open Source License [(MIT)](https://spdx.org/licenses/MIT.html).
