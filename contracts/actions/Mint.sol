@@ -99,7 +99,7 @@ contract Mint {
             fee: inputs.fee,
             tickLower: inputs.tickLower,
             tickUpper: inputs.tickUpper,
-            amount0Desired: amount0 - 1000,
+            amount0Desired: amount0,
             amount1Desired: amount1,
             amount0Min: 0,
             amount1Min: 0,
