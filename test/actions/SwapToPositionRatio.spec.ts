@@ -197,9 +197,10 @@ describe('SwapToPositionRatio.sol', function () {
 
       const events = (await tx.wait()).events as any;
       const outputEvent = events[events.length - 1];
-      const amountOut = abiCoder.decode(['uint256'], outputEvent.args[1]);
 
-      expect(amountOut[0].toNumber()).to.equal(99202);
+      const amount0Out = abiCoder.decode(['uint256'], outputEvent.args[1]);
+
+      expect(amount0Out.toString()).to.equal('199202');
     });
 
     it('should revert if the action does not exist', async function () {
