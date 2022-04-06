@@ -3,13 +3,13 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import '../helpers/ERC20Helper.sol';
-import '../helpers/NFTHelper.sol';
-import '../../interfaces/IUniswapAddressHolder.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
+import '../../interfaces/IUniswapAddressHolder.sol';
+import '../helpers/ERC20Helper.sol';
+import '../helpers/NFTHelper.sol';
 
 ///@notice action to increase the liquidity of a V3 position
 contract IncreaseLiquidity {
@@ -59,8 +59,9 @@ contract IncreaseLiquidity {
         IERC20 token0 = IERC20(token0Address);
         IERC20 token1 = IERC20(token1Address);
 
-        token0.transferFrom(msg.sender, address(this), inputs.amount0Desired);
-        token1.transferFrom(msg.sender, address(this), inputs.amount1Desired);
+        //TODO: pulling from msg.sender is not how we want the code to work and returning tokens to msg.sender is not optimal.
+        ERC20Helper._pullTokensIfNeeded(token0Address, msg.sender, inputs.amount0Desired);
+        ERC20Helper._pullTokensIfNeeded(token1Address, msg.sender, inputs.amount1Desired);
 
         INonfungiblePositionManager.IncreaseLiquidityParams memory params = INonfungiblePositionManager
             .IncreaseLiquidityParams({
