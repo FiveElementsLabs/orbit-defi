@@ -59,8 +59,7 @@ contract IncreaseLiquidity {
         IERC20 token0 = IERC20(token0Address);
         IERC20 token1 = IERC20(token1Address);
 
-        //token0.transferFrom(msg.sender, address(this), inputs.amount0Desired);
-        //token1.transferFrom(msg.sender, address(this), inputs.amount1Desired);
+        //TODO: pulling from msg.sender is not how we want the code to work and returning tokens to msg.sender is not optimal.
         ERC20Helper._pullTokensIfNeeded(token0Address, msg.sender, inputs.amount0Desired);
         ERC20Helper._pullTokensIfNeeded(token1Address, msg.sender, inputs.amount1Desired);
 

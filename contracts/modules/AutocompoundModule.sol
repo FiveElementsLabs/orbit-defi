@@ -53,8 +53,6 @@ contract AutoCompoundModule {
                         increaseLiquidityAddress,
                         abi.encode(positions[i], amount0Collected, amount1Collected)
                     );
-
-                    //do we need an output?
                 }
             }
         }
