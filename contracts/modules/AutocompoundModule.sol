@@ -35,7 +35,7 @@ contract AutoCompoundModule {
 
     ///@notice executes our recipe for autocompounding
     ///@param positionManagerAddress address of the position manager
-    function doMyThing(address positionManagerAddress) public {
+    function autoCompoundFees(address positionManagerAddress) public {
         IPositionManager positionManager = IPositionManager(positionManagerAddress);
         //check if autocompound is active
         if (
@@ -44,7 +44,7 @@ contract AutoCompoundModule {
             //TODO: check if autocompound module is active
             uint256[] memory positions = positionManager.getAllUniPosition();
             for (uint256 i = 0; i < positions.length; i++) {
-                if (checkForPosition(positionManagerAddress, positions[i])) {
+                if (checkIfCompoundIsNeeded(positionManagerAddress, positions[i])) {
                     bytes memory data = positionManager.doAction(collectFeeAddress, abi.encode(positions[i]));
 
                     (uint256 amount0Collected, uint256 amount1Collected) = abi.decode(data, (uint256, uint256));
@@ -62,30 +62,19 @@ contract AutoCompoundModule {
     ///@param positionManagerAddress address of the position manager
     ///@param tokenId token id of the position
     ///@return true if the position needs to be collected
-    function checkForPosition(address positionManagerAddress, uint256 tokenId) internal returns (bool) {
+    function checkIfCompoundIsNeeded(address positionManagerAddress, uint256 tokenId) internal returns (bool) {
         bytes memory data = IPositionManager(positionManagerAddress).doAction(updateFeesAddress, abi.encode(tokenId));
 
         (uint256 uncollectedFees0, uint256 uncollectedFees1) = abi.decode(data, (uint256, uint256));
-        return feesNeedToBeReinvested(uncollectedFees0, uncollectedFees1, tokenId);
-    }
-
-    ///@notice checks if the fees need to be reinvested
-    ///@param uncollectedFees0 uncollected fees of the first token
-    ///@param uncollectedFees1 uncollected fees of the second token
-    ///@param tokenId token id of the position
-    ///@return needToBeReinvested if the fees need to be reinvested
-    function feesNeedToBeReinvested(
-        uint256 uncollectedFees0,
-        uint256 uncollectedFees1,
-        uint256 tokenId
-    ) internal view returns (bool needToBeReinvested) {
         (uint256 amount0, uint256 amount1) = NFTHelper._getAmountsfromTokenId(
             tokenId,
             INonfungiblePositionManager(addressHolder.nonfungiblePositionManagerAddress()),
             addressHolder.uniswapV3FactoryAddress()
         );
+
         uint256 token0OverFees = 2**256 - 1;
         uint256 token1OverFees = 2**256 - 1;
+
         if (uncollectedFees0 > 0) {
             token0OverFees = amount0 / uncollectedFees0;
         }

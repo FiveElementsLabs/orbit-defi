@@ -85,14 +85,6 @@ contract DecreaseLiquidity {
                 deadline: block.timestamp + 1000
             });
 
-        /* (address token0Address, address token1Address) = NFTHelper._getTokenAddress(
-            inputs.tokenId,
-            INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress())
-        );
-
-        ERC20Helper._approveToken(token0Address, uniswapAddressHolder.nonfungiblePositionManagerAddress(), 2**256 - 1);
-        ERC20Helper._approveToken(token1Address, uniswapAddressHolder.nonfungiblePositionManagerAddress(), 2**256 - 1); */
-
         (uint256 amount0, uint256 amount1) = INonfungiblePositionManager(
             uniswapAddressHolder.nonfungiblePositionManagerAddress()
         ).decreaseLiquidity(decreaseliquidityparams);
