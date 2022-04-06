@@ -19,6 +19,9 @@ library ERC20Helper {
         address spender,
         uint256 amount
     ) internal {
+        if (IERC20(token).allowance(address(this), spender) >= amount) {
+            return;
+        }
         IERC20(token).approve(spender, amount);
     }
 
