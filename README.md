@@ -10,6 +10,15 @@
 
 > Orbit is a DeFi smart vault Optimizer that automates and rebalances your LP strategies effortlessly, starting with Uniswap V3.
 
+### Let's automate Uniswap V3
+
+- We chose Uniswap v3 as the first protocol to automate. Our choice was driven by:
+  The fact that concentrated liquidity is a new paradigm which is increasingly sucking out volumes from older design AMMs
+- The fact that more protocols are providing concentrated liquidity, such as new Sushi Trident
+- The market size and volumes of concentrated liquidity protocols. We are speaking about 1 trillion annualized volume as we write these docs
+- The number of options and strategies allowed by these protocols and possible integrations to offer
+- The fact that there are several vaults out there that provide strategies on top of Uniswap v3. This strategies are very simple (indeed, replicable with Orbit), costly (fees take about 1-2% of TVL) and overall not effective with respect to just holding the asset. We take a strategy agnostic approach, our aim is increasing return for any liquidity provider in Uni v3, independently from the strategy of choice
+
 ## Installation
 
 ```bash
