@@ -3,13 +3,13 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import '../helpers/ERC20Helper.sol';
-import '../helpers/NFTHelper.sol';
-import '../../interfaces/IUniswapAddressHolder.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
+import '../../interfaces/IUniswapAddressHolder.sol';
+import '../helpers/ERC20Helper.sol';
+import '../helpers/NFTHelper.sol';
 
 ///@notice action to increase the liquidity of a V3 position
 contract IncreaseLiquidity {
