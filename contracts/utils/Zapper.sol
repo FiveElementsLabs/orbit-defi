@@ -36,13 +36,9 @@ contract Zapper {
         require(token0 != token1, 'token0 and token1 cannot be the same');
         (token0, token1) = _reorderTokens(token0, token1);
 
-        address poolAddress = NFTHelper._getPoolAddress(
-            uniswapAddressHolder.uniswapV3FactoryAddress(),
-            token0,
-            token1,
-            fee
-        );
-        (, int24 tickPool, , , , , ) = IUniswapV3Pool(poolAddress).slot0();
+        (, int24 tickPool, , , , , ) = IUniswapV3Pool(
+            NFTHelper._getPoolAddress(uniswapAddressHolder.uniswapV3FactoryAddress(), token0, token1, fee)
+        ).slot0();
         uint256 ratioE18 = SwapHelper.getRatioFromRange(tickPool, tickLower, tickUpper);
         uint256 amountInTo0 = (amountIn * 1e18) / (ratioE18 + 1e18);
         uint256 amountInTo1 = amountIn - amountInTo0;
