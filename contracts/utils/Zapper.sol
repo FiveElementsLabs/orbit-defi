@@ -186,14 +186,3 @@ contract Zapper {
             ).liquidity();
     }
 }
-
-pragma solidity 0.7.6;
-
-import 'hardhat/console.sol';
-
-contract Test {
-    function test(address uno, address due) public view {
-        console.log(uno > due);
-        console.log(due > uno);
-    }
-}
