@@ -123,7 +123,7 @@ contract Zapper {
                 ISwapRouter.ExactInputSingleParams({
                     tokenIn: token0,
                     tokenOut: tokenOut,
-                    fee: fee, //how do we choose fee?
+                    fee: _findBestFee(token0, tokenOut),
                     recipient: address(this),
                     deadline: block.timestamp + 1,
                     amountIn: amount0,
@@ -138,7 +138,7 @@ contract Zapper {
                 ISwapRouter.ExactInputSingleParams({
                     tokenIn: token1,
                     tokenOut: tokenOut,
-                    fee: fee, //how do we choose fee?
+                    fee: _findBestFee(tokenOut, token1),
                     recipient: address(this),
                     deadline: block.timestamp + 1,
                     amountIn: amount1,
@@ -157,6 +157,33 @@ contract Zapper {
         } else {
             return (token0, token1);
         }
+    }
+
+    function _findBestFee(address token0, address token1) internal view returns (uint24 fee) {
+        uint128 bestLiquidity = 0;
+        uint16[4] memory fees = [100, 500, 3000, 10000];
+
+        for (uint8 i = 0; i < 4; i++) {
+            try this.getPoolLiquidity(token0, token1, uint24(fees[i])) returns (uint128 nextLiquidity) {
+                if (nextLiquidity > bestLiquidity) {
+                    bestLiquidity = nextLiquidity;
+                    fee = fees[i];
+                }
+            } catch {
+                // ignore
+            }
+        }
+    }
+
+    function getPoolLiquidity(
+        address token0,
+        address token1,
+        uint24 fee
+    ) public view returns (uint128 liquidity) {
+        return
+            IUniswapV3Pool(
+                NFTHelper._getPoolAddress(uniswapAddressHolder.uniswapV3FactoryAddress(), token0, token1, fee)
+            ).liquidity();
     }
 }
 
