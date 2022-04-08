@@ -3,8 +3,6 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-//import inonfungiblepositionManager
-
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
 import '../helpers/SwapHelper.sol';
@@ -24,6 +22,8 @@ contract Zapper {
         );
     }
 
+    event MintedNFT(uint256 tokenId);
+
     function zapIn(
         address tokenIn,
         uint256 amountIn,
@@ -36,6 +36,8 @@ contract Zapper {
         require(token0 != token1, 'token0 and token1 cannot be the same');
         (token0, token1) = _reorderTokens(token0, token1);
 
+        ERC20Helper._pullTokensIfNeeded(tokenIn, msg.sender, amountIn);
+
         (, int24 tickPool, , , , , ) = IUniswapV3Pool(
             NFTHelper._getPoolAddress(uniswapAddressHolder.uniswapV3FactoryAddress(), token0, token1, fee)
         ).slot0();
@@ -43,6 +45,7 @@ contract Zapper {
         uint256 amountInTo0 = (amountIn * 1e18) / (ratioE18 + 1e18);
         uint256 amountInTo1 = amountIn - amountInTo0;
 
+        ERC20Helper._approveToken(tokenIn, address(swapRouter), amountIn);
         if (tokenIn != token0) {
             amountInTo0 = swapRouter.exactInputSingle(
                 ISwapRouter.ExactInputSingleParams({
@@ -59,6 +62,7 @@ contract Zapper {
         }
 
         if (tokenIn != token1) {
+            ERC20Helper._approveToken(tokenIn, address(swapRouter), amountIn);
             amountInTo1 = swapRouter.exactInputSingle(
                 ISwapRouter.ExactInputSingleParams({
                     tokenIn: tokenIn,
@@ -73,6 +77,8 @@ contract Zapper {
             );
         }
 
+        ERC20Helper._approveToken(token0, address(nonfungiblePositionManager), amountInTo0);
+        ERC20Helper._approveToken(token1, address(nonfungiblePositionManager), amountInTo1);
         (tokenId, , , ) = nonfungiblePositionManager.mint(
             INonfungiblePositionManager.MintParams({
                 token0: token0,
@@ -88,6 +94,7 @@ contract Zapper {
                 deadline: block.timestamp + 1
             })
         );
+        emit MintedNFT(tokenId);
     }
 
     function zapOut(uint256 tokenId, address tokenOut) public returns (uint256 amountOut) {
@@ -115,6 +122,8 @@ contract Zapper {
         nonfungiblePositionManager.burn(tokenId);
 
         if (tokenOut != token0) {
+            ERC20Helper._approveToken(token0, address(swapRouter), amount0);
+
             amount0 = swapRouter.exactInputSingle(
                 ISwapRouter.ExactInputSingleParams({
                     tokenIn: token0,
@@ -130,6 +139,8 @@ contract Zapper {
         }
 
         if (tokenOut != token1) {
+            ERC20Helper._approveToken(token1, address(swapRouter), amount1);
+
             amount1 = swapRouter.exactInputSingle(
                 ISwapRouter.ExactInputSingleParams({
                     tokenIn: token1,
