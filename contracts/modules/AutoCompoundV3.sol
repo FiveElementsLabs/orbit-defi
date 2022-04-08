@@ -8,9 +8,11 @@ import '../../interfaces/IUniswapAddressHolder.sol';
 import '../helpers/NFTHelper.sol';
 import '../helpers/ERC20Helper.sol';
 import '../utils/Storage.sol';
+import '../actions/CollectFees.sol';
+import '../actions/IncreaseLiquidity.sol';
 import 'hardhat/console.sol';
 
-contract AutoCompoundModule {
+contract AutoCompoundModuleV3 {
     //TODO: setup registry
     IUniswapAddressHolder addressHolder;
     uint256 feesThreshold;
@@ -43,16 +45,18 @@ contract AutoCompoundModule {
         console.log('pre module state: ', positionManager.getModuleState(tokenId, address(this)));
         if (positionManager.getModuleState(tokenId, address(this))) {
             console.log('pre check');
-            console.log(checkIfCompoundIsNeeded(address(positionManager), tokenId));
-            if (checkIfCompoundIsNeeded(address(positionManager), tokenId)) {
+            //console.log(checkIfCompoundIsNeeded(address(positionManager), tokenId));
+            if (true) {
                 console.log('pre action');
-                bytes memory data = positionManager.doAction(collectFeeAddress, abi.encode(tokenId));
+                (uint256 amount0Desired, uint256 amount1Desired) = ICollectFees(
+                    0x763e69d24a03c0c8B256e470D9fE9e0753504D07
+                ).collectFees(tokenId);
 
-                (uint256 amount0Collected, uint256 amount1Collected) = abi.decode(data, (uint256, uint256));
                 console.log('pre do action');
-                data = positionManager.doAction(
-                    increaseLiquidityAddress,
-                    abi.encode(tokenId, amount0Collected, amount1Collected)
+                IIncreaseLiquidity(0x763e69d24a03c0c8B256e470D9fE9e0753504D07).increaseLiquidity(
+                    tokenId,
+                    amount0Desired,
+                    amount1Desired
                 );
             }
         }

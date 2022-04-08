@@ -14,9 +14,6 @@ import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.s
 
 ///@notice action to decrease liquidity of an NFT position
 contract DecreaseLiquidity {
-    IUniswapAddressHolder public uniswapAddressHolder;
-    address public owner;
-
     ///@notice input the decoder expects
     ///@param tokenId the tokenId of the position
     ///@param amount0Desired the amount of token0 liquidity desired
@@ -40,7 +37,7 @@ contract DecreaseLiquidity {
     ///@notice executes the action of the contract (decrease liquidity), should be the only function visible from the outside
     ///@param inputs input bytes to be decoded according to InputStruct
     ///@return outputs outputs encoded according OutputStruct
-    function doAction(bytes memory inputs) public returns (OutputStruct memory outputs) {
+    function decreaseLiquidityV1(bytes memory inputs) public returns (OutputStruct memory outputs) {
         InputStruct memory inputsStruct = decodeInputs(inputs);
         outputs = decreaseLiquidity(inputsStruct);
     }
@@ -49,6 +46,8 @@ contract DecreaseLiquidity {
     ///@param inputs input parameters for minting
     ///@param outputs output parameters
     function decreaseLiquidity(InputStruct memory inputs) internal returns (OutputStruct memory outputs) {
+        IUniswapAddressHolder uniswapAddressHolder;
+        address owner;
         (, , , , , int24 tickLower, int24 tickUpper, uint128 liquidity, , , , ) = INonfungiblePositionManager(
             uniswapAddressHolder.nonfungiblePositionManagerAddress()
         ).positions(inputs.tokenId);

@@ -17,6 +17,9 @@ import './Registry.sol';
 import '../interfaces/IPositionManager.sol';
 import './actions/BaseAction.sol';
 import '../interfaces/IUniswapAddressHolder.sol';
+import './utils/Storage.sol';
+import '../interfaces/IDiamondCut.sol';
+import 'hardhat/console.sol';
 
 /**
  * @title   Position Manager
@@ -29,7 +32,23 @@ import '../interfaces/IUniswapAddressHolder.sol';
 
 contract PositionManager is IPositionManager, ERC721Holder {
     //################### What should remain inside the PositionManager after refactoring ######################
-    IUniswapAddressHolder public uniswapAddressHolder;
+
+    constructor(address _owner, address _diamondCutFacet) payable {
+        PositionManagerStorage.setContractOwner(_owner);
+
+        // Add the diamondCut external function from the diamondCutFacet
+        IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](1);
+        bytes4[] memory functionSelectors = new bytes4[](1);
+        functionSelectors[0] = IDiamondCut.diamondCut.selector;
+        cut[0] = IDiamondCut.FacetCut({
+            facetAddress: _diamondCutFacet,
+            action: IDiamondCut.FacetCutAction.Add,
+            functionSelectors: functionSelectors
+        });
+        PositionManagerStorage.diamondCut(cut, address(0), '');
+    }
+
+    mapping(uint256 => mapping(address => bool)) public activatedModules;
 
     ///@notice emitted when a position is created
     ///@param from address of the user
@@ -47,12 +66,11 @@ contract PositionManager is IPositionManager, ERC721Holder {
     event Output(bool success, bytes data);
 
     uint256[] private uniswapNFTs;
-    address public immutable owner;
 
-    constructor(address userAddress, address _uniswapAddressHolder) {
-        owner = userAddress;
-        uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
-        gov = msg.sender; //TODO: hardcode in another contract
+    function init(address _owner, address _uniswapAddressHolder) public {
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+        Storage.owner = _owner;
+        Storage.uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
     }
 
     //TODO: refactor of user parameters
@@ -65,13 +83,11 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@param from address of the user
     ///@param tokenIds IDs of deposited tokens
     function depositUniNft(address from, uint256[] calldata tokenIds) external override onlyOwner {
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+
         for (uint32 i = 0; i < tokenIds.length; i++) {
-            INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).safeTransferFrom(
-                from,
-                address(this),
-                tokenIds[i],
-                '0x0'
-            );
+            INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress())
+                .safeTransferFrom(from, address(this), tokenIds[i], '0x0');
             uniswapNFTs.push(tokenIds[i]);
             emit DepositUni(from, tokenIds[i]);
         }
@@ -81,6 +97,8 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@param to address of the user
     ///@param tokenId ID of withdrawn token
     function withdrawUniNft(address to, uint256 tokenId) public override onlyOwner {
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+
         uint256 index = uniswapNFTs.length;
         for (uint256 i = 0; i < uniswapNFTs.length; i++) {
             if (uniswapNFTs[i] == tokenId) {
@@ -89,7 +107,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
             }
         }
         require(index < uniswapNFTs.length, 'token ID not found!');
-        INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).safeTransferFrom(
+        INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).safeTransferFrom(
             address(this),
             to,
             tokenId,
@@ -123,15 +141,31 @@ contract PositionManager is IPositionManager, ERC721Holder {
         return uniswapNFTsMemory;
     }
 
+    function toggleModule(
+        uint256 tokenId,
+        address moduleAddress,
+        bool activated
+    ) external override onlyOwner {
+        activatedModules[tokenId][moduleAddress] = activated;
+    }
+
+    function getModuleState(uint256 tokenId, address moduleAddress) external view override returns (bool) {
+        return activatedModules[tokenId][moduleAddress];
+    }
+
     ///@notice modifier to check if the msg.sender is the owner
     modifier onlyOwner() {
-        require(msg.sender == owner, 'Only owner');
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+
+        require(msg.sender == Storage.owner, 'Only owner');
         _;
     }
 
     ///@notice modifier to check if the msg.sender is the owner or a module
     modifier onlyOwnerOrModule() {
-        require((msg.sender == owner) || (registry.isApproved(msg.sender)), 'Only owner or module');
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+
+        require((msg.sender == Storage.owner), 'Only owner or module');
         _;
     }
 
@@ -151,11 +185,40 @@ contract PositionManager is IPositionManager, ERC721Holder {
         }
     }
 
+    fallback() external payable {
+        StorageStruct storage Storage;
+        bytes32 position = PositionManagerStorage.key;
+        ///@dev get diamond storage position
+        assembly {
+            Storage.slot := position
+        }
+        address facet = Storage.selectorToFacetAndPosition[msg.sig].facetAddress;
+        require(facet != address(0), 'Diamond: Function does not exist');
+        ///@dev Execute external function from facet using delegatecall and return any value.
+
+        assembly {
+            // copy function selector and any arguments
+            calldatacopy(0, 0, calldatasize())
+            // execute function call using the facet
+            let result := delegatecall(gas(), facet, 0, calldatasize(), 0, 0)
+            // get any return value
+            returndatacopy(0, 0, returndatasize())
+            // return any return value or error back to the caller
+            switch result
+            case 0 {
+                revert(0, returndatasize())
+            }
+            default {
+                return(0, returndatasize())
+            }
+        }
+    }
+
     //###########################################################################################
 
     //################## What should be deleted after refactoring ###############################
 
-    Registry public immutable registry = Registry(0x59b670e9fA9D0A427751Af201D676719a970857b);
+    /*   Registry public immutable registry = Registry(0x59b670e9fA9D0A427751Af201D676719a970857b);
     address public immutable gov;
 
     // details about the uniswap position
@@ -187,9 +250,6 @@ contract PositionManager is IPositionManager, ERC721Holder {
         }
     }
 
-    /**
-     * @notice mint a univ3 position and deposit in manager
-     */
     function mintAndDeposit(
         INonfungiblePositionManager.MintParams[] memory mintParams,
         bool _usingPositionManagerBalance
@@ -224,9 +284,6 @@ contract PositionManager is IPositionManager, ERC721Holder {
         }
     }
 
-    /**
-     * @notice get balance token0 and token1 in a position
-     */
     function getPositionBalance(uint256 tokenId) external view override returns (uint256, uint256) {
         (, , , , , int24 tickLower, int24 tickUpper, uint128 liquidity, , , , ) = INonfungiblePositionManager(
             uniswapAddressHolder.nonfungiblePositionManagerAddress()
@@ -244,19 +301,13 @@ contract PositionManager is IPositionManager, ERC721Holder {
             );
     }
 
-    /**
-     * @notice get fee of token0 and token1 in a position
-     */
     function getPositionFee(uint256 tokenId) external view override returns (uint128 tokensOwed0, uint128 tokensOwed1) {
         (, , , , , , , , , , tokensOwed0, tokensOwed1) = INonfungiblePositionManager(
             uniswapAddressHolder.nonfungiblePositionManagerAddress()
         ).positions(tokenId);
     }
 
-    /**
-     * @notice for fees to be updated need to interact with NFT
-     * not public!
-     */
+
     function updateUncollectedFees(uint256 tokenId) public override onlyOwnerOrModule {
         INonfungiblePositionManager.DecreaseLiquidityParams memory params = INonfungiblePositionManager
             .DecreaseLiquidityParams({
@@ -457,7 +508,6 @@ contract PositionManager is IPositionManager, ERC721Holder {
         }
     }
 
-    /*Get pool address from token ID*/
     function getPoolFromTokenId(uint256 tokenId) public view returns (IUniswapV3Pool) {
         (, , address token0, address token1, uint24 fee, , , , , , , ) = INonfungiblePositionManager(
             uniswapAddressHolder.nonfungiblePositionManagerAddress()
@@ -481,5 +531,5 @@ contract PositionManager is IPositionManager, ERC721Holder {
         ).positions(tokenId);
         token0 = IERC20(token0address);
         token1 = IERC20(token1address);
-    }
+    } */
 }

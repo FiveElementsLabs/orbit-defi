@@ -5,10 +5,9 @@ pragma abicoder v2;
 
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
+import '../utils/Storage.sol';
 
 contract UpdateUncollectedFees {
-    IUniswapAddressHolder public addressHolder;
-
     struct InputStruct {
         uint256 tokenId;
     }
@@ -18,14 +17,16 @@ contract UpdateUncollectedFees {
         uint256 uncollected1Fees;
     }
 
-    function doAction(bytes memory inputs) public returns (OutputStruct memory outputs) {
+    function updateUncollectedFeesV1(bytes memory inputs) public returns (OutputStruct memory outputs) {
         InputStruct memory inputStruct = decodeInputs(inputs);
         outputs = updateUncollectedFees(inputStruct);
     }
 
     function updateUncollectedFees(InputStruct memory inputs) internal returns (OutputStruct memory outputs) {
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+
         INonfungiblePositionManager nonfungiblePositionManager = INonfungiblePositionManager(
-            addressHolder.nonfungiblePositionManagerAddress()
+            Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()
         );
 
         nonfungiblePositionManager.decreaseLiquidity(
