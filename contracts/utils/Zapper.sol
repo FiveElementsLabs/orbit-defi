@@ -97,15 +97,17 @@ contract Zapper {
         emit MintedNFT(tokenId);
     }
 
-    function zapOut(uint256 tokenId, address tokenOut) public returns (uint256 amountOut) {
+    function zapOut(uint256 tokenId, address tokenOut) public {
         (address token0, address token1) = NFTHelper._getTokenAddress(tokenId, nonfungiblePositionManager);
+
+        (, , , , , , , uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(tokenId);
 
         nonfungiblePositionManager.decreaseLiquidity(
             INonfungiblePositionManager.DecreaseLiquidityParams({
                 tokenId: tokenId,
-                liquidity: 2**128 - 1,
+                liquidity: liquidity,
                 amount0Min: 0,
-                amount1Min: 1,
+                amount1Min: 0,
                 deadline: block.timestamp + 1
             })
         );
@@ -113,7 +115,7 @@ contract Zapper {
         (uint256 amount0, uint256 amount1) = nonfungiblePositionManager.collect(
             INonfungiblePositionManager.CollectParams({
                 tokenId: tokenId,
-                recipient: msg.sender,
+                recipient: address(this),
                 amount0Max: 2**128 - 1,
                 amount1Max: 2**128 - 1
             })
@@ -155,6 +157,7 @@ contract Zapper {
             );
         }
 
+        ERC20Helper._approveToken(tokenOut, address(this), amount0 + amount1);
         ERC20Helper._withdrawTokens(tokenOut, msg.sender, amount0 + amount1);
     }
 

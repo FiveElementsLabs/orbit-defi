@@ -59,12 +59,12 @@ describe('Zapper.sol', function () {
     PoolEthUsdc500 = (await poolFixture(tokenEth, tokenUsdc, 500, Factory)).pool;
     PoolEthDai500 = (await poolFixture(tokenEth, tokenDai, 500, Factory)).pool;
     PoolUsdcDai500 = (await poolFixture(tokenDai, tokenUsdc, 500, Factory)).pool;
-    console.log('pools deployed');
+
     //mint 1e30 token, you can call with arbitrary amount
     await mintSTDAmount(tokenEth);
     await mintSTDAmount(tokenUsdc);
     await mintSTDAmount(tokenDai);
-    console.log('tokens minted');
+
     //deploy NonFungiblePositionManagerDescriptor and NonFungiblePositionManager
     const NonFungiblePositionManagerDescriptorFactory = new ContractFactory(
       NonFungiblePositionManagerDescriptorjson['abi'],
@@ -88,7 +88,7 @@ describe('Zapper.sol', function () {
       NonFungiblePositionManagerDescriptor.address
     )) as INonfungiblePositionManager;
     await NonFungiblePositionManager.deployed();
-    console.log('NonFungiblePositionManager deployed');
+
     //deploy router
     const SwapRouterFactory = new ContractFactory(SwapRouterjson['abi'], SwapRouterjson['bytecode'], user);
     SwapRouter = await SwapRouterFactory.deploy(Factory.address, tokenEth.address);
@@ -102,12 +102,12 @@ describe('Zapper.sol', function () {
       SwapRouter.address
     );
     await uniswapAddressHolder.deployed();
-    console.log('uniswapAddressHolder deployed');
+
     //deploy zapper contract
     const zapperFactory = await ethers.getContractFactory('Zapper');
     zapper = (await zapperFactory.deploy(uniswapAddressHolder.address)) as Zapper;
     await zapper.deployed();
-    console.log('zapper deployed', zapper.address);
+
     //APPROVE
 
     //recipient: NonFungiblePositionManager - spender: liquidityProvider
@@ -123,7 +123,7 @@ describe('Zapper.sol', function () {
     //recipient: zapper - spender: user
     await tokenEth.connect(user).approve(zapper.address, ethers.utils.parseEther('100000000000000'));
     await tokenUsdc.connect(user).approve(zapper.address, ethers.utils.parseEther('100000000000000'));
-    console.log('APPROVED');
+
     // give pools some liquidity
     await NonFungiblePositionManager.connect(liquidityProvider).mint(
       {
@@ -141,7 +141,7 @@ describe('Zapper.sol', function () {
       },
       { gasLimit: 670000 }
     );
-    console.log('ethusdc3000 minted');
+
     await NonFungiblePositionManager.connect(liquidityProvider).mint(
       {
         token0: tokenEth.address,
@@ -158,7 +158,7 @@ describe('Zapper.sol', function () {
       },
       { gasLimit: 670000 }
     );
-    console.log('ethdai3000 minted');
+
     await NonFungiblePositionManager.connect(liquidityProvider).mint(
       {
         token0: tokenUsdc.address,
@@ -175,7 +175,7 @@ describe('Zapper.sol', function () {
       },
       { gasLimit: 670000 }
     );
-    console.log('daiusdc3000 minted');
+
     await NonFungiblePositionManager.connect(liquidityProvider).mint(
       {
         token0: tokenEth.address,
@@ -192,7 +192,7 @@ describe('Zapper.sol', function () {
       },
       { gasLimit: 670000 }
     );
-    console.log('ethusdc500 minted');
+
     await NonFungiblePositionManager.connect(liquidityProvider).mint(
       {
         token0: tokenEth.address,
@@ -209,7 +209,7 @@ describe('Zapper.sol', function () {
       },
       { gasLimit: 670000 }
     );
-    console.log('ethdai500 minted');
+
     await NonFungiblePositionManager.connect(liquidityProvider).mint(
       {
         token0: tokenUsdc.address,
@@ -226,7 +226,6 @@ describe('Zapper.sol', function () {
       },
       { gasLimit: 670000 }
     );
-    console.log('MINTED');
   });
 
   describe('Zapper.zapIn()', function () {
@@ -252,6 +251,110 @@ describe('Zapper.sol', function () {
       expect(position.tickLower).to.be.equal(tickLower);
       expect(position.tickUpper).to.be.equal(tickUpper);
       expect(position.liquidity).to.gt(0);
+    });
+
+    it('should correclty zap in if one of the two tokens is tokenIn', async function () {
+      const amountIn = 1e8;
+      const fee = 3000;
+      const tickLower = 0 - 60 * 1000;
+      const tickUpper = 0 + 60 * 1000;
+      const zapInTx = await zapper
+        .connect(user)
+        .zapIn(tokenEth.address, amountIn, tokenEth.address, tokenUsdc.address, tickLower, tickUpper, fee);
+
+      const events: any = (await zapInTx.wait()).events;
+      const tokenId = await events[events.length - 1].args.tokenId.toNumber();
+
+      expect(user.address).to.be.equal(await NonFungiblePositionManager.ownerOf(tokenId));
+
+      const position = await NonFungiblePositionManager.positions(tokenId);
+
+      expect(position.token0).to.be.equal(tokenEth.address);
+      expect(position.token1).to.be.equal(tokenUsdc.address);
+      expect(position.fee).to.be.equal(fee);
+      expect(position.tickLower).to.be.equal(tickLower);
+      expect(position.tickUpper).to.be.equal(tickUpper);
+      expect(position.liquidity).to.gt(0);
+    });
+
+    it('should revert if pool does not exist', async function () {
+      const amountIn = 1e8;
+      const fee = 100;
+      const tickLower = 0 - 60 * 1000;
+      const tickUpper = 0 + 60 * 1000;
+      await expect(
+        zapper
+          .connect(user)
+          .zapIn(tokenEth.address, amountIn, tokenEth.address, tokenUsdc.address, tickLower, tickUpper, fee)
+      ).to.be.reverted;
+    });
+  });
+
+  describe('Zapper.zapOut()', function () {
+    it('should correctly exit a position', async function () {
+      await tokenEth
+        .connect(user)
+        .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
+      await tokenUsdc
+        .connect(user)
+        .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
+      const mintTx = await NonFungiblePositionManager.connect(user).mint({
+        token0: tokenEth.address,
+        token1: tokenUsdc.address,
+        fee: 3000,
+        tickLower: 0 - 60 * 1000,
+        tickUpper: 0 + 60 * 1000,
+        amount0Desired: 1e6,
+        amount1Desired: 1e6,
+        amount0Min: 0,
+        amount1Min: 0,
+        recipient: user.address,
+        deadline: Date.now() + 1000,
+      });
+      const mintReceipt: any = await mintTx.wait();
+      const tokenId = mintReceipt.events[mintReceipt.events.length - 1].args.tokenId.toNumber();
+      const daiBalance = await tokenDai.balanceOf(user.address);
+      await NonFungiblePositionManager.connect(user).setApprovalForAll(zapper.address, true);
+
+      await zapper.connect(user).zapOut(tokenId, tokenDai.address);
+
+      await expect(NonFungiblePositionManager.ownerOf(tokenId)).to.be.reverted;
+      expect(await tokenDai.balanceOf(user.address)).to.be.gt(daiBalance);
+    });
+
+    it('should correctly exit a position even if tokenOut is one of the two tokens', async function () {
+      await tokenEth
+        .connect(user)
+        .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
+      await tokenUsdc
+        .connect(user)
+        .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
+      const mintTx = await NonFungiblePositionManager.connect(user).mint({
+        token0: tokenEth.address,
+        token1: tokenUsdc.address,
+        fee: 3000,
+        tickLower: 0 - 60 * 1000,
+        tickUpper: 0 + 60 * 1000,
+        amount0Desired: 1e6,
+        amount1Desired: 1e6,
+        amount0Min: 0,
+        amount1Min: 0,
+        recipient: user.address,
+        deadline: Date.now() + 1000,
+      });
+      const mintReceipt: any = await mintTx.wait();
+      const tokenId = mintReceipt.events[mintReceipt.events.length - 1].args.tokenId.toNumber();
+      const usdcBalance = await tokenUsdc.balanceOf(user.address);
+      await NonFungiblePositionManager.connect(user).setApprovalForAll(zapper.address, true);
+
+      await zapper.connect(user).zapOut(tokenId, tokenUsdc.address);
+
+      await expect(NonFungiblePositionManager.ownerOf(tokenId)).to.be.reverted;
+      expect(await tokenUsdc.balanceOf(user.address)).to.be.gt(usdcBalance);
+    });
+
+    it('should revert user is not owner of position', async function () {
+      expect(zapper.connect(user).zapOut(1, tokenDai.address)).to.be.reverted;
     });
   });
 });
