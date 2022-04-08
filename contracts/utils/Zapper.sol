@@ -203,8 +203,12 @@ contract Zapper {
                     fee = fees[i];
                 }
             } catch {
-                // ignore
+                //pass
             }
+        }
+
+        if (bestLiquidity == 0) {
+            revert('No pool found');
         }
     }
 

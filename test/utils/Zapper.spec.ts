@@ -21,7 +21,7 @@ describe('Zapper.sol', function () {
   });
 
   //all the token used globally
-  let tokenEth: MockToken, tokenUsdc: MockToken, tokenDai: MockToken;
+  let tokenEth: MockToken, tokenUsdc: MockToken, tokenDai: MockToken, tokenUsdt: MockToken;
 
   //all the pools used globally
   let PoolEthUsdc3000: IUniswapV3Pool, PoolEthDai3000: IUniswapV3Pool, PoolUsdcDai3000: IUniswapV3Pool;
@@ -42,6 +42,7 @@ describe('Zapper.sol', function () {
     tokenEth = (await tokensFixture('ETH', 18)).tokenFixture;
     tokenDai = (await tokensFixture('DAI', 18)).tokenFixture;
     tokenUsdc = (await tokensFixture('USDC', 6)).tokenFixture;
+    tokenUsdt = (await tokensFixture('USDT', 18)).tokenFixture;
 
     //deploy factory, used for pools
     const uniswapFactoryFactory = new ContractFactory(
@@ -353,8 +354,33 @@ describe('Zapper.sol', function () {
       expect(await tokenUsdc.balanceOf(user.address)).to.be.gt(usdcBalance);
     });
 
-    it('should revert user is not owner of position', async function () {
+    it('should revert if user is not owner of position', async function () {
       expect(zapper.connect(user).zapOut(1, tokenDai.address)).to.be.reverted;
+    });
+
+    it('should revert if pool does not exist', async function () {
+      await tokenEth
+        .connect(user)
+        .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
+      await tokenUsdc
+        .connect(user)
+        .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
+      const mintTx = await NonFungiblePositionManager.connect(user).mint({
+        token0: tokenEth.address,
+        token1: tokenUsdc.address,
+        fee: 3000,
+        tickLower: 0 - 60 * 1000,
+        tickUpper: 0 + 60 * 1000,
+        amount0Desired: 1e6,
+        amount1Desired: 1e6,
+        amount0Min: 0,
+        amount1Min: 0,
+        recipient: user.address,
+        deadline: Date.now() + 1000,
+      });
+      const mintReceipt: any = await mintTx.wait();
+      const tokenId = mintReceipt.events[mintReceipt.events.length - 1].args.tokenId.toNumber();
+      expect(zapper.connect(user).zapOut(tokenId, tokenUsdt.address)).to.be.reverted;
     });
   });
 });
