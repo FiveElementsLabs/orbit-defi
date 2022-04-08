@@ -22,8 +22,19 @@ contract Zapper {
         );
     }
 
+    ///@notice emitted when a NFT is minted
+    ///@param tokenId the id of the minted NFT
     event MintedNFT(uint256 tokenId);
 
+    ///@notice mints a uni NFT with a single input token
+    ///@param tokenIn address of input token
+    ///@param amountIn amount of input token
+    ///@param token0 address token0 of the pool
+    ///@param token1 address token1 of the pool
+    ///@param tickLower lower bound of desired position
+    ///@param tickUpper upper bound of desired position
+    ///@param fee fee tier of the pool
+    ///@return tokenId of minted NFT
     function zapIn(
         address tokenIn,
         uint256 amountIn,
@@ -97,6 +108,9 @@ contract Zapper {
         emit MintedNFT(tokenId);
     }
 
+    ///@notice burns a uni NFT with a single output token
+    ///@param tokenId id of the NFT to burn
+    ///@param tokenOut address of output token
     function zapOut(uint256 tokenId, address tokenOut) public {
         (address token0, address token1) = NFTHelper._getTokenAddress(tokenId, nonfungiblePositionManager);
 
@@ -161,6 +175,11 @@ contract Zapper {
         ERC20Helper._withdrawTokens(tokenOut, msg.sender, amount0 + amount1);
     }
 
+    ///@notice orders token addresses
+    ///@param token0 address of first token
+    ///@param token1 address of second token
+    ///@return address ordered token address
+    ///@return address ordered token address
     function _reorderTokens(address token0, address token1) internal pure returns (address, address) {
         if (token0 > token1) {
             return (token1, token0);
@@ -169,6 +188,10 @@ contract Zapper {
         }
     }
 
+    ///@notice finds the best fee tier on which to perform a swap
+    ///@param token0 address of first token
+    ///@param token1 address of second token
+    ///@return fee suggested fee tier
     function _findBestFee(address token0, address token1) internal view returns (uint24 fee) {
         uint128 bestLiquidity = 0;
         uint16[4] memory fees = [100, 500, 3000, 10000];
@@ -185,6 +208,11 @@ contract Zapper {
         }
     }
 
+    ///@notice wrapper of getPoolLiquidity to use try/catch statement
+    ///@param token0 address of first token
+    ///@param token1 address of second token
+    ///@param fee pool fee tier
+    ///@return liquidity of the pool
     function getPoolLiquidity(
         address token0,
         address token1,
