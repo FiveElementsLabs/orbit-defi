@@ -26,7 +26,7 @@ contract Zapper {
     ///@param tokenId the id of the minted NFT
     event MintedNFT(uint256 tokenId);
 
-    ///@notice mints a uni NFT with a single input token
+    ///@notice mints a uni NFT with a single input token, the token in input can be different from the two position tokens
     ///@param tokenIn address of input token
     ///@param amountIn amount of input token
     ///@param token0 address token0 of the pool
@@ -57,6 +57,7 @@ contract Zapper {
         uint256 amountInTo1 = amountIn - amountInTo0;
 
         ERC20Helper._approveToken(tokenIn, address(swapRouter), amountIn);
+        //if token in input is not the token0 of the pool, we need to swap it
         if (tokenIn != token0) {
             amountInTo0 = swapRouter.exactInputSingle(
                 ISwapRouter.ExactInputSingleParams({
@@ -72,6 +73,7 @@ contract Zapper {
             );
         }
 
+        //if token in input is not the token1 of the pool, we need to swap it
         if (tokenIn != token1) {
             ERC20Helper._approveToken(tokenIn, address(swapRouter), amountIn);
             amountInTo1 = swapRouter.exactInputSingle(
@@ -108,7 +110,7 @@ contract Zapper {
         emit MintedNFT(tokenId);
     }
 
-    ///@notice burns a uni NFT with a single output token
+    ///@notice burns a uni NFT with a single output token, the output token can be different from the two position tokens
     ///@param tokenId id of the NFT to burn
     ///@param tokenOut address of output token
     function zapOut(uint256 tokenId, address tokenOut) public {
@@ -137,6 +139,7 @@ contract Zapper {
 
         nonfungiblePositionManager.burn(tokenId);
 
+        //if token in output is not the token0 of the pool, we need to swap it
         if (tokenOut != token0) {
             ERC20Helper._approveToken(token0, address(swapRouter), amount0);
 
@@ -154,6 +157,7 @@ contract Zapper {
             );
         }
 
+        //if token in output is not the token1 of the pool, we need to swap it
         if (tokenOut != token1) {
             ERC20Helper._approveToken(token1, address(swapRouter), amount1);
 
@@ -176,10 +180,10 @@ contract Zapper {
     }
 
     ///@notice orders token addresses
-    ///@param token0 address of first token
-    ///@param token1 address of second token
-    ///@return address ordered token address
-    ///@return address ordered token address
+    ///@param token0 address of token0
+    ///@param token1 address of token1
+    ///@return address first token address
+    ///@return address second token address
     function _reorderTokens(address token0, address token1) internal pure returns (address, address) {
         if (token0 > token1) {
             return (token1, token0);
