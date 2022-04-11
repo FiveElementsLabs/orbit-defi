@@ -9,6 +9,7 @@ import '../helpers/SwapHelper.sol';
 import '../helpers/NFTHelper.sol';
 import '../helpers/ERC20Helper.sol';
 
+///@notice Zapper is a utility contract that allows user to enter/exit Uniswap V3 position with a single token
 contract Zapper {
     IUniswapAddressHolder public uniswapAddressHolder;
     ISwapRouter swapRouter;
