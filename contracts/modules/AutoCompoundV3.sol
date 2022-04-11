@@ -42,17 +42,13 @@ contract AutoCompoundModuleV3 {
     ///@param tokenId id of the token to autocompound
     function autoCompoundFees(IPositionManager positionManager, uint256 tokenId) public {
         ///@devcheck if autocompound is active
-        console.log('pre module state: ', positionManager.getModuleState(tokenId, address(this)));
         if (positionManager.getModuleState(tokenId, address(this))) {
-            console.log('pre check');
             //console.log(checkIfCompoundIsNeeded(address(positionManager), tokenId));
             if (true) {
-                console.log('pre action');
                 (uint256 amount0Desired, uint256 amount1Desired) = ICollectFees(
                     0x763e69d24a03c0c8B256e470D9fE9e0753504D07
                 ).collectFees(tokenId);
 
-                console.log('pre do action');
                 IIncreaseLiquidity(0x763e69d24a03c0c8B256e470D9fE9e0753504D07).increaseLiquidity(
                     tokenId,
                     amount0Desired,
@@ -67,7 +63,6 @@ contract AutoCompoundModuleV3 {
     ///@param tokenId token id of the position
     ///@return true if the position needs to be collected
     function checkIfCompoundIsNeeded(address positionManagerAddress, uint256 tokenId) internal returns (bool) {
-        console.log('inside check');
         bytes memory data = IPositionManager(positionManagerAddress).doAction(updateFeesAddress, abi.encode(tokenId));
 
         (uint256 uncollectedFees0, uint256 uncollectedFees1) = abi.decode(data, (uint256, uint256));

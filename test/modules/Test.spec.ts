@@ -151,8 +151,6 @@ describe('AutoCompoundModule.sol', function () {
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
 
-    console.log('PositionManager address: ', PositionManager.address);
-
     //deploy actions needed for Autocompound
     const collectFeesActionFactory = await ethers.getContractFactory('CollectFees');
     collectFeesAction = await collectFeesActionFactory.deploy();
@@ -244,7 +242,11 @@ describe('AutoCompoundModule.sol', function () {
       },
       { gasLimit: 670000 }
     );
-    await PositionManager.connect(user).depositUniNft(user.address, [2]);
+
+    const receipt: any = await mintTx.wait();
+    tokenId = receipt.events[receipt.events.length - 1].args.tokenId;
+
+    await PositionManager.connect(user).depositUniNft(user.address, [tokenId]);
 
     // user approve autocompound module
     await PositionManager.toggleModule(2, autoCompound.address, true);
@@ -283,9 +285,7 @@ describe('AutoCompoundModule.sol', function () {
   // PM 0x763e69d24a03c0c8B256e470D9fE9e0753504D07
   // cutfacet 0x322813Fd9A801c5507c9de605d63CEA4f2CE6c44
 
-  it('should call and action', async function () {
-    console.log('autoCompound');
-
+  it('should call autocompound action', async function () {
     //do some trades to accrue fees
     for (let i = 0; i < 20; i++) {
       await SwapRouter.connect(trader).exactInputSingle([
@@ -300,7 +300,6 @@ describe('AutoCompoundModule.sol', function () {
       ]);
     }
     //autoCompound.autoCompoundFees
-    const res = await autoCompound.autoCompoundFees('0x763e69d24a03c0c8B256e470D9fE9e0753504D07', 2);
-    console.log(res);
+    const res = await autoCompound.autoCompoundFees(PositionManager.address, tokenId);
   });
 });
