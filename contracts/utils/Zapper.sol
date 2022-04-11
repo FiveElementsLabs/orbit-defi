@@ -140,44 +140,37 @@ contract Zapper {
 
         nonfungiblePositionManager.burn(tokenId);
 
-        //if token in output is not the token0 of the pool, we need to swap it
         if (tokenOut != token0) {
-            ERC20Helper._approveToken(token0, address(swapRouter), amount0);
-
-            amount0 = swapRouter.exactInputSingle(
-                ISwapRouter.ExactInputSingleParams({
-                    tokenIn: token0,
-                    tokenOut: tokenOut,
-                    fee: _findBestFee(token0, tokenOut),
-                    recipient: address(this),
-                    deadline: block.timestamp + 1,
-                    amountIn: amount0,
-                    amountOutMinimum: 1,
-                    sqrtPriceLimitX96: 0
-                })
-            );
+            amount0 = _swapToTokenOut(tokenOut, token0, amount0);
         }
 
-        //if token in output is not the token1 of the pool, we need to swap it
         if (tokenOut != token1) {
-            ERC20Helper._approveToken(token1, address(swapRouter), amount1);
-
-            amount1 = swapRouter.exactInputSingle(
-                ISwapRouter.ExactInputSingleParams({
-                    tokenIn: token1,
-                    tokenOut: tokenOut,
-                    fee: _findBestFee(tokenOut, token1),
-                    recipient: address(this),
-                    deadline: block.timestamp + 1,
-                    amountIn: amount1,
-                    amountOutMinimum: 1,
-                    sqrtPriceLimitX96: 0
-                })
-            );
+            amount1 = _swapToTokenOut(tokenOut, token1, amount1);
         }
 
         ERC20Helper._approveToken(tokenOut, address(this), amount0 + amount1);
         ERC20Helper._withdrawTokens(tokenOut, msg.sender, amount0 + amount1);
+    }
+
+    function _swapToTokenOut(
+        address tokenOut,
+        address tokenIn,
+        uint256 amountIn
+    ) internal returns (uint256 amountOut) {
+        ERC20Helper._approveToken(tokenIn, address(swapRouter), amountIn);
+
+        amountOut = swapRouter.exactInputSingle(
+            ISwapRouter.ExactInputSingleParams({
+                tokenIn: tokenIn,
+                tokenOut: tokenOut,
+                fee: _findBestFee(tokenIn, tokenOut),
+                recipient: address(this),
+                deadline: block.timestamp + 1,
+                amountIn: amountIn,
+                amountOutMinimum: 1,
+                sqrtPriceLimitX96: 0
+            })
+        );
     }
 
     ///@notice orders token addresses
