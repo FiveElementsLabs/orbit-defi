@@ -38,7 +38,7 @@ export async function RegistryFixture(): Promise<RegistryFixture> {
     from: deployer.address,
     nonce: transactionCount,
   });
-  console.log(futureAddress);
+
   const registryFactory = await ethers.getContractFactory('Registry');
   const registryFixture: Registry = (await registryFactory.deploy()) as Registry;
   return { registryFixture };
