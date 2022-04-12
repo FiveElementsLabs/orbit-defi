@@ -3,30 +3,31 @@ pragma solidity 0.7.6;
 
 /// @title Stores all the important module addresses
 contract Registry {
-    address public owner;
+    address public governance;
 
     struct Entry {
+        address contractAddress;
         bool activated;
         bool exists;
     }
 
-    mapping(address => Entry) public entries;
+    mapping(bytes32 => Entry) public modules;
 
     constructor() {
-        owner = msg.sender;
+        governance = msg.sender;
     }
 
-    function addNewContract(address _contractAddr) external onlyOwner {
-        require(!entries[_contractAddr].exists, 'Entry already exists');
-        entries[_contractAddr] = Entry({activated: true, exists: true});
+    function addNewContract(bytes32 _id, address _contractAddr) external onlyGovernance {
+        require(!modules[_id].exists, 'Entry already exists');
+        modules[_id] = Entry({contractAddress: _contractAddr, activated: true, exists: true});
     }
 
-    function isApproved(address _contractAddr) public view returns (bool) {
-        return entries[_contractAddr].activated;
+    function isActive(bytes32 _id) public view returns (bool) {
+        return modules[_id].activated;
     }
 
-    modifier onlyOwner() {
-        require(msg.sender == owner, 'Only owner');
+    modifier onlyGovernance() {
+        require(msg.sender == governance, 'Only governance');
         _;
     }
 }
