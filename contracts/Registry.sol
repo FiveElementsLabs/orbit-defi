@@ -22,6 +22,17 @@ contract Registry {
         modules[_id] = Entry({contractAddress: _contractAddr, activated: true, exists: true});
     }
 
+    function changeContract(bytes32 _id, address _newContractAddr) external onlyGovernance {
+        require(modules[_id].exists, 'Entry does not exist');
+        //Begin timelock
+        modules[_id].contractAddress = _newContractAddr;
+    }
+
+    function toggleModule(bytes32 _id, bool _activated) external onlyGovernance {
+        require(modules[_id].exists, 'Entry does not exist');
+        modules[_id].activated = _activated;
+    }
+
     function isActive(bytes32 _id) public view returns (bool) {
         return modules[_id].activated;
     }
