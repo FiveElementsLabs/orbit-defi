@@ -42,7 +42,7 @@ describe('DecreaseLiquidity.sol', function () {
   let PositionManager: PositionManager; // PositionManager contract by UniswapV3
   let SwapRouter: Contract; // SwapRouter contract by UniswapV3
   let DecreaseLiquidityAction: DecreaseLiquidity; // DecreaseLiquidity contract
-  let decreaseLiquidityAction: DecreaseLiquidity; //used to call position manager fallback
+  let DecreaseLiquidityFallback: DecreaseLiquidity; //used to call position manager fallback
   let abiCoder: AbiCoder;
   let UniswapAddressHolder: Contract; // address holder for UniswapV3 contracts
 
@@ -217,7 +217,7 @@ describe('DecreaseLiquidity.sol', function () {
 
     const mintReceipt = (await txMint.wait()) as any;
     tokenId = mintReceipt.events[mintReceipt.events.length - 1].args.tokenId;
-    decreaseLiquidityAction = (await ethers.getContractAt(
+    DecreaseLiquidityFallback = (await ethers.getContractAt(
       'IDecreaseLiquidity',
       PositionManager.address
     )) as DecreaseLiquidity;
@@ -231,7 +231,7 @@ describe('DecreaseLiquidity.sol', function () {
 
       const amount0Desired = '0x' + (5e9).toString(16);
       const amount1Desired = '0x' + (5e9).toString(16);
-      await decreaseLiquidityAction.decreaseLiquidity(tokenId, amount0Desired, amount1Desired);
+      await DecreaseLiquidityFallback.decreaseLiquidity(tokenId, amount0Desired, amount1Desired);
 
       const newPosition: any = await NonFungiblePositionManager.connect(user).positions(tokenId);
       expect(newPosition.liquidity).to.be.lt(position.liquidity);
@@ -245,7 +245,7 @@ describe('DecreaseLiquidity.sol', function () {
       const amount0Desired = '0x' + (1000).toString(16);
       const amount1Desired = '0x' + (1000).toString(16);
 
-      await decreaseLiquidityAction.decreaseLiquidity(tokenId, amount0Desired, amount1Desired);
+      await DecreaseLiquidityFallback.decreaseLiquidity(tokenId, amount0Desired, amount1Desired);
 
       const liquidityAfter: any = await NonFungiblePositionManager.positions(tokenId);
       expect(liquidityAfter.liquidity).to.be.lt(liquidityBefore.liquidity);
@@ -257,7 +257,7 @@ describe('DecreaseLiquidity.sol', function () {
       const amount0Desired = '0x' + (1e35).toString(16);
       const amount1Desired = '0x' + (1e35).toString(16);
 
-      await decreaseLiquidityAction.decreaseLiquidity(tokenId, amount0Desired, amount1Desired);
+      await DecreaseLiquidityFallback.decreaseLiquidity(tokenId, amount0Desired, amount1Desired);
 
       const liquidityAfter: any = await NonFungiblePositionManager.positions(tokenId);
       expect(liquidityAfter.liquidity).to.be.equal(0);

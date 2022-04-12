@@ -92,7 +92,7 @@ contract IdleLiquidityModule {
                 ///@dev call swapToPositionAction to perform the swap
                 (uint256 token0Swapped, uint256 token1Swapped) = ISwapToPositionRatio(address(positionManager))
                     .swapToPositionRatio(
-                        ISwapToPositionRatio.InputStruct(
+                        ISwapToPositionRatio.SwapToPositionInput(
                             token0,
                             token1,
                             fee,

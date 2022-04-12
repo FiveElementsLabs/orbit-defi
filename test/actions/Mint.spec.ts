@@ -30,7 +30,7 @@ describe('Mint.sol', function () {
   let Factory: Contract; // the factory that will deploy all pools
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
   let MintAction: Mint;
-  let mint: Mint;
+  let MintFallback: Mint;
   let abiCoder: AbiCoder;
   let PositionManager: PositionManager;
 
@@ -164,7 +164,7 @@ describe('Mint.sol', function () {
 
     const tx = await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
 
-    mint = (await ethers.getContractAt('IMint', PositionManager.address)) as Mint;
+    MintFallback = (await ethers.getContractAt('IMint', PositionManager.address)) as Mint;
   });
 
   describe('MintAction.sol - mint', function () {
@@ -175,7 +175,7 @@ describe('Mint.sol', function () {
       const tickLower = -720;
       const tickUpper = 3600;
 
-      await mint.mint({
+      await MintFallback.mint({
         token0Address: tokenEth.address,
         token1Address: tokenUsdc.address,
         fee: 3000,
@@ -195,7 +195,7 @@ describe('Mint.sol', function () {
       const tickUpper = 720;
 
       await expect(
-        mint.mint({
+        MintFallback.mint({
           token0Address: tokenEth.address,
           token1Address: tokenUsdc.address,
           fee: 1235132,
@@ -214,7 +214,7 @@ describe('Mint.sol', function () {
       const tickUpper = 900000;
 
       await expect(
-        mint.mint({
+        MintFallback.mint({
           token0Address: tokenEth.address,
           token1Address: tokenUsdc.address,
           fee: 3000,

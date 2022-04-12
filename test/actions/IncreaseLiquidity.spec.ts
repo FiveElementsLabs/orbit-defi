@@ -41,7 +41,7 @@ describe('IncreaseLiquidity.sol', function () {
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
   let PositionManager: PositionManager; // PositionManager contract by UniswapV3
   let SwapRouter: Contract; // SwapRouter contract by UniswapV3
-  let increaseLiquidity: Contract; // IncreaseLiquidity contract
+  let IncreaseLiquidityFallback: Contract; // IncreaseLiquidity contract
   let abiCoder: AbiCoder;
   let UniswapAddressHolder: Contract; // address holder for UniswapV3 contracts
 
@@ -194,7 +194,7 @@ describe('IncreaseLiquidity.sol', function () {
 
     await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
 
-    increaseLiquidity = await ethers.getContractAt('IIncreaseLiquidity', PositionManager.address);
+    IncreaseLiquidityFallback = await ethers.getContractAt('IIncreaseLiquidity', PositionManager.address);
   });
 
   // Mint a liquidity position for the user in order to test the action.
@@ -225,14 +225,18 @@ describe('IncreaseLiquidity.sol', function () {
       await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
 
       const poolTokenId = 1;
-      const liquidityPre = (await NonFungiblePositionManager.positions(poolTokenId)).liquidity;
+      const liquidityBefore = (await NonFungiblePositionManager.positions(poolTokenId)).liquidity;
 
       const amount0Desired = 1e4;
       const amount1Desired = 1e6;
 
-      const tx = await increaseLiquidity.connect(user).increaseLiquidity(poolTokenId, amount0Desired, amount1Desired);
+      const tx = await IncreaseLiquidityFallback.connect(user).increaseLiquidity(
+        poolTokenId,
+        amount0Desired,
+        amount1Desired
+      );
 
-      expect((await NonFungiblePositionManager.positions(poolTokenId)).liquidity).to.gt(liquidityPre);
+      expect((await NonFungiblePositionManager.positions(poolTokenId)).liquidity).to.gt(liquidityBefore);
     });
 
     it('should correctly add liquidity to the NFT position', async function () {
@@ -247,7 +251,11 @@ describe('IncreaseLiquidity.sol', function () {
         [poolTokenId, amount0Desired, amount1Desired]
       );
 
-      const tx = await increaseLiquidity.connect(user).increaseLiquidity(poolTokenId, amount0Desired, amount1Desired);
+      const tx = await IncreaseLiquidityFallback.connect(user).increaseLiquidity(
+        poolTokenId,
+        amount0Desired,
+        amount1Desired
+      );
 
       const events = await tx.wait();
       expect(await Pool0.liquidity()).to.be.gt(liquidityBefore);
@@ -260,8 +268,9 @@ describe('IncreaseLiquidity.sol', function () {
       const amount0Desired = 0;
       const amount1Desired = 0;
 
-      await expect(increaseLiquidity.connect(user).increaseLiquidity(poolTokenId, amount0Desired, amount1Desired)).to.be
-        .reverted;
+      await expect(
+        IncreaseLiquidityFallback.connect(user).increaseLiquidity(poolTokenId, amount0Desired, amount1Desired)
+      ).to.be.reverted;
     });
 
     it('should revert if the pool does not exist', async function () {
@@ -269,8 +278,9 @@ describe('IncreaseLiquidity.sol', function () {
       const amount0Desired = 1e4;
       const amount1Desired = 1e6;
 
-      await expect(increaseLiquidity.connect(user).increaseLiquidity(poolTokenId, amount0Desired, amount1Desired)).to.be
-        .reverted;
+      await expect(
+        IncreaseLiquidityFallback.connect(user).increaseLiquidity(poolTokenId, amount0Desired, amount1Desired)
+      ).to.be.reverted;
     });
   });
 });
