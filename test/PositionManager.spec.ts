@@ -110,12 +110,17 @@ describe('PositionManager.sol', function () {
     );
     await uniswapAddressHolder.deployed();
 
+    // deploy DiamondCutFacet ----------------------------------------------------------------------
+    const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet');
+    const diamondCutFacet = await DiamondCutFacet.deploy();
+    await diamondCutFacet.deployed();
+
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactoryFactory = await ethers.getContractFactory('PositionManagerFactory');
     const PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
     await PositionManagerFactory.deployed();
 
-    await PositionManagerFactory.create(user.address, uniswapAddressHolder.address);
+    await PositionManagerFactory.create(user.address, diamondCutFacet.address, uniswapAddressHolder.address);
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
@@ -261,131 +266,6 @@ describe('PositionManager.sol', function () {
     });
   });
 
-  describe('PositionManager - collectPositionFee', function () {
-    it('Should collect fees', async function () {
-      await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
-
-      // Do some trades to accrue fees
-      for (let i = 0; i < 10; i++) {
-        const res = await SwapRouter.connect(trader).exactInputSingle([
-          i % 2 === 0 ? tokenEth.address : tokenUsdc.address,
-          i % 2 === 0 ? tokenUsdc.address : tokenEth.address,
-          3000,
-          trader.address,
-          Date.now() + 1000,
-          1e15,
-          0,
-          0,
-        ]);
-      }
-      // Fees are updated at every interaction with the position
-      await PositionManager.connect(user).updateUncollectedFees(tokenId);
-
-      let position = await NonFungiblePositionManager.positions(tokenId);
-      expect(position.tokensOwed0).to.gt(0);
-      expect(position.tokensOwed1).to.gt(0);
-
-      await PositionManager.connect(user).collectPositionFee(tokenId, user.address);
-      position = await NonFungiblePositionManager.positions(tokenId);
-      expect(position.tokensOwed0).to.equal(0);
-      expect(position.tokensOwed1).to.equal(0);
-    });
-  });
-  describe('PositionManager - mintAndDeposit', function () {
-    it('Should mint and deposit an uniV3 NFT', async function () {
-      const tokenIds = (await PositionManager.getAllUniPosition()).length;
-
-      await PositionManager.connect(user).mintAndDeposit(
-        [
-          {
-            token0: tokenEth.address,
-            token1: tokenUsdc.address,
-            fee: 3000,
-            tickLower: 0 - 60 * 1,
-            tickUpper: 0 + 60 * 1,
-            amount0Desired: '0x' + (1e13).toString(16),
-            amount1Desired: '0x' + (3e3).toString(16),
-            amount0Min: 0,
-            amount1Min: 0,
-            recipient: PositionManager.address,
-            deadline: Date.now(),
-          },
-        ],
-        false
-      );
-
-      expect(tokenIds).to.be.lt((await PositionManager.getAllUniPosition()).length);
-    });
-    it('Should mint and deposit multiple positions with one call', async function () {
-      let mintParams = [
-        {
-          token0: tokenEth.address,
-          token1: tokenUsdc.address,
-          fee: 3000,
-          tickLower: 0 - 60 * 2,
-          tickUpper: 0 + 60 * 2,
-          amount0Desired: '0x' + (1e13).toString(16),
-          amount1Desired: '0x' + (3e3).toString(16),
-          amount0Min: 0,
-          amount1Min: 0,
-          recipient: PositionManager.address,
-          deadline: Date.now(),
-        },
-        {
-          token0: tokenEth.address,
-          token1: tokenUsdc.address,
-          fee: 3000,
-          tickLower: 0 - 60 * 1,
-          tickUpper: 0 + 60 * 1,
-          amount0Desired: '0x' + (1e13).toString(16),
-          amount1Desired: '0x' + (3e3).toString(16),
-          amount0Min: 0,
-          amount1Min: 0,
-          recipient: PositionManager.address,
-          deadline: Date.now(),
-        },
-      ];
-
-      const oldBalance = await NonFungiblePositionManager.balanceOf(PositionManager.address);
-      await PositionManager.connect(user).mintAndDeposit(mintParams, false);
-      expect(await NonFungiblePositionManager.balanceOf(PositionManager.address)).to.equal(oldBalance.add(2));
-    });
-  });
-  describe('PositionManager - increasePositionLiquidity', function () {
-    it('Should increase the liquidity in the NFT', async function () {
-      await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
-      const liquidityBefore = await Pool0.liquidity();
-
-      await PositionManager.connect(user).increasePositionLiquidity(1, 1e10, 1e6);
-      expect(await Pool0.liquidity()).to.be.gt(liquidityBefore);
-    });
-  });
-  describe('PositionManager - decreasePositionLiquidity', function () {
-    it('decrease the liquidity in the NFT', async function () {
-      await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
-
-      const tokenOwnedBefore: any = await PositionManager.connect(user).getPositionBalance(tokenId);
-      const liquidityBefore: any = await NonFungiblePositionManager.positions(tokenId);
-
-      await PositionManager.connect(user).decreasePositionLiquidity(
-        tokenId,
-        '0x' + (tokenOwnedBefore[0] / 2).toString(16),
-        '0x' + (tokenOwnedBefore[1] / 2).toString(16)
-      );
-
-      const liquidityAfter = await NonFungiblePositionManager.positions(tokenId);
-      expect(liquidityAfter.liquidity).to.be.lt(liquidityBefore.liquidity);
-    });
-  });
-  describe('PositionManager - getPositionBalance', function () {
-    it('should return the amount of token', async function () {
-      await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
-
-      const amounts = await PositionManager.getPositionBalance(tokenId);
-      expect(amounts[0]).to.be.gt(0);
-      expect(amounts[0]).to.be.gt(1);
-    });
-  });
   describe('PositionManager - OnlyUser Modifier', function () {
     it('depositUniNft', async function () {
       await expect(
@@ -397,168 +277,6 @@ describe('PositionManager.sol', function () {
       await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
 
       await expect(PositionManager.connect(trader).withdrawUniNft(user.address, tokenId)).to.be.reverted;
-    });
-
-    it('withdrawAllUniNft', async function () {
-      await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
-
-      await expect(PositionManager.connect(trader).withdrawAllUniNft(user.address)).to.be.reverted;
-    });
-
-    it('mintAndDeposit', async function () {
-      await expect(
-        PositionManager.connect(trader).mintAndDeposit(
-          [
-            {
-              token0: tokenEth.address,
-              token1: tokenUsdc.address,
-              fee: 3000,
-              tickLower: -240000 - 60,
-              tickUpper: -240000 + 60,
-              amount0Desired: '0x' + (1e13).toString(16),
-              amount1Desired: '0x' + (3e3).toString(16),
-              amount0Min: 0,
-              amount1Min: 0,
-              recipient: PositionManager.address,
-              deadline: Date.now(),
-            },
-          ],
-          false
-        )
-      ).to.be.reverted;
-    });
-  });
-
-  describe('PositionManager - swap', function () {
-    it('should correctly perform a swap', async function () {
-      const balancePreUsdc = (await tokenEth.balanceOf(PositionManager.address)).toNumber();
-      await PositionManager.connect(user).swap(
-        tokenEth.address,
-        tokenUsdc.address,
-        3000,
-        '0x' + (1e5).toString(16),
-        false
-      );
-      const balancePostUsdc = (await tokenUsdc.balanceOf(PositionManager.address)).toNumber();
-
-      expect(balancePostUsdc).to.be.closeTo(balancePreUsdc + 1e5, 5e3);
-    });
-  });
-
-  describe('PositionManager - swapToPositionRatio', function () {
-    it('should correctly perform a swap', async function () {
-      const tx = await PositionManager.connect(user).swapToPositionRatio(
-        tokenEth.address,
-        tokenUsdc.address,
-        3000,
-        '0x' + (7e5).toString(16),
-        '0x' + (1.5e5).toString(16),
-        -600,
-        600,
-        false
-      );
-    });
-
-    it('should correctly calculate the amount to swap', async function () {
-      const tickPool = (await Pool0.slot0()).tick;
-      let amount0Desired = 1e5;
-      let amount1Desired = 2e5;
-      const tickLower = -660;
-      const tickUpper = 660;
-
-      const [amountToSwap, amount0In] = await PositionManager.connect(user)._calcAmountToSwap(
-        tickPool,
-        tickLower,
-        tickUpper,
-        '0x' + amount0Desired.toString(16),
-        '0x' + amount1Desired.toString(16)
-      );
-      const price = Math.pow(1.0001, tickPool);
-
-      amount0Desired = Math.round(amount0Desired + (amount0In ? -1 : 1 / price) * amountToSwap.toNumber());
-      amount1Desired = Math.round(amount1Desired + (amount0In ? price : -1) * amountToSwap.toNumber());
-
-      const transaction = await PositionManager.connect(user).mintAndDeposit(
-        [
-          {
-            token0: tokenEth.address,
-            token1: tokenUsdc.address,
-            fee: 3000,
-            tickLower: tickLower,
-            tickUpper: tickUpper,
-            amount0Desired: amount0Desired,
-            amount1Desired: amount1Desired,
-            amount0Min: 0,
-            amount1Min: 0,
-            recipient: PositionManager.address,
-            deadline: Date.now() + 1000,
-          },
-        ],
-        false
-      );
-      const positions = await PositionManager.getAllUniPosition();
-      const [positionBalance0, positionBalance1] = await PositionManager.getPositionBalance(
-        positions[positions.length - 1]
-      );
-
-      expect(positionBalance0.toNumber()).to.be.closeTo(amount0Desired, 5e3);
-      expect(positionBalance1.toNumber()).to.be.closeTo(amount1Desired, 5e3);
-    });
-  });
-
-  describe('PositionManager.doAction() - delegate call to actions', function () {
-    it('should be able to call an action', async function () {
-      const tickLower = -300;
-      const tickUpper = 600;
-      const amount0In = 1e5;
-      const amount1In = 2e5;
-      const inputBytes = abiCoder.encode(
-        ['address', 'address', 'uint24', 'int24', 'int24', 'uint256', 'uint256'],
-        [tokenEth.address, tokenUsdc.address, 3000, tickLower, tickUpper, amount0In, amount1In]
-      );
-      await tokenEth.connect(user).transfer(PositionManager.address, 3e5);
-      await tokenUsdc.connect(user).transfer(PositionManager.address, 3e5);
-      const positionsPre = await NonFungiblePositionManager.balanceOf(PositionManager.address);
-      await PositionManager.connect(user).doAction(MintAction.address, inputBytes);
-      expect(await NonFungiblePositionManager.balanceOf(PositionManager.address)).to.be.equal(positionsPre.add(1));
-    });
-
-    it('should revert if the action does not exist', async function () {
-      const tickLower = -300;
-      const tickUpper = 600;
-      const amount0In = 1e5;
-      const amount1In = 2e5;
-      const inputBytes = abiCoder.encode(
-        ['address', 'address', 'uint24', 'int24', 'int24', 'uint256', 'uint256'],
-        [tokenEth.address, tokenUsdc.address, 3000, tickLower, tickUpper, amount0In, amount1In]
-      );
-
-      await tokenEth.connect(user).transfer(PositionManager.address, 3e5);
-      await tokenUsdc.connect(user).transfer(PositionManager.address, 3e5);
-      await expect(PositionManager.connect(user).doAction(Factory.address, inputBytes)).to.be.reverted;
-    });
-
-    it('should be able to decode outputs', async function () {
-      const tickLower = -600;
-      const tickUpper = 600;
-      const amount0In = 1e5;
-      const amount1In = 1e5;
-      const inputBytes = abiCoder.encode(
-        ['address', 'address', 'uint24', 'int24', 'int24', 'uint256', 'uint256'],
-        [tokenEth.address, tokenUsdc.address, 3000, tickLower, tickUpper, amount0In, amount1In]
-      );
-      await tokenEth.connect(user).transfer(PositionManager.address, 3e5);
-      await tokenUsdc.connect(user).transfer(PositionManager.address, 3e5);
-
-      const positionsPre = await NonFungiblePositionManager.balanceOf(PositionManager.address);
-
-      const tx = await PositionManager.connect(user).doAction(MintAction.address, inputBytes);
-
-      expect(await NonFungiblePositionManager.balanceOf(PositionManager.address)).to.be.equal(positionsPre.add(1));
-
-      const events = (await tx.wait()).events as any;
-      const successEvent = events[events.length - 1];
-      const outputs = abiCoder.decode(['uint256', 'uint256', 'uint256'], successEvent.args.data);
     });
   });
 });

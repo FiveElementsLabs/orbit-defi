@@ -10,7 +10,7 @@ const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/
 const PositionManagerjson = require('../../artifacts/contracts/PositionManager.sol/PositionManager.json');
 const SwapRouterjson = require('@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json');
 const FixturesConst = require('../shared/fixtures');
-import { tokensFixture, poolFixture, mintSTDAmount } from '../shared/fixtures';
+import { tokensFixture, poolFixture, mintSTDAmount, getSelectors } from '../shared/fixtures';
 import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager } from '../../typechain';
 
 describe('UpdateUncollectedFees.sol', function () {
@@ -38,6 +38,8 @@ describe('UpdateUncollectedFees.sol', function () {
   let PositionManager: PositionManager;
   let swapRouter: Contract;
   let mintAction: Contract; //Mint contract
+  let mint: Contract;
+  let updateFee: Contract;
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
@@ -104,6 +106,11 @@ describe('UpdateUncollectedFees.sol', function () {
     );
     await uniswapAddressHolder.deployed();
 
+    // deploy DiamondCutFacet ----------------------------------------------------------------------
+    const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet');
+    const diamondCutFacet = await DiamondCutFacet.deploy();
+    await diamondCutFacet.deployed();
+
     //deploy Mint action
     const MintFactory = await ethers.getContractFactory('Mint');
     mintAction = await MintFactory.deploy();
@@ -119,7 +126,7 @@ describe('UpdateUncollectedFees.sol', function () {
     const PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
     await PositionManagerFactory.deployed();
 
-    await PositionManagerFactory.create(user.address, uniswapAddressHolder.address);
+    await PositionManagerFactory.create(user.address, diamondCutFacet.address, uniswapAddressHolder.address);
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
@@ -159,30 +166,56 @@ describe('UpdateUncollectedFees.sol', function () {
       },
       { gasLimit: 670000 }
     );
+
+    // add actions to position manager using diamond pattern
+    const cut = [];
+    const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 };
+
+    cut.push({
+      facetAddress: mintAction.address,
+      action: FacetCutAction.Add,
+      functionSelectors: await getSelectors(mintAction),
+    });
+    cut.push({
+      facetAddress: updateUncollectedFees.address,
+      action: FacetCutAction.Add,
+      functionSelectors: await getSelectors(updateUncollectedFees),
+    });
+
+    const diamondCut = await ethers.getContractAt('IDiamondCut', PositionManager.address);
+
+    const tx = await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
+
+    mint = (await ethers.getContractAt('IMint', PositionManager.address)) as Contract;
+    updateFee = (await ethers.getContractAt('IUpdateUncollectedFees', PositionManager.address)) as Contract;
   });
 
-  describe('UpdateUncollectedFees.doAction()', function () {
+  describe('UpdateUncollectedFees.sol - updateUncollectedFees', function () {
     it('should collect fees', async function () {
       const fee = 3000;
       const tickLower = -720;
       const tickUpper = 720;
       const amount0In = 5e5;
       const amount1In = 5e5;
-      let inputBytes = abiCoder.encode(
-        ['address', 'address', 'uint24', 'int24', 'int24', 'uint256', 'uint256'],
-        [tokenEth.address, tokenUsdc.address, fee, tickLower, tickUpper, amount0In, amount1In]
-      );
 
       //give positionManager some funds
       await tokenEth.connect(user).transfer(PositionManager.address, 6e5);
       await tokenUsdc.connect(user).transfer(PositionManager.address, 6e5);
 
       //mint a position
-      let tx = await PositionManager.connect(user).doAction(mintAction.address, inputBytes);
-      let events = (await tx.wait()).events as any;
+      const txMint = await mint.mint({
+        token0Address: tokenEth.address,
+        token1Address: tokenUsdc.address,
+        fee: fee,
+        tickLower: tickLower,
+        tickUpper: tickUpper,
+        amount0Desired: amount0In,
+        amount1Desired: amount1In,
+      });
 
-      const mintEvent = events[events.length - 1];
-      const tokenId = abiCoder.decode(['uint256', 'uint256', 'uint256'], mintEvent.args.data)[0];
+      let eventsMint = (await txMint.wait()).events as any;
+
+      const mintEvent = eventsMint[eventsMint.length - 1];
 
       // Do some trades to accrue fees
       for (let i = 0; i < 10; i++) {
@@ -200,26 +233,21 @@ describe('UpdateUncollectedFees.sol', function () {
           ]);
       }
 
-      // collect fees
-      inputBytes = abiCoder.encode(['uint256'], [tokenId]);
-
-      tx = await PositionManager.connect(user).doAction(updateUncollectedFees.address, inputBytes);
-      events = (await tx.wait()).events as any;
+      const tx = await updateFee.updateUncollectedFees(mintEvent.data);
+      const events = (await tx.wait()).events as any;
       const updateEvent = events[events.length - 1];
-      const feesUncollected = abiCoder.decode(['uint256', 'uint256'], updateEvent.args.data);
+      const total = abiCoder.decode(['uint256', 'uint256'], updateEvent.data);
 
-      expect(feesUncollected[0]).to.gt(0);
-      expect(feesUncollected[1]).to.gt(0);
+      expect(total[0]).to.gt(0);
+      expect(total[1]).to.gt(0);
     });
 
     it('should revert if position does not exist', async function () {
-      const inputBytes = abiCoder.encode(['uint256'], [200]);
-      await expect(PositionManager.connect(user).doAction(updateUncollectedFees.address, inputBytes)).to.be.reverted;
+      await expect(updateFee.updateUncollectedFees(200)).to.be.reverted;
     });
 
     it('should revert if position is not owned by user', async function () {
-      const inputBytes = abiCoder.encode(['uint256'], [1]);
-      await expect(PositionManager.connect(user).doAction(updateUncollectedFees.address, inputBytes)).to.be.reverted;
+      await expect(updateFee.updateUncollectedFees(1)).to.be.reverted;
     });
   });
 });

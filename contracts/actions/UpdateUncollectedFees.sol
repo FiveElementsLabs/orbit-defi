@@ -7,22 +7,22 @@ import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.s
 import '../../interfaces/IUniswapAddressHolder.sol';
 import '../utils/Storage.sol';
 
+interface IUpdateUncollectedFees {
+    function updateUncollectedFees(uint256 tokenId) external returns (uint256, uint256);
+}
+
 contract UpdateUncollectedFees {
-    struct InputStruct {
-        uint256 tokenId;
-    }
+    ///@notice emitted when a UniswapNFT position is updated
+    ///@param from address of PositionManager
+    ///@param token0 fee collected
+    ///@param token1 fee collected
+    event updateFees(address indexed from, uint256 token0, uint256 token1);
 
-    struct OutputStruct {
-        uint256 uncollected0Fees;
-        uint256 uncollected1Fees;
-    }
-
-    function updateUncollectedFeesV1(bytes memory inputs) public returns (OutputStruct memory outputs) {
-        InputStruct memory inputStruct = decodeInputs(inputs);
-        outputs = updateUncollectedFees(inputStruct);
-    }
-
-    function updateUncollectedFees(InputStruct memory inputs) internal returns (OutputStruct memory outputs) {
+    ///@notice update the uncollected fees of a UniswapV3 position NFT
+    ///@param tokenId ID of the NFT
+    ///@return uint256 token0 fee collected
+    ///@return uint256 token1 fee collected
+    function updateUncollectedFees(uint256 tokenId) public returns (uint256, uint256) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
         INonfungiblePositionManager nonfungiblePositionManager = INonfungiblePositionManager(
@@ -31,7 +31,7 @@ contract UpdateUncollectedFees {
 
         nonfungiblePositionManager.decreaseLiquidity(
             INonfungiblePositionManager.DecreaseLiquidityParams({
-                tokenId: inputs.tokenId,
+                tokenId: tokenId,
                 liquidity: 1,
                 amount0Min: 0,
                 amount1Min: 0,
@@ -39,14 +39,8 @@ contract UpdateUncollectedFees {
             })
         );
 
-        (, , , , , , , , , , uint128 tokensOwed0, uint128 tokensOwed1) = nonfungiblePositionManager.positions(
-            inputs.tokenId
-        );
-
-        outputs = OutputStruct({uncollected0Fees: tokensOwed0, uncollected1Fees: tokensOwed1});
-    }
-
-    function decodeInputs(bytes memory inputBytes) internal pure returns (InputStruct memory inputsStruct) {
-        inputsStruct = InputStruct({tokenId: abi.decode(inputBytes, (uint256))});
+        (, , , , , , , , , , uint128 tokensOwed0, uint128 tokensOwed1) = nonfungiblePositionManager.positions(tokenId);
+        emit updateFees(address(this), tokensOwed0, tokensOwed1);
+        return (tokensOwed0, tokensOwed1);
     }
 }

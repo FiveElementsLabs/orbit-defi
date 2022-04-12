@@ -10,50 +10,32 @@ import '../helpers/ERC20Helper.sol';
 import '../utils/Storage.sol';
 import '../actions/CollectFees.sol';
 import '../actions/IncreaseLiquidity.sol';
+import '../actions/UpdateUncollectedFees.sol';
 import 'hardhat/console.sol';
 
-contract AutoCompoundModuleV3 {
+contract AutoCompoundModule {
     //TODO: setup registry
     IUniswapAddressHolder addressHolder;
     uint256 feesThreshold;
-    address collectFeeAddress;
-    address increaseLiquidityAddress;
-    address decreaseLiquidityAddress;
-    address updateFeesAddress;
 
-    constructor(
-        address _addressHolder,
-        uint256 _feesThreshold,
-        address _collectFeeAddress,
-        address _increaseLiquidityAddress,
-        address _decreaseLiquidityAddress,
-        address _updateFeesAddress
-    ) {
+    constructor(address _addressHolder, uint256 _feesThreshold) {
         addressHolder = IUniswapAddressHolder(_addressHolder);
         feesThreshold = _feesThreshold;
-        collectFeeAddress = _collectFeeAddress;
-        increaseLiquidityAddress = _increaseLiquidityAddress;
-        decreaseLiquidityAddress = _decreaseLiquidityAddress;
-        updateFeesAddress = _updateFeesAddress;
     }
 
     ///@notice executes our recipe for autocompounding
     ///@param positionManager address of the position manager
     ///@param tokenId id of the token to autocompound
     function autoCompoundFees(IPositionManager positionManager, uint256 tokenId) public {
-        ///@devcheck if autocompound is active
+        ///@dev check if autocompound is active
         if (positionManager.getModuleState(tokenId, address(this))) {
-            //console.log(checkIfCompoundIsNeeded(address(positionManager), tokenId));
-            if (true) {
-                (uint256 amount0Desired, uint256 amount1Desired) = ICollectFees(
-                    0x763e69d24a03c0c8B256e470D9fE9e0753504D07
-                ).collectFees(tokenId);
-
-                IIncreaseLiquidity(0x763e69d24a03c0c8B256e470D9fE9e0753504D07).increaseLiquidity(
-                    tokenId,
-                    amount0Desired,
-                    amount1Desired
+            ///@dev check if compound need to be done
+            if (checkIfCompoundIsNeeded(address(positionManager), tokenId)) {
+                (uint256 amount0Desired, uint256 amount1Desired) = ICollectFees(address(positionManager)).collectFees(
+                    tokenId
                 );
+
+                IIncreaseLiquidity(address(positionManager)).increaseLiquidity(tokenId, amount0Desired, amount1Desired);
             }
         }
     }
@@ -63,9 +45,9 @@ contract AutoCompoundModuleV3 {
     ///@param tokenId token id of the position
     ///@return true if the position needs to be collected
     function checkIfCompoundIsNeeded(address positionManagerAddress, uint256 tokenId) internal returns (bool) {
-        bytes memory data = IPositionManager(positionManagerAddress).doAction(updateFeesAddress, abi.encode(tokenId));
+        (uint256 uncollectedFees0, uint256 uncollectedFees1) = IUpdateUncollectedFees(positionManagerAddress)
+            .updateUncollectedFees(tokenId);
 
-        (uint256 uncollectedFees0, uint256 uncollectedFees1) = abi.decode(data, (uint256, uint256));
         (uint256 amount0, uint256 amount1) = NFTHelper._getAmountsfromTokenId(
             tokenId,
             INonfungiblePositionManager(addressHolder.nonfungiblePositionManagerAddress()),

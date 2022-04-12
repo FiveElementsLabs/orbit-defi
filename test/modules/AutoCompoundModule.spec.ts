@@ -10,7 +10,7 @@ const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/
 const PositionManagerjson = require('../../artifacts/contracts/PositionManager.sol/PositionManager.json');
 const SwapRouterjson = require('@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json');
 const FixturesConst = require('../shared/fixtures');
-import { tokensFixture, poolFixture, mintSTDAmount, routerFixture } from '../shared/fixtures';
+import { tokensFixture, poolFixture, mintSTDAmount, routerFixture, getSelectors } from '../shared/fixtures';
 import {
   MockToken,
   IUniswapV3Pool,
@@ -43,7 +43,7 @@ describe('AutoCompoundModule.sol', function () {
 
   let Factory: Contract; // the factory that will deploy all pools
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
-  let PositionManager: PositionManager; //Our smart vault named PositionManager
+  let PositionManager: Contract; //Our smart vault named PositionManager
   let Router: TestRouter; //Our router to perform swap
   let SwapRouter: Contract;
   let collectFeesAction: Contract;
@@ -121,12 +121,17 @@ describe('AutoCompoundModule.sol', function () {
     );
     await uniswapAddressHolder.deployed();
 
+    // deploy DiamondCutFacet ----------------------------------------------------------------------
+    const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet');
+    const diamondCutFacet = await DiamondCutFacet.deploy();
+    await diamondCutFacet.deployed();
+
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactoryFactory = await ethers.getContractFactory('PositionManagerFactory');
     const PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
     await PositionManagerFactory.deployed();
 
-    await PositionManagerFactory.create(user.address, uniswapAddressHolder.address);
+    await PositionManagerFactory.create(user.address, diamondCutFacet.address, uniswapAddressHolder.address);
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
@@ -150,14 +155,7 @@ describe('AutoCompoundModule.sol', function () {
 
     //deploy AutoCompound Module
     const AutocompoundFactory = await ethers.getContractFactory('AutoCompoundModule');
-    autoCompound = await AutocompoundFactory.deploy(
-      uniswapAddressHolder.address,
-      100,
-      collectFeesAction.address,
-      increaseLiquidityAction.address,
-      decreaseLiquidityAction.address,
-      updateFeesAction.address
-    );
+    autoCompound = await AutocompoundFactory.deploy(uniswapAddressHolder.address, 100);
     await autoCompound.deployed();
 
     //select standard abicoder
@@ -222,13 +220,47 @@ describe('AutoCompoundModule.sol', function () {
       },
       { gasLimit: 670000 }
     );
-    await PositionManager.connect(user).depositUniNft(user.address, [2]);
+
+    const receipt: any = await mintTx.wait();
+    tokenId = receipt.events[receipt.events.length - 1].args.tokenId;
+
+    await PositionManager.connect(user).depositUniNft(user.address, [tokenId]);
 
     // user approve autocompound module
     await PositionManager.toggleModule(2, autoCompound.address, true);
+    // ----------------------------------------------------------------------------------------------------
+
+    // add actions to position manager using diamond pattern
+    const cut = [];
+    const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 };
+
+    cut.push({
+      facetAddress: collectFeesAction.address,
+      action: FacetCutAction.Add,
+      functionSelectors: await getSelectors(collectFeesAction),
+    });
+    cut.push({
+      facetAddress: increaseLiquidityAction.address,
+      action: FacetCutAction.Add,
+      functionSelectors: await getSelectors(increaseLiquidityAction),
+    });
+    cut.push({
+      facetAddress: decreaseLiquidityAction.address,
+      action: FacetCutAction.Add,
+      functionSelectors: await getSelectors(decreaseLiquidityAction),
+    });
+    cut.push({
+      facetAddress: updateFeesAction.address,
+      action: FacetCutAction.Add,
+      functionSelectors: await getSelectors(updateFeesAction),
+    });
+
+    const diamondCut = await ethers.getContractAt('IDiamondCut', PositionManager.address);
+
+    const tx = await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
   });
 
-  /*  it('should be able not autocompound if fees are not enough', async function () {
+  it('should be able not autocompound if fees are not enough', async function () {
     //do some trades to accrue fees
     for (let i = 0; i < 2; i++) {
       await SwapRouter.connect(trader).exactInputSingle([
@@ -245,12 +277,11 @@ describe('AutoCompoundModule.sol', function () {
 
     const position = await NonFungiblePositionManager.positions(2);
     //collect and reinvest fees
-    await autoCompound.connect(user).autoCompoundFees(PositionManager.address, 2);
+    await autoCompound.autoCompoundFees(PositionManager.address, tokenId);
     const positionPost = await NonFungiblePositionManager.positions(2);
     expect(positionPost.liquidity).to.lt(position.liquidity);
-  }); */
-
-  /* it('should be able to autocompound fees', async function () {
+  });
+  it('should be able to autocompound fees', async function () {
     //do some trades to accrue fees
     for (let i = 0; i < 20; i++) {
       await SwapRouter.connect(trader).exactInputSingle([
@@ -264,8 +295,6 @@ describe('AutoCompoundModule.sol', function () {
         0,
       ]);
     }
-    console.log('precall');
-    console.log('Nonfungibleadd: ', NonFungiblePositionManager.address);
 
     const position = await NonFungiblePositionManager.positions(2);
     //collect and reinvest fees
@@ -276,55 +305,5 @@ describe('AutoCompoundModule.sol', function () {
 
   it('should revert if position Manager does not exist', async function () {
     await expect(autoCompound.connect(user).autoCompoundFees(Factory.address));
-  }); */
-
-  async function deployA() {
-    const Facet = await ethers.getContractFactory('A');
-    const facet = await Facet.deploy();
-    await facet.deployed();
-    console.log(`A deployed: ${facet.address}`);
-    return facet;
-  }
-
-  // get function selectors from ABI
-  function getSelectors(contract: any) {
-    const signatures = Object.keys(contract.interface.functions);
-    const selectors = signatures.reduce((acc: any, val: any) => {
-      if (val !== 'init(bytes)') {
-        acc.push(contract.interface.getSighash(val));
-      }
-      return acc;
-    }, []);
-    selectors.contract = contract;
-
-    return selectors;
-  }
-
-  it('test', async function () {
-    console.log('test diamond cut');
-
-    const cut = [];
-    const facet = await deployA();
-    const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 };
-
-    cut.push({
-      facetAddress: facet.address,
-      action: FacetCutAction.Add,
-      functionSelectors: getSelectors(facet),
-    });
-
-    const diamondCut = await ethers.getContractAt('IDiamondCut', PositionManager.address);
-
-    const tx = await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
-    console.log('Diamond cut tx: ', tx.hash);
-    const receipt = await tx.wait();
-    if (!receipt.status) {
-      throw Error(`Diamond upgrade failed: ${tx.hash}`);
-    }
-    console.log('Completed diamond cut');
-
-    const a = await ethers.getContractAt('IA', '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512');
-    console.log('a: ', await a.getA());
-    //return PositionManager;
   });
 });

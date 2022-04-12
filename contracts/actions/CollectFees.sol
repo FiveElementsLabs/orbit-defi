@@ -14,29 +14,34 @@ interface ICollectFees {
 
 ///@notice collect fees from a uniswapV3 position
 contract CollectFees {
+    ///@notice emitted upon collect fees of a UniswapV3 position
+    ///@param amount0 amount of token0 collected
+    ///@param amount1 amount of token1 collected
+    event feesCollected(uint256 amount0, uint256 amount1);
+
     ///@notice collect fees from a uniswapV3 position
+    ///@param tokenId of token to collect fees from
+    ///@return amount0 of token0 collected
+    ///@return amount1 of token1 collected
     function collectFees(uint256 tokenId) public returns (uint256 amount0, uint256 amount1) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
-        console.log('called');
-        console.log(address(this));
-        console.log(Storage.owner);
 
         updateUncollectedFees(tokenId);
-        console.log('1');
+
         INonfungiblePositionManager nonfungiblePositionManager = INonfungiblePositionManager(
             Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()
         );
         (, , , , , , , , , , uint128 feesToken0, uint128 feesToken1) = nonfungiblePositionManager.positions(tokenId);
-        console.log('2');
+
         INonfungiblePositionManager.CollectParams memory params = INonfungiblePositionManager.CollectParams({
             tokenId: tokenId,
             recipient: address(this),
             amount0Max: feesToken0,
             amount1Max: feesToken1
         });
-        console.log('3');
-        console.log(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress());
+
         (amount0, amount1) = nonfungiblePositionManager.collect(params);
+        emit feesCollected(amount0, amount1);
     }
 
     ///@notice update the uncollected fees of a uniswapV3 position

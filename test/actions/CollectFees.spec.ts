@@ -10,7 +10,7 @@ const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/
 const PositionManagerjson = require('../../artifacts/contracts/PositionManager.sol/PositionManager.json');
 const SwapRouterjson = require('@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json');
 const FixturesConst = require('../shared/fixtures');
-import { tokensFixture, poolFixture, mintSTDAmount } from '../shared/fixtures';
+import { tokensFixture, poolFixture, mintSTDAmount, getSelectors } from '../shared/fixtures';
 import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager } from '../../typechain';
 
 describe('CollectFees.sol', function () {
@@ -37,7 +37,7 @@ describe('CollectFees.sol', function () {
   let abiCoder: AbiCoder;
   let PositionManager: PositionManager;
   let swapRouter: Contract;
-  let mintAction: Contract; //Mint contract
+  let mint: Contract; //Mint contract
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
@@ -106,20 +106,25 @@ describe('CollectFees.sol', function () {
 
     //deploy Mint action
     const MintFactory = await ethers.getContractFactory('Mint');
-    mintAction = await MintFactory.deploy();
+    const mintAction = await MintFactory.deploy();
     await mintAction.deployed();
 
     //deploy CollectFees action
     const CollectFeesFactory = await ethers.getContractFactory('CollectFees');
-    collectFees = await CollectFeesFactory.deploy();
-    await collectFees.deployed();
+    const collectFeesAction = await CollectFeesFactory.deploy();
+    await collectFeesAction.deployed();
+
+    // deploy DiamondCutFacet ----------------------------------------------------------------------
+    const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet');
+    const diamondCutFacet = await DiamondCutFacet.deploy();
+    await diamondCutFacet.deployed();
 
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactoryFactory = await ethers.getContractFactory('PositionManagerFactory');
     const PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
     await PositionManagerFactory.deployed();
 
-    await PositionManagerFactory.create(user.address, uniswapAddressHolder.address);
+    await PositionManagerFactory.create(user.address, diamondCutFacet.address, uniswapAddressHolder.address);
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
@@ -159,30 +164,57 @@ describe('CollectFees.sol', function () {
       },
       { gasLimit: 670000 }
     );
+
+    // add actions to position manager using diamond cut
+    const cut = [];
+    const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 };
+
+    cut.push({
+      facetAddress: mintAction.address,
+      action: FacetCutAction.Add,
+      functionSelectors: await getSelectors(mintAction),
+    });
+
+    cut.push({
+      facetAddress: collectFeesAction.address,
+      action: FacetCutAction.Add,
+      functionSelectors: await getSelectors(collectFeesAction),
+    });
+
+    const diamondCut = await ethers.getContractAt('IDiamondCut', PositionManager.address);
+
+    await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
+
+    mint = await ethers.getContractAt('IMint', PositionManager.address);
+    collectFees = await ethers.getContractAt('ICollectFees', PositionManager.address);
   });
 
-  describe('CollectFees.doAction()', function () {
+  describe('CollectFees.collectFees()', function () {
     it('should collect fees', async function () {
       const fee = 3000;
       const tickLower = -720;
       const tickUpper = 720;
       const amount0In = 5e5;
       const amount1In = 5e5;
-      let inputBytes = abiCoder.encode(
-        ['address', 'address', 'uint24', 'int24', 'int24', 'uint256', 'uint256'],
-        [tokenEth.address, tokenUsdc.address, fee, tickLower, tickUpper, amount0In, amount1In]
-      );
 
       //give positionManager some funds
       await tokenEth.connect(user).transfer(PositionManager.address, 6e5);
       await tokenUsdc.connect(user).transfer(PositionManager.address, 6e5);
 
       //mint a position
-      let tx = await PositionManager.connect(user).doAction(mintAction.address, inputBytes);
+      let tx = await mint.connect(user).mint({
+        token0Address: tokenEth.address,
+        token1Address: tokenUsdc.address,
+        fee: fee,
+        tickLower: tickLower,
+        tickUpper: tickUpper,
+        amount0Desired: amount0In,
+        amount1Desired: amount1In,
+      });
       let events = (await tx.wait()).events as any;
 
       const mintEvent = events[events.length - 1];
-      const tokenId = abiCoder.decode(['uint256', 'uint256', 'uint256'], mintEvent.args.data)[0];
+      const tokenId = mintEvent.data;
 
       // Do some trades to accrue fees
       for (let i = 0; i < 10; i++) {
@@ -201,25 +233,21 @@ describe('CollectFees.sol', function () {
       }
 
       // collect fees
-      inputBytes = abiCoder.encode(['uint256'], [tokenId]);
-
-      tx = await PositionManager.connect(user).doAction(collectFees.address, inputBytes);
+      tx = await collectFees.connect(user).collectFees(tokenId);
       events = (await tx.wait()).events as any;
       const collectEvent = events[events.length - 1];
-      const feesCollected = abiCoder.decode(['uint256', 'uint256'], collectEvent.args.data);
+      const feesCollected = abiCoder.decode(['uint256', 'uint256'], collectEvent.data);
 
       expect(feesCollected[0]).to.gt(0);
       expect(feesCollected[1]).to.gt(0);
     });
 
     it('should revert if position does not exist', async function () {
-      const inputBytes = abiCoder.encode(['uint256'], [200]);
-      await expect(PositionManager.connect(user).doAction(collectFees.address, inputBytes)).to.be.reverted;
+      await expect(collectFees.connect(user).collectFees(200)).to.be.reverted;
     });
 
     it('should revert if position is not owned by user', async function () {
-      const inputBytes = abiCoder.encode(['uint256'], [1]);
-      await expect(PositionManager.connect(user).doAction(collectFees.address, inputBytes)).to.be.reverted;
+      await expect(collectFees.connect(user).collectFees(1)).to.be.reverted;
     });
   });
 });
