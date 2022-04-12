@@ -17,6 +17,9 @@ contract AutoCompoundModule {
     IUniswapAddressHolder addressHolder;
     uint256 feesThreshold;
 
+    ///@notice constructor of autoCompoundModule
+    ///@param _addressHolder the address of the uniswap address holder contract
+    ///@param _feesThreshold the fees threshold
     constructor(address _addressHolder, uint256 _feesThreshold) {
         addressHolder = IUniswapAddressHolder(_addressHolder);
         feesThreshold = _feesThreshold;

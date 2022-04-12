@@ -12,7 +12,7 @@ import '../utils/Storage.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
 
 interface ISwapToPositionRatio {
-    struct InputStruct {
+    struct SwapToPositionInput {
         address token0Address;
         address token1Address;
         uint24 fee;
@@ -22,7 +22,9 @@ interface ISwapToPositionRatio {
         int24 tickUpper;
     }
 
-    function swapToPositionRatio(InputStruct memory inputs) external returns (uint256 amount0Out, uint256 amount1Out);
+    function swapToPositionRatio(SwapToPositionInput memory inputs)
+        external
+        returns (uint256 amount0Out, uint256 amount1Out);
 }
 
 ///@notice action to swap to an exact position ratio
@@ -37,7 +39,7 @@ contract SwapToPositionRatio {
     ///@param amount1In actual token1 amount to be deposited
     ///@param tickLower lower tick of position
     ///@param tickUpper upper tick of position
-    struct InputStruct {
+    struct SwapToPositionInput {
         address token0Address;
         address token1Address;
         uint24 fee;
@@ -48,10 +50,13 @@ contract SwapToPositionRatio {
     }
 
     ///@notice performs swap to optimal ratio for the position at tickLower and tickUpper
-    ///@param inputs input bytes to be decoded according to InputStruct
+    ///@param inputs input bytes to be decoded according to SwapToPositionInput
     ///@param amount0Out the new value of amount0
     ///@param amount1Out the new value of amount1
-    function swapToPositionRatio(InputStruct memory inputs) public returns (uint256 amount0Out, uint256 amount1Out) {
+    function swapToPositionRatio(SwapToPositionInput memory inputs)
+        public
+        returns (uint256 amount0Out, uint256 amount1Out)
+    {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
         address poolAddress = NFTHelper._getPoolAddress(

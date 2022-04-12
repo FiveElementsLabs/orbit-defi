@@ -3,7 +3,6 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 /******************************************************************************\
-* Author: Nick Mudge <nick@perfectabstractions.com> (https://twitter.com/mudgen)
 * EIP-2535 Diamonds: https://eips.ethereum.org/EIPS/eip-2535
 /******************************************************************************/
 

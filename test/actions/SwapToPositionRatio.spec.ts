@@ -38,7 +38,7 @@ describe('SwapToPositionRatio.sol', function () {
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
   let PositionManager: PositionManager; // PositionManager contract by UniswapV3
   let SwapRouter: Contract; // SwapRouter contract by UniswapV3
-  let SwapToPositionRatio: Contract; // SwapToPositionRatio contract
+  let SwapToPositionRatioFallback: Contract; // SwapToPositionRatio contract
   let abiCoder: AbiCoder;
   let UniswapAddressHolder: Contract; // address holder for UniswapV3 contracts
 
@@ -179,7 +179,10 @@ describe('SwapToPositionRatio.sol', function () {
 
     const tx = await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
 
-    SwapToPositionRatio = (await ethers.getContractAt('ISwapToPositionRatio', PositionManager.address)) as Contract;
+    SwapToPositionRatioFallback = (await ethers.getContractAt(
+      'ISwapToPositionRatio',
+      PositionManager.address
+    )) as Contract;
   });
 
   describe('doAction', function () {
@@ -189,7 +192,7 @@ describe('SwapToPositionRatio.sol', function () {
       const amount0In = 1e5;
       const amount1In = 2e5;
 
-      await SwapToPositionRatio.connect(user).swapToPositionRatio({
+      await SwapToPositionRatioFallback.connect(user).swapToPositionRatio({
         token0Address: tokenEth.address,
         token1Address: tokenUsdc.address,
         fee: 3000,
@@ -206,7 +209,7 @@ describe('SwapToPositionRatio.sol', function () {
       const amount0In = 1e5;
       const amount1In = 2e5;
 
-      const tx = await SwapToPositionRatio.connect(user).swapToPositionRatio({
+      const tx = await SwapToPositionRatioFallback.connect(user).swapToPositionRatio({
         token0Address: tokenEth.address,
         token1Address: tokenUsdc.address,
         fee: 3000,
@@ -230,7 +233,7 @@ describe('SwapToPositionRatio.sol', function () {
       const amount1In = 5e5;
 
       await expect(
-        SwapToPositionRatio.connect(user).swapToPositionRatio({
+        SwapToPositionRatioFallback.connect(user).swapToPositionRatio({
           token0Address: tokenEth.address,
           token1Address: tokenUsdc.address,
           fee: 3000,
@@ -249,7 +252,7 @@ describe('SwapToPositionRatio.sol', function () {
       const amount1In = 5e5;
 
       await expect(
-        SwapToPositionRatio.connect(user).swapToPositionRatio({
+        SwapToPositionRatioFallback.connect(user).swapToPositionRatio({
           token0Address: tokenEth.address,
           token1Address: tokenDai.address,
           fee: 2348,
