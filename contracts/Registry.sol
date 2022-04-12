@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.6;
 
-/// @title Stores modules addresses
+/// @title Stores all the important module addresses
 contract Registry {
-    address public governance;
+    address public owner;
 
     struct Entry {
         bool activated;
@@ -13,10 +13,10 @@ contract Registry {
     mapping(address => Entry) public entries;
 
     constructor() {
-        governance = msg.sender;
+        owner = msg.sender;
     }
 
-    function addNewContract(address _contractAddr) external onlyGovernance {
+    function addNewContract(address _contractAddr) external onlyOwner {
         require(!entries[_contractAddr].exists, 'Entry already exists');
         entries[_contractAddr] = Entry({activated: true, exists: true});
     }
@@ -25,8 +25,8 @@ contract Registry {
         return entries[_contractAddr].activated;
     }
 
-    modifier onlyGovernance() {
-        require(msg.sender == governance, 'Only governance');
+    modifier onlyOwner() {
+        require(msg.sender == owner, 'Only owner');
         _;
     }
 }
