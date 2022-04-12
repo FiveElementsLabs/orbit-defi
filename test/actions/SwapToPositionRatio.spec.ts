@@ -10,7 +10,7 @@ const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/
 const PositionManagerjson = require('../../artifacts/contracts/PositionManager.sol/PositionManager.json');
 const SwapRouterjson = require('@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json');
 const FixturesConst = require('../shared/fixtures');
-import { tokensFixture, poolFixture, mintSTDAmount } from '../shared/fixtures';
+import { tokensFixture, poolFixture, mintSTDAmount, getSelectors } from '../shared/fixtures';
 import {
   MockToken,
   IUniswapV3Pool,
@@ -38,7 +38,7 @@ describe('SwapToPositionRatio.sol', function () {
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
   let PositionManager: PositionManager; // PositionManager contract by UniswapV3
   let SwapRouter: Contract; // SwapRouter contract by UniswapV3
-  let SwapToPositionRatioAction: SwapToPositionRatio; // SwapToPositionRatio contract
+  let SwapToPositionRatio: Contract; // SwapToPositionRatio contract
   let abiCoder: AbiCoder;
   let UniswapAddressHolder: Contract; // address holder for UniswapV3 contracts
 
@@ -108,30 +108,33 @@ describe('SwapToPositionRatio.sol', function () {
     )) as Contract;
     await UniswapAddressHolder.deployed();
 
+    // deploy DiamondCutFacet ----------------------------------------------------------------------
+    const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet');
+    const diamondCutFacet = await DiamondCutFacet.deploy();
+    await diamondCutFacet.deployed();
+
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactoryFactory = await ethers.getContractFactory('PositionManagerFactory');
     const PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
     await PositionManagerFactory.deployed();
 
-    await PositionManagerFactory.create(user.address, UniswapAddressHolder.address);
+    await PositionManagerFactory.create(user.address, diamondCutFacet.address, UniswapAddressHolder.address);
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
 
     //Deploy SwapToPositionRatio Action
     const swapToPositionRatioActionFactory = await ethers.getContractFactory('SwapToPositionRatio');
-    SwapToPositionRatioAction = (await swapToPositionRatioActionFactory.deploy()) as SwapToPositionRatio;
+    const SwapToPositionRatioAction = (await swapToPositionRatioActionFactory.deploy()) as SwapToPositionRatio;
     await SwapToPositionRatioAction.deployed();
 
     //get AbiCoder
     abiCoder = ethers.utils.defaultAbiCoder;
 
     //APPROVE
-    //recipient: SwapToPositionRatio action - spender: user
-    await tokenEth.connect(user).approve(SwapToPositionRatioAction.address, ethers.utils.parseEther('100000000000000'));
-    await tokenUsdc
-      .connect(user)
-      .approve(SwapToPositionRatioAction.address, ethers.utils.parseEther('100000000000000'));
+    //recipient: PositionManager action - spender: user
+    await tokenEth.connect(user).approve(PositionManager.address, ethers.utils.parseEther('100000000000000'));
+    await tokenUsdc.connect(user).approve(PositionManager.address, ethers.utils.parseEther('100000000000000'));
     //recipient: NonFungiblePositionManager - spender: liquidityProvider
     await tokenEth
       .connect(liquidityProvider)
@@ -161,6 +164,22 @@ describe('SwapToPositionRatio.sol', function () {
       },
       { gasLimit: 670000 }
     );
+
+    // add actions to position manager using diamond pattern
+    const cut = [];
+    const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 };
+
+    cut.push({
+      facetAddress: SwapToPositionRatioAction.address,
+      action: FacetCutAction.Add,
+      functionSelectors: await getSelectors(SwapToPositionRatioAction),
+    });
+
+    const diamondCut = await ethers.getContractAt('IDiamondCut', PositionManager.address);
+
+    const tx = await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
+
+    SwapToPositionRatio = (await ethers.getContractAt('ISwapToPositionRatio', PositionManager.address)) as Contract;
   });
 
   describe('doAction', function () {
@@ -169,56 +188,39 @@ describe('SwapToPositionRatio.sol', function () {
       const tickUpper = 600;
       const amount0In = 1e5;
       const amount1In = 2e5;
-      const inputBytes = abiCoder.encode(
-        ['address', 'address', 'uint24', 'uint256', 'uint256', 'int24', 'int24'],
-        [tokenEth.address, tokenUsdc.address, 3000, amount0In, amount1In, tickLower, tickUpper]
-      );
 
-      const events = (
-        await (await PositionManager.connect(user).doAction(SwapToPositionRatioAction.address, inputBytes)).wait()
-      ).events as any;
-
-      const outputEvent = events[events.length - 1];
-      const success = outputEvent.args[0];
-      expect(success).to.be.true;
+      await SwapToPositionRatio.connect(user).swapToPositionRatio({
+        token0Address: tokenEth.address,
+        token1Address: tokenUsdc.address,
+        fee: 3000,
+        amount0In: amount0In,
+        amount1In: amount1In,
+        tickLower: tickLower,
+        tickUpper: tickUpper,
+      });
     });
 
-    it('should correctly return bytes output', async function () {
+    it('should correctly return output', async function () {
       const tickLower = -300;
       const tickUpper = 600;
       const amount0In = 1e5;
       const amount1In = 2e5;
-      const inputBytes = abiCoder.encode(
-        ['address', 'address', 'uint24', 'uint256', 'uint256', 'int24', 'int24'],
-        [tokenEth.address, tokenUsdc.address, 3000, amount0In, amount1In, tickLower, tickUpper]
-      );
 
-      const tx = await PositionManager.connect(user).doAction(SwapToPositionRatioAction.address, inputBytes);
+      const tx = await SwapToPositionRatio.connect(user).swapToPositionRatio({
+        token0Address: tokenEth.address,
+        token1Address: tokenUsdc.address,
+        fee: 3000,
+        amount0In: amount0In,
+        amount1In: amount1In,
+        tickLower: tickLower,
+        tickUpper: tickUpper,
+      });
 
       const events = (await tx.wait()).events as any;
       const outputEvent = events[events.length - 1];
-
-      const amount0Out = abiCoder.decode(['uint256'], outputEvent.args[1]);
-
-      expect(amount0Out.toString()).to.equal('199202');
-    });
-
-    it('should revert if the action does not exist', async function () {
-      const tickLower = -300;
-      const tickUpper = 600;
-      const amount0In = 1e5;
-      const amount1In = 2e5;
-      const inputBytes = abiCoder.encode(
-        ['address', 'address', 'uint24', 'uint256', 'uint256', 'int24', 'int24'],
-        [tokenEth.address, tokenUsdc.address, 3000, amount0In, amount1In, tickLower, tickUpper]
-      );
-
-      await expect(
-        PositionManager.connect(user).doAction(
-          Factory.address, // Invalid action address on purpose
-          inputBytes
-        )
-      ).to.be.reverted;
+      const amountsOut = abiCoder.decode(['uint256', 'uint256'], outputEvent.data);
+      expect(amountsOut[0].toNumber()).to.equal(199202);
+      expect(amountsOut[1].toNumber()).to.equal(100498);
     });
 
     it('should revert if a too high/low tick is passed', async function () {
@@ -226,13 +228,18 @@ describe('SwapToPositionRatio.sol', function () {
       const tickUpper = 900000;
       const amount0In = 7e5;
       const amount1In = 5e5;
-      const inputBytes = abiCoder.encode(
-        ['address', 'address', 'uint24', 'uint256', 'uint256', 'int24', 'int24'],
-        [tokenEth.address, tokenUsdc.address, 3000, amount0In, amount1In, tickLower, tickUpper]
-      );
 
-      await expect(PositionManager.connect(user).doAction(SwapToPositionRatioAction.address, inputBytes)).to.be
-        .reverted;
+      await expect(
+        SwapToPositionRatio.connect(user).swapToPositionRatio({
+          token0Address: tokenEth.address,
+          token1Address: tokenUsdc.address,
+          fee: 3000,
+          amount0In: amount0In,
+          amount1In: amount1In,
+          tickLower: tickLower,
+          tickUpper: tickUpper,
+        })
+      ).to.be.reverted;
     });
 
     it('should revert if pool does not exist', async function () {
@@ -240,13 +247,18 @@ describe('SwapToPositionRatio.sol', function () {
       const tickUpper = 720;
       const amount0In = 7e5;
       const amount1In = 5e5;
-      const inputBytes = abiCoder.encode(
-        ['address', 'address', 'uint24', 'uint256', 'uint256', 'int24', 'int24'],
-        [tokenEth.address, tokenDai.address, 3000, amount0In, amount1In, tickLower, tickUpper]
-      );
 
-      await expect(PositionManager.connect(user).doAction(SwapToPositionRatioAction.address, inputBytes)).to.be
-        .reverted;
+      await expect(
+        SwapToPositionRatio.connect(user).swapToPositionRatio({
+          token0Address: tokenEth.address,
+          token1Address: tokenDai.address,
+          fee: 2348,
+          amount0In: amount0In,
+          amount1In: amount1In,
+          tickLower: tickLower,
+          tickUpper: tickUpper,
+        })
+      ).to.be.reverted;
     });
   });
 });
