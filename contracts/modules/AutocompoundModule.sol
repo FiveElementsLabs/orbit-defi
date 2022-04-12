@@ -11,7 +11,6 @@ import '../helpers/ERC20Helper.sol';
 contract AutoCompoundModule {
     //TODO: setup registry
     IUniswapAddressHolder addressHolder;
-    uint256 feesThreshold;
     address collectFeeAddress;
     address increaseLiquidityAddress;
     address decreaseLiquidityAddress;
@@ -19,14 +18,12 @@ contract AutoCompoundModule {
 
     constructor(
         address _addressHolder,
-        uint256 _feesThreshold,
         address _collectFeeAddress,
         address _increaseLiquidityAddress,
         address _decreaseLiquidityAddress,
         address _updateFeesAddress
     ) {
         addressHolder = IUniswapAddressHolder(_addressHolder);
-        feesThreshold = _feesThreshold;
         collectFeeAddress = _collectFeeAddress;
         increaseLiquidityAddress = _increaseLiquidityAddress;
         decreaseLiquidityAddress = _decreaseLiquidityAddress;
@@ -35,7 +32,7 @@ contract AutoCompoundModule {
 
     ///@notice executes our recipe for autocompounding
     ///@param positionManagerAddress address of the position manager
-    function autoCompoundFees(address positionManagerAddress) public {
+    function autoCompoundFees(address positionManagerAddress, uint256 feesThreshold) public {
         IPositionManager positionManager = IPositionManager(positionManagerAddress);
         //check if autocompound is active
         if (
@@ -44,7 +41,7 @@ contract AutoCompoundModule {
             //TODO: check if autocompound module is active
             uint256[] memory positions = positionManager.getAllUniPosition();
             for (uint256 i = 0; i < positions.length; i++) {
-                if (checkIfCompoundIsNeeded(positionManagerAddress, positions[i])) {
+                if (checkIfCompoundIsNeeded(positionManagerAddress, positions[i], feesThreshold)) {
                     bytes memory data = positionManager.doAction(collectFeeAddress, abi.encode(positions[i]));
 
                     (uint256 amount0Collected, uint256 amount1Collected) = abi.decode(data, (uint256, uint256));
@@ -62,7 +59,11 @@ contract AutoCompoundModule {
     ///@param positionManagerAddress address of the position manager
     ///@param tokenId token id of the position
     ///@return true if the position needs to be collected
-    function checkIfCompoundIsNeeded(address positionManagerAddress, uint256 tokenId) internal returns (bool) {
+    function checkIfCompoundIsNeeded(
+        address positionManagerAddress,
+        uint256 tokenId,
+        uint256 feesThreshold
+    ) internal returns (bool) {
         bytes memory data = IPositionManager(positionManagerAddress).doAction(updateFeesAddress, abi.encode(tokenId));
 
         (uint256 uncollectedFees0, uint256 uncollectedFees1) = abi.decode(data, (uint256, uint256));
@@ -72,15 +73,6 @@ contract AutoCompoundModule {
             addressHolder.uniswapV3FactoryAddress()
         );
 
-        uint256 token0OverFees = 2**256 - 1;
-        uint256 token1OverFees = 2**256 - 1;
-
-        if (uncollectedFees0 > 0) {
-            token0OverFees = amount0 / uncollectedFees0;
-        }
-        if (uncollectedFees1 > 0) {
-            token1OverFees = amount1 / uncollectedFees1;
-        }
-        return (token0OverFees < feesThreshold || token1OverFees < feesThreshold);
+        return (uncollectedFees0 * 100 > amount0 * feesThreshold || uncollectedFees1 * 100 > amount1 * feesThreshold);
     }
 }

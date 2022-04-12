@@ -230,20 +230,20 @@ describe('IdleLiquidityModule.sol', function () {
 
       expect(await NonFungiblePositionManager.ownerOf(tokenId)).to.equal(PositionManager.address);
       await expect(NonFungiblePositionManager.ownerOf(tokenId.add(1))).to.be.reverted;
-      expect((await NonFungiblePositionManager.positions(tokenId)).tickLower).to.be.lt(tick);
-      expect((await NonFungiblePositionManager.positions(tokenId)).tickUpper).to.be.lt(tick);
+      expect(Math.abs((await NonFungiblePositionManager.positions(tokenId)).tickLower)).to.be.lt(Math.abs(tick));
+      expect(Math.abs((await NonFungiblePositionManager.positions(tokenId)).tickUpper)).to.be.lt(Math.abs(tick));
 
-      await IdleLiquidityModule.rebalance(tokenId, PositionManager.address);
+      await IdleLiquidityModule.rebalance(tokenId, PositionManager.address, 10);
 
       await expect(NonFungiblePositionManager.ownerOf(tokenId)).to.be.reverted;
       expect(await NonFungiblePositionManager.ownerOf(tokenId.add(1))).to.equal(PositionManager.address);
-      expect((await NonFungiblePositionManager.positions(tokenId.add(1))).tickLower).to.be.lt(tick);
-      expect((await NonFungiblePositionManager.positions(tokenId.add(1))).tickUpper).to.be.gt(tick);
+      expect(Math.abs((await NonFungiblePositionManager.positions(tokenId.add(1))).tickLower)).to.be.lt(Math.abs(tick));
+      expect(Math.abs((await NonFungiblePositionManager.positions(tokenId.add(1))).tickUpper)).to.be.gt(Math.abs(tick));
     });
 
     it('should faild cause inesistent tokenId', async function () {
       try {
-        await IdleLiquidityModule.rebalance(tokenId.add(1), PositionManager.address);
+        await IdleLiquidityModule.rebalance(tokenId.add(1), PositionManager.address, 100);
       } catch (error: any) {
         expect(error.message).to.include('Invalid token ID');
       }
