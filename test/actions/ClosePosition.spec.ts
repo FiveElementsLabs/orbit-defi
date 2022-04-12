@@ -11,7 +11,7 @@ const PositionManagerjson = require('../../artifacts/contracts/PositionManager.s
 const SwapRouterjson = require('@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json');
 
 const FixturesConst = require('../shared/fixtures');
-import { tokensFixture, poolFixture, mintSTDAmount } from '../shared/fixtures';
+import { tokensFixture, poolFixture, mintSTDAmount, getSelectors } from '../shared/fixtures';
 import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager } from '../../typechain';
 
 describe('ClosePosition.sol', function () {
@@ -103,12 +103,17 @@ describe('ClosePosition.sol', function () {
     );
     await uniswapAddressHolder.deployed();
 
+    // deploy DiamondCutFacet ----------------------------------------------------------------------
+    const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet');
+    const diamondCutFacet = await DiamondCutFacet.deploy();
+    await diamondCutFacet.deployed();
+
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactoryFactory = await ethers.getContractFactory('PositionManagerFactory');
     const PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
     await PositionManagerFactory.deployed();
 
-    await PositionManagerFactory.create(user.address, uniswapAddressHolder.address);
+    await PositionManagerFactory.create(user.address, diamondCutFacet.address, uniswapAddressHolder.address);
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
@@ -159,6 +164,20 @@ describe('ClosePosition.sol', function () {
       },
       { gasLimit: 670000 }
     );
+
+    // add actions to position manager using diamond pattern
+    const cut = [];
+    const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 };
+
+    cut.push({
+      facetAddress: ClosePositionAction.address,
+      action: FacetCutAction.Add,
+      functionSelectors: await getSelectors(ClosePositionAction),
+    });
+
+    const diamondCut = await ethers.getContractAt('IDiamondCut', PositionManager.address);
+
+    const tx = await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
   });
   beforeEach(async function () {
     //mint NFT
@@ -185,11 +204,10 @@ describe('ClosePosition.sol', function () {
     await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
   });
 
-  describe('doAction', function () {
+  describe('ClosePositionAction - closePosition', function () {
     it('should close a uni position', async function () {
-      const inputBytes = abiCoder.encode(['uint256', 'bool'], [tokenId, true]);
-
-      await PositionManager.connect(user).doAction(ClosePositionAction.address, inputBytes);
+      const close = (await ethers.getContractAt('IClosePosition', PositionManager.address)) as Contract;
+      await close.closePosition(tokenId, true);
       let e;
       try {
         await NonFungiblePositionManager.ownerOf(tokenId);
