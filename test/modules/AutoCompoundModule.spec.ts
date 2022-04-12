@@ -10,7 +10,7 @@ const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/
 const PositionManagerjson = require('../../artifacts/contracts/PositionManager.sol/PositionManager.json');
 const SwapRouterjson = require('@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json');
 const FixturesConst = require('../shared/fixtures');
-import { tokensFixture, poolFixture, mintSTDAmount, routerFixture } from '../shared/fixtures';
+import { tokensFixture, poolFixture, mintSTDAmount, routerFixture, getSelectors } from '../shared/fixtures';
 import {
   MockToken,
   IUniswapV3Pool,
@@ -43,7 +43,7 @@ describe('AutoCompoundModule.sol', function () {
 
   let Factory: Contract; // the factory that will deploy all pools
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
-  let PositionManager: PositionManager; //Our smart vault named PositionManager
+  let PositionManager: Contract; //Our smart vault named PositionManager
   let Router: TestRouter; //Our router to perform swap
   let SwapRouter: Contract;
   let collectFeesAction: Contract;
@@ -121,12 +121,17 @@ describe('AutoCompoundModule.sol', function () {
     );
     await uniswapAddressHolder.deployed();
 
+    // deploy DiamondCutFacet ----------------------------------------------------------------------
+    const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet');
+    const diamondCutFacet = await DiamondCutFacet.deploy();
+    await diamondCutFacet.deployed();
+
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactoryFactory = await ethers.getContractFactory('PositionManagerFactory');
     const PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
     await PositionManagerFactory.deployed();
 
-    await PositionManagerFactory.create(user.address, uniswapAddressHolder.address);
+    await PositionManagerFactory.create(user.address, diamondCutFacet.address, uniswapAddressHolder.address);
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
@@ -150,14 +155,7 @@ describe('AutoCompoundModule.sol', function () {
 
     //deploy AutoCompound Module
     const AutocompoundFactory = await ethers.getContractFactory('AutoCompoundModule');
-    autoCompound = await AutocompoundFactory.deploy(
-      uniswapAddressHolder.address,
-      100,
-      collectFeesAction.address,
-      increaseLiquidityAction.address,
-      decreaseLiquidityAction.address,
-      updateFeesAction.address
-    );
+    autoCompound = await AutocompoundFactory.deploy(uniswapAddressHolder.address, 100);
     await autoCompound.deployed();
 
     //select standard abicoder
@@ -211,8 +209,8 @@ describe('AutoCompoundModule.sol', function () {
         token0: tokenEth.address,
         token1: tokenUsdc.address,
         fee: 3000,
-        tickLower: 0 - 60 * 1000,
-        tickUpper: 0 + 60 * 1000,
+        tickLower: 0 - 60 * 10,
+        tickUpper: 0 + 60 * 10,
         amount0Desired: '0x' + (1e10).toString(16),
         amount1Desired: '0x' + (1e10).toString(16),
         amount0Min: 0,
@@ -222,7 +220,44 @@ describe('AutoCompoundModule.sol', function () {
       },
       { gasLimit: 670000 }
     );
-    await PositionManager.connect(user).depositUniNft(user.address, [2]);
+
+    const receipt: any = await mintTx.wait();
+    tokenId = receipt.events[receipt.events.length - 1].args.tokenId;
+
+    await PositionManager.connect(user).depositUniNft(user.address, [tokenId]);
+
+    // user approve autocompound module
+    await PositionManager.toggleModule(2, autoCompound.address, true);
+    // ----------------------------------------------------------------------------------------------------
+
+    // add actions to position manager using diamond pattern
+    const cut = [];
+    const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 };
+
+    cut.push({
+      facetAddress: collectFeesAction.address,
+      action: FacetCutAction.Add,
+      functionSelectors: await getSelectors(collectFeesAction),
+    });
+    cut.push({
+      facetAddress: increaseLiquidityAction.address,
+      action: FacetCutAction.Add,
+      functionSelectors: await getSelectors(increaseLiquidityAction),
+    });
+    cut.push({
+      facetAddress: decreaseLiquidityAction.address,
+      action: FacetCutAction.Add,
+      functionSelectors: await getSelectors(decreaseLiquidityAction),
+    });
+    cut.push({
+      facetAddress: updateFeesAction.address,
+      action: FacetCutAction.Add,
+      functionSelectors: await getSelectors(updateFeesAction),
+    });
+
+    const diamondCut = await ethers.getContractAt('IDiamondCut', PositionManager.address);
+
+    const tx = await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
   });
 
   it('should be able not autocompound if fees are not enough', async function () {
@@ -242,11 +277,10 @@ describe('AutoCompoundModule.sol', function () {
 
     const position = await NonFungiblePositionManager.positions(2);
     //collect and reinvest fees
-    await autoCompound.connect(user).autoCompoundFees(PositionManager.address);
+    await autoCompound.autoCompoundFees(PositionManager.address, tokenId);
     const positionPost = await NonFungiblePositionManager.positions(2);
     expect(positionPost.liquidity).to.lt(position.liquidity);
   });
-
   it('should be able to autocompound fees', async function () {
     //do some trades to accrue fees
     for (let i = 0; i < 20; i++) {
@@ -264,7 +298,7 @@ describe('AutoCompoundModule.sol', function () {
 
     const position = await NonFungiblePositionManager.positions(2);
     //collect and reinvest fees
-    await autoCompound.connect(user).autoCompoundFees(PositionManager.address);
+    await autoCompound.connect(user).autoCompoundFees(PositionManager.address, 2);
     const positionPost = await NonFungiblePositionManager.positions(2);
     expect(positionPost.liquidity).to.gt(position.liquidity);
   });

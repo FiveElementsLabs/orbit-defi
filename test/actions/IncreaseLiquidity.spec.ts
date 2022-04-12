@@ -10,7 +10,7 @@ const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/
 const PositionManagerjson = require('../../artifacts/contracts/PositionManager.sol/PositionManager.json');
 const SwapRouterjson = require('@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json');
 const FixturesConst = require('../shared/fixtures');
-import { tokensFixture, poolFixture, mintSTDAmount } from '../shared/fixtures';
+import { tokensFixture, poolFixture, mintSTDAmount, getSelectors } from '../shared/fixtures';
 import {
   MockToken,
   IUniswapV3Pool,
@@ -41,7 +41,7 @@ describe('IncreaseLiquidity.sol', function () {
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
   let PositionManager: PositionManager; // PositionManager contract by UniswapV3
   let SwapRouter: Contract; // SwapRouter contract by UniswapV3
-  let IncreaseLiquidityAction: IncreaseLiquidity; // IncreaseLiquidity contract
+  let IncreaseLiquidityFallback: Contract; // IncreaseLiquidity contract
   let abiCoder: AbiCoder;
   let UniswapAddressHolder: Contract; // address holder for UniswapV3 contracts
 
@@ -111,19 +111,24 @@ describe('IncreaseLiquidity.sol', function () {
     )) as Contract;
     await UniswapAddressHolder.deployed();
 
+    // deploy DiamondCutFacet ----------------------------------------------------------------------
+    const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet');
+    const diamondCutFacet = await DiamondCutFacet.deploy();
+    await diamondCutFacet.deployed();
+
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactory = await ethers
       .getContractFactory('PositionManagerFactory')
       .then((contract) => contract.deploy().then((deploy) => deploy.deployed()));
 
-    await PositionManagerFactory.create(user.address, UniswapAddressHolder.address);
+    await PositionManagerFactory.create(user.address, diamondCutFacet.address, UniswapAddressHolder.address);
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
 
     //Deploy IncreaseLiquidity Action
     const IncreaseLiquidityActionFactory = await ethers.getContractFactory('IncreaseLiquidity');
-    IncreaseLiquidityAction = (await IncreaseLiquidityActionFactory.deploy()) as IncreaseLiquidity;
+    const IncreaseLiquidityAction = (await IncreaseLiquidityActionFactory.deploy()) as IncreaseLiquidity;
     await IncreaseLiquidityAction.deployed();
 
     //get AbiCoder
@@ -174,6 +179,22 @@ describe('IncreaseLiquidity.sol', function () {
       },
       { gasLimit: 670000 }
     );
+
+    // add actions to position manager using diamond cut
+    const cut = [];
+    const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 };
+
+    cut.push({
+      facetAddress: IncreaseLiquidityAction.address,
+      action: FacetCutAction.Add,
+      functionSelectors: await getSelectors(IncreaseLiquidityAction),
+    });
+
+    const diamondCut = await ethers.getContractAt('IDiamondCut', PositionManager.address);
+
+    await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
+
+    IncreaseLiquidityFallback = await ethers.getContractAt('IIncreaseLiquidity', PositionManager.address);
   });
 
   // Mint a liquidity position for the user in order to test the action.
@@ -199,25 +220,23 @@ describe('IncreaseLiquidity.sol', function () {
     tokenId = mintReceipt.events[mintReceipt.events.length - 1].args.tokenId;
   });
 
-  describe('doAction', function () {
+  describe('IncreaseLiquidity.increaseLiquidity()', function () {
     it('should correctly perform the add liquidity action', async function () {
       await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
 
       const poolTokenId = 1;
+      const liquidityBefore = (await NonFungiblePositionManager.positions(poolTokenId)).liquidity;
+
       const amount0Desired = 1e4;
       const amount1Desired = 1e6;
-      const inputBytes = abiCoder.encode(
-        ['uint256', 'uint256', 'uint256'],
-        [poolTokenId, amount0Desired, amount1Desired]
+
+      const tx = await IncreaseLiquidityFallback.connect(user).increaseLiquidity(
+        poolTokenId,
+        amount0Desired,
+        amount1Desired
       );
 
-      const events = (
-        await (await PositionManager.connect(user).doAction(IncreaseLiquidityAction.address, inputBytes)).wait()
-      ).events as any;
-
-      const outputEvent = events[events.length - 1];
-      const success = outputEvent.args[0];
-      expect(success).to.be.true;
+      expect((await NonFungiblePositionManager.positions(poolTokenId)).liquidity).to.gt(liquidityBefore);
     });
 
     it('should correctly add liquidity to the NFT position', async function () {
@@ -232,7 +251,13 @@ describe('IncreaseLiquidity.sol', function () {
         [poolTokenId, amount0Desired, amount1Desired]
       );
 
-      await PositionManager.connect(user).doAction(IncreaseLiquidityAction.address, inputBytes);
+      const tx = await IncreaseLiquidityFallback.connect(user).increaseLiquidity(
+        poolTokenId,
+        amount0Desired,
+        amount1Desired
+      );
+
+      const events = await tx.wait();
       expect(await Pool0.liquidity()).to.be.gt(liquidityBefore);
     });
 
@@ -242,38 +267,20 @@ describe('IncreaseLiquidity.sol', function () {
       const poolTokenId = 1;
       const amount0Desired = 0;
       const amount1Desired = 0;
-      const inputBytes = abiCoder.encode(
-        ['uint256', 'uint256', 'uint256'],
-        [poolTokenId, amount0Desired, amount1Desired]
-      );
 
-      await expect(PositionManager.connect(user).doAction(IncreaseLiquidityAction.address, inputBytes)).to.be.reverted;
-    });
-
-    it('should revert if the action does not exist', async function () {
-      await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
-
-      const poolTokenId = 1;
-      const amount0Desired = 1e4;
-      const amount1Desired = 1e6;
-      const inputBytes = abiCoder.encode(
-        ['uint256', 'uint256', 'uint256'],
-        [poolTokenId, amount0Desired, amount1Desired]
-      );
-
-      await expect(PositionManager.connect(user).doAction(Factory.address, inputBytes)).to.be.reverted;
+      await expect(
+        IncreaseLiquidityFallback.connect(user).increaseLiquidity(poolTokenId, amount0Desired, amount1Desired)
+      ).to.be.reverted;
     });
 
     it('should revert if the pool does not exist', async function () {
       const poolTokenId = 30;
       const amount0Desired = 1e4;
       const amount1Desired = 1e6;
-      const inputBytes = abiCoder.encode(
-        ['uint256', 'uint256', 'uint256'],
-        [poolTokenId, amount0Desired, amount1Desired]
-      );
 
-      await expect(PositionManager.connect(user).doAction(IncreaseLiquidityAction.address, inputBytes)).to.be.reverted;
+      await expect(
+        IncreaseLiquidityFallback.connect(user).increaseLiquidity(poolTokenId, amount0Desired, amount1Desired)
+      ).to.be.reverted;
     });
   });
 });
