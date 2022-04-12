@@ -63,7 +63,7 @@ contract IncreaseLiquidity {
                 amount1Desired: amount1Desired,
                 amount0Min: 0,
                 amount1Min: 0,
-                deadline: block.timestamp + 1000
+                deadline: block.timestamp + 120
             });
         (, uint256 amount0, uint256 amount1) = INonfungiblePositionManager(
             Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()

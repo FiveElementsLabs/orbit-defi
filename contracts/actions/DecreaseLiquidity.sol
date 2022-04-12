@@ -83,7 +83,7 @@ contract DecreaseLiquidity {
                 liquidity: liquidityToDecrease,
                 amount0Min: 0,
                 amount1Min: 0,
-                deadline: block.timestamp + 1000
+                deadline: block.timestamp + 120
             });
 
         (amount0, amount1) = INonfungiblePositionManager(

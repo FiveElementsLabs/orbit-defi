@@ -62,10 +62,6 @@ contract IdleLiquidityModule {
         if (positionManager.getModuleState(tokenId, address(this))) {
             int24 tickDiff = _checkDistanceFromRange(tokenId, positionManager);
 
-            // using this for all the actions cause declare more will cause stack too deep error
-            bytes memory inputs;
-            bytes memory outputs;
-
             ///@dev rebalance only if the position's range is outside of the tick of the pool (tickDiff < 0)
             if (tickDiff < 0) {
                 (

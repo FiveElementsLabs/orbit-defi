@@ -112,7 +112,7 @@ contract SwapToPositionRatio {
             tokenOut: token1Address,
             fee: fee,
             recipient: address(this),
-            deadline: block.timestamp + 1000,
+            deadline: block.timestamp + 120,
             amountIn: amount0In,
             amountOutMinimum: 0,
             sqrtPriceLimitX96: 0

@@ -54,7 +54,7 @@ contract CollectFees {
                 liquidity: 1,
                 amount0Min: 0,
                 amount1Min: 0,
-                deadline: block.timestamp + 1000
+                deadline: block.timestamp + 120
             });
         INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).decreaseLiquidity(
                 params

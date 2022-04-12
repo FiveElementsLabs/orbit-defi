@@ -14,14 +14,14 @@ contract PositionManagerFactory {
     ///@param _uniswapAddressHolderAddress helper uniswapAddressHolder cause PositionManager need it in constructor
     ///@return address[] return array of PositionManager address updated with the last deployed PositionManager
     function create(
-        address userAddress,
+        address _userAddress,
         address _diamondCutFacet,
         address _uniswapAddressHolderAddress
     ) public returns (address[] memory) {
-        PositionManager manager = new PositionManager(userAddress, _diamondCutFacet);
+        PositionManager manager = new PositionManager(_userAddress, _diamondCutFacet);
         positionManagers.push(address(manager));
-        manager.init(userAddress, _uniswapAddressHolderAddress);
-        emit PositionManagerCreated(address(manager), userAddress, _uniswapAddressHolderAddress);
+        manager.init(_userAddress, _uniswapAddressHolderAddress);
+        emit PositionManagerCreated(address(manager), _userAddress, _uniswapAddressHolderAddress);
 
         return positionManagers;
     }
