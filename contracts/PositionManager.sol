@@ -6,6 +6,7 @@ pragma abicoder v2;
 import '@openzeppelin/contracts/token/ERC721/ERC721Holder.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import './utils/Storage.sol';
+import './helpers/ERC20Helper.sol';
 import '../interfaces/IDiamondCut.sol';
 import '../interfaces/IPositionManager.sol';
 import '../interfaces/IUniswapAddressHolder.sol';
@@ -145,6 +146,12 @@ contract PositionManager is IPositionManager, ERC721Holder {
 
     function getModuleState(uint256 tokenId, address moduleAddress) external view override returns (bool) {
         return activatedModules[tokenId][moduleAddress];
+    }
+
+    ///@notice return the all tokens of tokenAddress in the positionManager
+    ///@param tokenAddress address of the token
+    function withdrawERC20(address tokenAddress) external onlyOwner {
+        ERC20Helper._withdrawTokens(tokenAddress, msg.sender, 2 * 256 - 1);
     }
 
     ///@notice modifier to check if the msg.sender is the owner
