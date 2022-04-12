@@ -6,7 +6,6 @@ pragma abicoder v2;
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
 import '../utils/Storage.sol';
-import 'hardhat/console.sol';
 
 interface ICollectFees {
     function collectFees(uint256 tokenId) external returns (uint256 amount0, uint256 amount1);

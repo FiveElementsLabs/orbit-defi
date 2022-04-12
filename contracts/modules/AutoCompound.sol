@@ -11,7 +11,6 @@ import '../utils/Storage.sol';
 import '../actions/CollectFees.sol';
 import '../actions/IncreaseLiquidity.sol';
 import '../actions/UpdateUncollectedFees.sol';
-import 'hardhat/console.sol';
 
 contract AutoCompoundModule {
     //TODO: setup registry

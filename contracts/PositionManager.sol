@@ -139,6 +139,10 @@ contract PositionManager is IPositionManager, ERC721Holder {
         return uniswapNFTsMemory;
     }
 
+    ///@notice toggle module state, activated (true) or not (false)
+    ///@param tokenId ID of the NFT
+    ///@param moduleAddress address of the module
+    ///@param activated state of the module
     function toggleModule(
         uint256 tokenId,
         address moduleAddress,
