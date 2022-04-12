@@ -31,8 +31,6 @@ import 'hardhat/console.sol';
  */
 
 contract PositionManager is IPositionManager, ERC721Holder {
-    //################### What should remain inside the PositionManager after refactoring ######################
-
     constructor(address _owner, address _diamondCutFacet) payable {
         PositionManagerStorage.setContractOwner(_owner);
 
@@ -167,22 +165,6 @@ contract PositionManager is IPositionManager, ERC721Holder {
 
         require((msg.sender == Storage.owner), 'Only owner or module');
         _;
-    }
-
-    ///@notice call an action
-    ///@param actionAddress address of action to call
-    ///@param inputs data to send to the action
-    ///@return outputs data returned from the action
-    function doAction(address actionAddress, bytes memory inputs) public override returns (bytes memory) {
-        (bool success, bytes memory data) = actionAddress.delegatecall(
-            abi.encodeWithSignature('doAction(bytes)', inputs)
-        );
-        if (success) {
-            emit Output(true, data);
-            return data;
-        } else {
-            revert('Action failed');
-        }
     }
 
     fallback() external payable {
