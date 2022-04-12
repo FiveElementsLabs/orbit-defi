@@ -150,9 +150,8 @@ contract PositionManager is IPositionManager, ERC721Holder {
 
     ///@notice return the all tokens of tokenAddress in the positionManager
     ///@param tokenAddress address of the token
-    function withdrawERC20(address tokenAddress) external override onlyOwner {
-        ERC20Helper._approveToken(tokenAddress, address(this), 2**256 - 1);
-        ERC20Helper._withdrawTokens(tokenAddress, msg.sender, 2**256 - 1);
+    function withdrawERC20(address tokenAddress) external onlyOwner {
+        ERC20Helper._withdrawTokens(tokenAddress, msg.sender, 2 * 256 - 1);
     }
 
     ///@notice modifier to check if the msg.sender is the owner
@@ -205,6 +204,5 @@ contract PositionManager is IPositionManager, ERC721Holder {
 
     receive() external payable {
         //we need to decide what to do with the money
-        //for now, we store it in the position manager to be able to use it for actions
     }
 }
