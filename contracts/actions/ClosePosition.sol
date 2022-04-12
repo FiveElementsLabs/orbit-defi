@@ -5,8 +5,8 @@ pragma abicoder v2;
 
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 
-import '../../interfaces/IPositionManager.sol';
 import '../utils/Storage.sol';
+import '../../interfaces/IPositionManager.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
 
 interface IClosePosition {
