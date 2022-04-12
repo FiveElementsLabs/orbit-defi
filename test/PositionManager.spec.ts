@@ -10,7 +10,7 @@ const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/
 const PositionManagerjson = require('../artifacts/contracts/PositionManager.sol/PositionManager.json');
 const SwapRouterjson = require('@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json');
 const FixturesConst = require('./shared/fixtures');
-import { tokensFixture, poolFixture, mintSTDAmount, routerFixture } from './shared/fixtures';
+import { tokensFixture, poolFixture, mintSTDAmount, routerFixture, getSelectors } from './shared/fixtures';
 import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager, TestRouter } from '../typechain';
 
 describe('PositionManager.sol', function () {
@@ -40,6 +40,9 @@ describe('PositionManager.sol', function () {
   let Router: TestRouter; //Our router to perform swap
   let SwapRouter: Contract;
   let MintAction: Contract;
+  let IncreaseLiquidityAction: Contract;
+  let IncreaseLiquidityActionNew: Contract;
+  let IncreaseLiquidityFallback: Contract;
   let abiCoder: AbiCoder;
 
   before(async function () {
@@ -129,6 +132,16 @@ describe('PositionManager.sol', function () {
     const ActionFactory = await ethers.getContractFactory('Mint');
     MintAction = await ActionFactory.deploy();
     await MintAction.deployed();
+
+    //Deploy IncreaseLiquidity Action
+    const IncreaseLiquidityActionFactory = await ethers.getContractFactory('IncreaseLiquidity');
+    IncreaseLiquidityAction = (await IncreaseLiquidityActionFactory.deploy()) as Contract;
+    await IncreaseLiquidityAction.deployed();
+
+    //Deploy IncreaseLiquidity Action
+    const IncreaseLiquidityActionFactoryNew = await ethers.getContractFactory('IncreaseLiquidity');
+    IncreaseLiquidityActionNew = (await IncreaseLiquidityActionFactoryNew.deploy()) as Contract;
+    await IncreaseLiquidityActionNew.deployed();
 
     //select standard abicoder
     abiCoder = ethers.utils.defaultAbiCoder;
@@ -277,6 +290,115 @@ describe('PositionManager.sol', function () {
       await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
 
       await expect(PositionManager.connect(trader).withdrawUniNft(user.address, tokenId)).to.be.reverted;
+    });
+  });
+  describe('PositionManager - DiamondCut', function () {
+    it('should add a new action and call it', async function () {
+      // add actions to position manager using diamond cut
+      const cut = [];
+      const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 };
+
+      cut.push({
+        facetAddress: IncreaseLiquidityAction.address,
+        action: FacetCutAction.Add,
+        functionSelectors: await getSelectors(IncreaseLiquidityAction),
+      });
+
+      const diamondCut = await ethers.getContractAt('IDiamondCut', PositionManager.address);
+
+      await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
+
+      IncreaseLiquidityFallback = await ethers.getContractAt('IIncreaseLiquidity', PositionManager.address);
+
+      const poolTokenId = 1;
+      const liquidityBefore = (await NonFungiblePositionManager.positions(poolTokenId)).liquidity;
+
+      const amount0Desired = 1e4;
+      const amount1Desired = 1e6;
+
+      await expect(
+        IncreaseLiquidityFallback.connect(user).increaseLiquidity(poolTokenId, amount0Desired, amount1Desired)
+      ).to.not.reverted;
+    });
+    it('should revert if replace a wrong one function address', async function () {
+      // add actions to position manager using diamond cut
+      const cut = [];
+      const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 };
+
+      cut.push({
+        facetAddress: MintAction.address,
+        action: FacetCutAction.Replace,
+        functionSelectors: await getSelectors(IncreaseLiquidityAction),
+      });
+
+      const diamondCut = await ethers.getContractAt('IDiamondCut', PositionManager.address);
+
+      await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
+
+      IncreaseLiquidityFallback = await ethers.getContractAt('IIncreaseLiquidity', PositionManager.address);
+
+      const poolTokenId = 1;
+      const liquidityBefore = (await NonFungiblePositionManager.positions(poolTokenId)).liquidity;
+
+      const amount0Desired = 1e4;
+      const amount1Desired = 1e6;
+
+      await expect(
+        IncreaseLiquidityFallback.connect(user).increaseLiquidity(poolTokenId, amount0Desired, amount1Desired)
+      ).to.be.reverted;
+    });
+    it('should replace onefunction address', async function () {
+      // add actions to position manager using diamond cut
+      const cut = [];
+      const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 };
+
+      cut.push({
+        facetAddress: IncreaseLiquidityActionNew.address,
+        action: FacetCutAction.Replace,
+        functionSelectors: await getSelectors(IncreaseLiquidityAction),
+      });
+
+      const diamondCut = await ethers.getContractAt('IDiamondCut', PositionManager.address);
+
+      await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
+
+      IncreaseLiquidityFallback = await ethers.getContractAt('IIncreaseLiquidity', PositionManager.address);
+
+      const poolTokenId = 1;
+      const liquidityBefore = (await NonFungiblePositionManager.positions(poolTokenId)).liquidity;
+
+      const amount0Desired = 1e4;
+      const amount1Desired = 1e6;
+
+      await expect(
+        IncreaseLiquidityFallback.connect(user).increaseLiquidity(poolTokenId, amount0Desired, amount1Desired)
+      ).to.not.reverted;
+    });
+    it('should remove onefunction address', async function () {
+      // add actions to position manager using diamond cut
+      const cut = [];
+      const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 };
+
+      cut.push({
+        facetAddress: '0x0000000000000000000000000000000000000000',
+        action: FacetCutAction.Remove,
+        functionSelectors: await getSelectors(IncreaseLiquidityAction),
+      });
+
+      const diamondCut = await ethers.getContractAt('IDiamondCut', PositionManager.address);
+
+      await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
+      IncreaseLiquidityFallback = await ethers.getContractAt('IIncreaseLiquidity', PositionManager.address);
+
+      const poolTokenId = 1;
+      const liquidityBefore = (await NonFungiblePositionManager.positions(poolTokenId)).liquidity;
+
+      const amount0Desired = 1e4;
+      const amount1Desired = 1e6;
+
+      await expect(
+        IncreaseLiquidityFallback.connect(user).increaseLiquidity(poolTokenId, amount0Desired, amount1Desired)
+      ).to.be.reverted;
     });
   });
 });

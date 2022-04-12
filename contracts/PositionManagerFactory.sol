@@ -10,7 +10,7 @@ contract PositionManagerFactory {
     event PositionManagerCreated(address indexed contractAddress, address userAddress, address uniswapAddressHolder);
 
     ///@notice deploy new positionManager and assign to userAddress
-    ///@param userAddress the address of the user that will be the owner of PositionManager
+    ///@param _userAddress the address of the user that will be the owner of PositionManager
     ///@param _uniswapAddressHolderAddress helper uniswapAddressHolder cause PositionManager need it in constructor
     ///@return address[] return array of PositionManager address updated with the last deployed PositionManager
     function create(

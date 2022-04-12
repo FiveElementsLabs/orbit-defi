@@ -33,13 +33,13 @@ describe('UpdateUncollectedFees.sol', function () {
 
   let Factory: Contract; // the factory that will deploy all pools
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
-  let updateUncollectedFees: Contract; // collectFees contract
+  let UpdateUncollectedFees: Contract; // collectFees contract
   let abiCoder: AbiCoder;
   let PositionManager: PositionManager;
-  let swapRouter: Contract;
-  let mintAction: Contract; //Mint contract
-  let mint: Contract;
-  let updateFee: Contract;
+  let SwapRouter: Contract;
+  let MintAction: Contract; //Mint contract
+  let MintFallback: Contract;
+  let UpdateFeeFallback: Contract;
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
@@ -94,15 +94,15 @@ describe('UpdateUncollectedFees.sol', function () {
 
     //deploy SwapRouter
     const SwapRouterFactory = new ContractFactory(SwapRouterjson['abi'], SwapRouterjson['bytecode'], user);
-    swapRouter = await SwapRouterFactory.deploy(Factory.address, tokenEth.address);
-    await swapRouter.deployed();
+    SwapRouter = await SwapRouterFactory.deploy(Factory.address, tokenEth.address);
+    await SwapRouter.deployed();
 
     //deploy uniswapAddressHolder
     const uniswapAddressHolderFactory = await ethers.getContractFactory('UniswapAddressHolder');
     const uniswapAddressHolder = await uniswapAddressHolderFactory.deploy(
       NonFungiblePositionManager.address,
       Factory.address,
-      swapRouter.address
+      SwapRouter.address
     );
     await uniswapAddressHolder.deployed();
 
@@ -113,13 +113,13 @@ describe('UpdateUncollectedFees.sol', function () {
 
     //deploy Mint action
     const MintFactory = await ethers.getContractFactory('Mint');
-    mintAction = await MintFactory.deploy();
-    await mintAction.deployed();
+    MintAction = await MintFactory.deploy();
+    await MintAction.deployed();
 
     //deploy CollectFees action
     const UpdateFeesFactory = await ethers.getContractFactory('UpdateUncollectedFees');
-    updateUncollectedFees = await UpdateFeesFactory.deploy();
-    await updateUncollectedFees.deployed();
+    UpdateUncollectedFees = await UpdateFeesFactory.deploy();
+    await UpdateUncollectedFees.deployed();
 
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactoryFactory = await ethers.getContractFactory('PositionManagerFactory');
@@ -146,8 +146,8 @@ describe('UpdateUncollectedFees.sol', function () {
       .connect(liquidityProvider)
       .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
     //recipient: Router - spender: trader
-    await tokenEth.connect(trader).approve(swapRouter.address, ethers.utils.parseEther('1000000000000'));
-    await tokenUsdc.connect(trader).approve(swapRouter.address, ethers.utils.parseEther('1000000000000'));
+    await tokenEth.connect(trader).approve(SwapRouter.address, ethers.utils.parseEther('1000000000000'));
+    await tokenUsdc.connect(trader).approve(SwapRouter.address, ethers.utils.parseEther('1000000000000'));
 
     // give pool some liquidity
     await NonFungiblePositionManager.connect(liquidityProvider).mint(
@@ -172,22 +172,22 @@ describe('UpdateUncollectedFees.sol', function () {
     const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 };
 
     cut.push({
-      facetAddress: mintAction.address,
+      facetAddress: MintAction.address,
       action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(mintAction),
+      functionSelectors: await getSelectors(MintAction),
     });
     cut.push({
-      facetAddress: updateUncollectedFees.address,
+      facetAddress: UpdateUncollectedFees.address,
       action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(updateUncollectedFees),
+      functionSelectors: await getSelectors(UpdateUncollectedFees),
     });
 
     const diamondCut = await ethers.getContractAt('IDiamondCut', PositionManager.address);
 
     const tx = await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
 
-    mint = (await ethers.getContractAt('IMint', PositionManager.address)) as Contract;
-    updateFee = (await ethers.getContractAt('IUpdateUncollectedFees', PositionManager.address)) as Contract;
+    MintFallback = (await ethers.getContractAt('IMint', PositionManager.address)) as Contract;
+    UpdateFeeFallback = (await ethers.getContractAt('IUpdateUncollectedFees', PositionManager.address)) as Contract;
   });
 
   describe('UpdateUncollectedFees.sol - updateUncollectedFees', function () {
@@ -203,7 +203,7 @@ describe('UpdateUncollectedFees.sol', function () {
       await tokenUsdc.connect(user).transfer(PositionManager.address, 6e5);
 
       //mint a position
-      const txMint = await mint.mint({
+      const txMint = await MintFallback.mint({
         token0Address: tokenEth.address,
         token1Address: tokenUsdc.address,
         fee: fee,
@@ -219,21 +219,19 @@ describe('UpdateUncollectedFees.sol', function () {
 
       // Do some trades to accrue fees
       for (let i = 0; i < 10; i++) {
-        await swapRouter
-          .connect(trader)
-          .exactInputSingle([
-            i % 2 === 0 ? tokenEth.address : tokenUsdc.address,
-            i % 2 === 0 ? tokenUsdc.address : tokenEth.address,
-            3000,
-            trader.address,
-            Date.now() + 1000,
-            1e4,
-            0,
-            0,
-          ]);
+        await SwapRouter.connect(trader).exactInputSingle([
+          i % 2 === 0 ? tokenEth.address : tokenUsdc.address,
+          i % 2 === 0 ? tokenUsdc.address : tokenEth.address,
+          3000,
+          trader.address,
+          Date.now() + 1000,
+          1e4,
+          0,
+          0,
+        ]);
       }
 
-      const tx = await updateFee.updateUncollectedFees(mintEvent.data);
+      const tx = await UpdateFeeFallback.updateUncollectedFees(mintEvent.data);
       const events = (await tx.wait()).events as any;
       const updateEvent = events[events.length - 1];
       const total = abiCoder.decode(['uint256', 'uint256'], updateEvent.data);
@@ -243,11 +241,11 @@ describe('UpdateUncollectedFees.sol', function () {
     });
 
     it('should revert if position does not exist', async function () {
-      await expect(updateFee.updateUncollectedFees(200)).to.be.reverted;
+      await expect(UpdateFeeFallback.updateUncollectedFees(200)).to.be.reverted;
     });
 
     it('should revert if position is not owned by user', async function () {
-      await expect(updateFee.updateUncollectedFees(1)).to.be.reverted;
+      await expect(UpdateFeeFallback.updateUncollectedFees(1)).to.be.reverted;
     });
   });
 });

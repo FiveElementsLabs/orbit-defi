@@ -3,9 +3,8 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import './BaseAction.sol';
-
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
+
 import '../../interfaces/IPositionManager.sol';
 import '../utils/Storage.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';

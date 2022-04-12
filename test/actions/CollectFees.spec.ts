@@ -37,7 +37,7 @@ describe('CollectFees.sol', function () {
   let abiCoder: AbiCoder;
   let PositionManager: PositionManager;
   let swapRouter: Contract;
-  let mint: Contract; //Mint contract
+  let MintFallback: Contract; //Mint contract
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
@@ -185,7 +185,7 @@ describe('CollectFees.sol', function () {
 
     await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
 
-    mint = await ethers.getContractAt('IMint', PositionManager.address);
+    MintFallback = await ethers.getContractAt('IMint', PositionManager.address);
     collectFees = await ethers.getContractAt('ICollectFees', PositionManager.address);
   });
 
@@ -202,7 +202,7 @@ describe('CollectFees.sol', function () {
       await tokenUsdc.connect(user).transfer(PositionManager.address, 6e5);
 
       //mint a position
-      let tx = await mint.connect(user).mint({
+      let tx = await MintFallback.connect(user).mint({
         token0Address: tokenEth.address,
         token1Address: tokenUsdc.address,
         fee: fee,
