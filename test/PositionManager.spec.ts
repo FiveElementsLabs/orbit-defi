@@ -279,4 +279,21 @@ describe('PositionManager.sol', function () {
       await expect(PositionManager.connect(trader).withdrawUniNft(user.address, tokenId)).to.be.reverted;
     });
   });
+
+  describe('PositionManager - withdrawERC20()', function () {
+    it('should withdraw ERC20', async function () {
+      await tokenEth.connect(user).transfer(PositionManager.address, ethers.utils.parseEther('100000000000'));
+      expect(await tokenEth.balanceOf(PositionManager.address)).to.equal(ethers.utils.parseEther('100000000000'));
+
+      await PositionManager.connect(user).withdrawERC20(tokenEth.address);
+      expect(await tokenEth.balanceOf(PositionManager.address)).to.equal(0);
+    });
+
+    it('should revert if not called by user', async function () {
+      await tokenEth.connect(user).transfer(PositionManager.address, ethers.utils.parseEther('100000000000'));
+      expect(await tokenEth.balanceOf(PositionManager.address)).to.equal(ethers.utils.parseEther('100000000000'));
+
+      await expect(PositionManager.connect(liquidityProvider).withdrawERC20(tokenEth.address)).to.be.reverted;
+    });
+  });
 });
