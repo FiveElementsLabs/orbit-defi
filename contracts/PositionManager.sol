@@ -4,11 +4,22 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import '@openzeppelin/contracts/token/ERC721/ERC721Holder.sol';
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
+import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
+import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
+import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
+import '@uniswap/v3-core/contracts/libraries/FixedPoint96.sol';
+import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
+import '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol';
+import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
+import './Registry.sol';
+import '../interfaces/IPositionManager.sol';
+import './actions/BaseAction.sol';
+import '../interfaces/IUniswapAddressHolder.sol';
 import './utils/Storage.sol';
 import '../interfaces/IDiamondCut.sol';
-import '../interfaces/IPositionManager.sol';
-import '../interfaces/IUniswapAddressHolder.sol';
+import 'hardhat/console.sol';
 
 /**
  * @title   Position Manager
@@ -93,7 +104,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
                 i = uniswapNFTs.length;
             }
         }
-        require(index < uniswapNFTs.length, 'PositionManager::withdrawUniNFT: Token Id not found!');
+        require(index < uniswapNFTs.length, 'token ID not found!');
         INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).safeTransferFrom(
             address(this),
             to,
@@ -106,10 +117,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@notice remove awareness of NFT at index
     ///@param index index of the NFT in the uniswapNFTs array
     function removePositionId(uint256 index) external override {
-        require(
-            msg.sender == address(this),
-            'PositionManager::removePositionId: Only PositionManager can remove a position'
-        );
+        require(msg.sender == address(this), 'only position manager can remove position');
         if (uniswapNFTs.length > 1) {
             uniswapNFTs[index] = uniswapNFTs[uniswapNFTs.length - 1];
             uniswapNFTs.pop();
@@ -151,7 +159,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
     modifier onlyOwner() {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
-        require(msg.sender == Storage.owner, 'PositionManager::modifier: Only owner can call this function');
+        require(msg.sender == Storage.owner, 'Only owner');
         _;
     }
 
@@ -159,10 +167,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
     modifier onlyOwnerOrModule() {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
-        require(
-            (msg.sender == Storage.owner),
-            'PositionManager::modifier: Only owner or a module can call this function'
-        );
+        require((msg.sender == Storage.owner), 'Only owner or module');
         _;
     }
 
@@ -174,7 +179,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
             Storage.slot := position
         }
         address facet = Storage.selectorToFacetAndPosition[msg.sig].facetAddress;
-        require(facet != address(0), 'PositionManager::fallback: Function does not exist');
+        require(facet != address(0), 'Diamond: Function does not exist');
         ///@dev Execute external function from facet using delegatecall and return any value.
 
         assembly {
@@ -193,9 +198,5 @@ contract PositionManager is IPositionManager, ERC721Holder {
                 return(0, returndatasize())
             }
         }
-    }
-
-    receive() external payable {
-        //we need to decide what to do with the money
     }
 }
