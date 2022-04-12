@@ -6,6 +6,7 @@ import './PositionManager.sol';
 
 contract PositionManagerFactory {
     address[] public positionManagers;
+    mapping(address => address) public userToPositionManager;
 
     event PositionManagerCreated(address indexed contractAddress, address userAddress, address uniswapAddressHolder);
 
@@ -16,6 +17,7 @@ contract PositionManagerFactory {
     function create(address userAddress, address _uniswapAddressHolderAddress) public returns (address[] memory) {
         PositionManager manager = new PositionManager(userAddress, _uniswapAddressHolderAddress);
         positionManagers.push(address(manager));
+        userToPositionManager[userAddress] = address(manager);
         emit PositionManagerCreated(address(manager), userAddress, _uniswapAddressHolderAddress);
 
         return positionManagers;
