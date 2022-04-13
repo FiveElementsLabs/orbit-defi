@@ -6,6 +6,7 @@ pragma abicoder v2;
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
 import '../../interfaces/IPositionManager.sol';
+import '../../interfaces/IPositionManagerFactory.sol';
 import '../helpers/SwapHelper.sol';
 import '../helpers/NFTHelper.sol';
 import '../helpers/ERC20Helper.sol';
@@ -15,18 +16,54 @@ contract Zapper {
     IUniswapAddressHolder public uniswapAddressHolder;
     ISwapRouter swapRouter;
     INonfungiblePositionManager nonfungiblePositionManager;
+    IPositionManagerFactory positionManagerFactory;
 
-    constructor(address _uniswapAddressHolder) {
+    constructor(address _uniswapAddressHolder, address _positionManagerFactory) {
         uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
         swapRouter = ISwapRouter(uniswapAddressHolder.swapRouterAddress());
         nonfungiblePositionManager = INonfungiblePositionManager(
             uniswapAddressHolder.nonfungiblePositionManagerAddress()
         );
+        positionManagerFactory = IPositionManagerFactory(_positionManagerFactory);
     }
 
     ///@notice emitted when a NFT is minted
     ///@param tokenId the id of the minted NFT
     event MintedNFT(uint256 tokenId);
+
+    function mintAndDeposit(
+        address token0,
+        address token1,
+        uint256 amount0,
+        uint256 amount1,
+        int24 tickLower,
+        int24 tickUpper,
+        uint24 fee
+    ) public returns (uint256 tokenId) {
+        ERC20Helper._pullTokensIfNeeded(token0, msg.sender, amount0);
+        ERC20Helper._pullTokensIfNeeded(token1, msg.sender, amount1);
+
+        ERC20Helper._approveToken(token0, address(nonfungiblePositionManager), amount0);
+        ERC20Helper._approveToken(token1, address(nonfungiblePositionManager), amount1);
+        address positionManagerAddress = positionManagerFactory.userToPositionManager(msg.sender);
+        (tokenId, , , ) = nonfungiblePositionManager.mint(
+            INonfungiblePositionManager.MintParams({
+                token0: token0,
+                token1: token1,
+                fee: fee,
+                tickLower: tickLower,
+                tickUpper: tickUpper,
+                amount0Desired: amount0,
+                amount1Desired: amount1,
+                amount0Min: 0,
+                amount1Min: 0,
+                recipient: positionManagerAddress,
+                deadline: block.timestamp + 1
+            })
+        );
+        IPositionManager(positionManagerAddress).pushPositionId(tokenId);
+        emit MintedNFT(tokenId);
+    }
 
     ///@notice mints a uni NFT with a single input token, the token in input can be different from the two position tokens
     ///@param tokenIn address of input token
@@ -92,24 +129,7 @@ contract Zapper {
             );
         }
 
-        ERC20Helper._approveToken(token0, address(nonfungiblePositionManager), amountInTo0);
-        ERC20Helper._approveToken(token1, address(nonfungiblePositionManager), amountInTo1);
-        (tokenId, , , ) = nonfungiblePositionManager.mint(
-            INonfungiblePositionManager.MintParams({
-                token0: token0,
-                token1: token1,
-                fee: fee,
-                tickLower: tickLower,
-                tickUpper: tickUpper,
-                amount0Desired: amountInTo0,
-                amount1Desired: amountInTo1,
-                amount0Min: 0,
-                amount1Min: 0,
-                recipient: msg.sender,
-                deadline: block.timestamp + 1
-            })
-        );
-        emit MintedNFT(tokenId);
+        tokenId = mintAndDeposit(token0, token1, amountInTo0, amountInTo1, tickLower, tickUpper, fee);
     }
 
     ///@notice burns a uni NFT with a single output token, the output token can be different from the two position tokens

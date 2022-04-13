@@ -8,7 +8,6 @@ import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.s
 import '../interfaces/IPositionManager.sol';
 import '../interfaces/IUniswapAddressHolder.sol';
 import '../interfaces/IDiamondCut.sol';
-import './utils/Zapper.sol';
 import './helpers/ERC20Helper.sol';
 import './utils/Storage.sol';
 
@@ -21,7 +20,7 @@ import './utils/Storage.sol';
  * @notice  vault works for multiple positions
  */
 
-contract PositionManager is IPositionManager, ERC721Holder, Zapper {
+contract PositionManager is IPositionManager, ERC721Holder {
     constructor(address _owner, address _diamondCutFacet) payable {
         PositionManagerStorage.setContractOwner(_owner);
 
@@ -122,6 +121,7 @@ contract PositionManager is IPositionManager, ERC721Holder, Zapper {
     ///@notice add tokenId in the uniswapNFTs array
     ///@param tokenId ID of the added NFT
     function pushPositionId(uint256 tokenId) public {
+        //TODO: this needs a modifier or a require!
         uniswapNFTs.push(tokenId);
     }
 
