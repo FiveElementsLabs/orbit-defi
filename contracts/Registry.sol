@@ -13,8 +13,14 @@ contract Registry {
 
     mapping(bytes32 => Entry) public modules;
 
-    constructor() {
-        governance = msg.sender;
+    constructor(address _governance) {
+        governance = _governance;
+    }
+
+    ///@notice change the address of the governance
+    ///@param _governance the address of the new governance
+    function changeGovernance(address _governance) external onlyGovernance {
+        governance = _governance;
     }
 
     ///@notice Register a module
