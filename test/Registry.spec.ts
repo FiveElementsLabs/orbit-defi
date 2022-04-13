@@ -33,8 +33,7 @@ describe('Registry.sol', function () {
 
     const AutoCompoundModuleFactory = await ethers.getContractFactory('AutoCompoundModule');
     AutoCompoundModule = (await AutoCompoundModuleFactory.deploy(
-      zeroAddress, //we don't need this contract for this test
-      30
+      zeroAddress //we don't need this contract for this test
     )) as Contract;
     await AutoCompoundModule.deployed();
   });
