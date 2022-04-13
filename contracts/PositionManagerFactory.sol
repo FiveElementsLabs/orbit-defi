@@ -6,6 +6,7 @@ import './PositionManager.sol';
 
 contract PositionManagerFactory {
     address[] public positionManagers;
+    mapping(address => address) public userToPositionManager;
 
     event PositionManagerCreated(address indexed contractAddress, address userAddress, address uniswapAddressHolder);
 
@@ -20,8 +21,10 @@ contract PositionManagerFactory {
     ) public returns (address[] memory) {
         PositionManager manager = new PositionManager(_userAddress, _diamondCutFacet);
         positionManagers.push(address(manager));
+        userToPositionManager[_userAddress] = address(manager);
         manager.init(_userAddress, _uniswapAddressHolderAddress);
         emit PositionManagerCreated(address(manager), _userAddress, _uniswapAddressHolderAddress);
+
 
         return positionManagers;
     }
