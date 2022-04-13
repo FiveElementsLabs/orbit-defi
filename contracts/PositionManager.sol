@@ -48,10 +48,11 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@param tokenId ID of the withdrawn NFT
     event WithdrawUni(address to, uint256 tokenId);
 
-    ///@notice emitted to return the output of doAction transaction
-    ///@param success delegate call was a success
-    ///@param data data returned by the delegate call
-    event Output(bool success, bytes data);
+    ///@notice emitted when a ERC20 is withdrawn
+    ///@param tokenAddress address of the ERC20
+    ///@param to address of the user
+    ///@param amount of the ERC20
+    event WithdrawERC20(address tokenAddress, address to, uint256 amount);
 
     uint256[] private uniswapNFTs;
 
@@ -155,7 +156,8 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@param tokenAddress address of the token to be withdrawn
     function withdrawERC20(address tokenAddress) external override onlyOwner {
         ERC20Helper._approveToken(tokenAddress, address(this), 2**256 - 1);
-        ERC20Helper._withdrawTokens(tokenAddress, msg.sender, 2**256 - 1);
+        uint256 amount = ERC20Helper._withdrawTokens(tokenAddress, msg.sender, 2**256 - 1);
+        emit WithdrawERC20(tokenAddress, msg.sender, amount);
     }
 
     ///@notice modifier to check if the msg.sender is the owner
