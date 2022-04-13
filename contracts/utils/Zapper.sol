@@ -6,12 +6,13 @@ pragma abicoder v2;
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
 import '../../interfaces/IPositionManager.sol';
+import '../../interfaces/IZapper.sol';
 import '../helpers/SwapHelper.sol';
 import '../helpers/NFTHelper.sol';
 import '../helpers/ERC20Helper.sol';
 
 ///@notice Zapper is a utility contract that allows user to enter/exit Uniswap V3 position with a single token
-contract Zapper {
+contract Zapper is IZapper {
     IUniswapAddressHolder public uniswapAddressHolder;
     ISwapRouter swapRouter;
     INonfungiblePositionManager nonfungiblePositionManager;
@@ -45,7 +46,7 @@ contract Zapper {
         int24 tickLower,
         int24 tickUpper,
         uint24 fee
-    ) public returns (uint256 tokenId) {
+    ) public override returns (uint256 tokenId) {
         require(token0 != token1, 'token0 and token1 cannot be the same');
         (token0, token1) = _reorderTokens(token0, token1);
 
@@ -115,7 +116,7 @@ contract Zapper {
     ///@notice burns a uni NFT with a single output token, the output token can be different from the two position tokens
     ///@param tokenId id of the NFT to burn
     ///@param tokenOut address of output token
-    function zapOut(uint256 tokenId, address tokenOut) public {
+    function zapOut(uint256 tokenId, address tokenOut) public override {
         (address token0, address token1) = NFTHelper._getTokenAddress(tokenId, nonfungiblePositionManager);
 
         (, , , , , , , uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(tokenId);
