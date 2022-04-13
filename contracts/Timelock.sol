@@ -39,10 +39,10 @@ contract Timelock {
     uint256 public constant MINIMUM_DELAY = 6 hours;
     uint256 public constant MAXIMUM_DELAY = 30 days;
 
+    uint256 public delay;
     address public admin;
     address public pendingAdmin;
-    uint256 public delay;
-
+    mapping(address => bool) public pendingAdminAccepted;
     mapping(bytes32 => bool) public queuedTransactions;
 
     constructor(address _admin, uint256 _delay) public {
@@ -63,21 +63,32 @@ contract Timelock {
         emit NewDelay(delay);
     }
 
-    /// @notice Accepts the pending admin as new admin
-    function acceptAdmin() public {
-        require(msg.sender == pendingAdmin, 'Timelock::acceptAdmin: Call must come from pendingAdmin.');
-        admin = msg.sender;
-        pendingAdmin = address(0);
-
-        emit NewAdmin(admin);
-    }
-
     /// @notice Sets a new address as pending admin
     /// @param _pendingAdmin the pending admin
-    function setPendingAdmin(address _pendingAdmin) public onlyAdmin {
+    function setNewPendingAdmin(address _pendingAdmin) public onlyAdmin {
         pendingAdmin = _pendingAdmin;
+        pendingAdminAccepted[_pendingAdmin] = false;
 
         emit NewPendingAdmin(pendingAdmin);
+    }
+
+    /// @notice Pending admin accepts its role of new admin
+    function acceptAdminRole() public {
+        require(msg.sender == pendingAdmin, 'Timelock::acceptAdminRole: Call must come from pendingAdmin.');
+        pendingAdminAccepted[msg.sender] = true;
+    }
+
+    /// @notice Confirms the pending admin as new admin after he accepted the role
+    function confirmNewAdmin() public onlyAdmin {
+        require(
+            pendingAdminAccepted[pendingAdmin],
+            'Timelock::confirmNewAdmin: Pending admin must accept admin role first.'
+        );
+        admin = pendingAdmin;
+        pendingAdmin = address(0);
+        pendingAdminAccepted[pendingAdmin] = false;
+
+        emit NewAdmin(admin);
     }
 
     /// @notice queues a transaction to be executed after the delay passed

@@ -71,12 +71,17 @@ describe('Timelock.sol', function () {
 
     it('Should correctly set a new pending admin', async function () {
       const newPendingAdmin = deployer2.address;
-      await Timelock2.connect(deployer4).setPendingAdmin(newPendingAdmin);
+      await Timelock2.connect(deployer4).setNewPendingAdmin(newPendingAdmin);
       expect(await Timelock2.pendingAdmin()).to.equal(newPendingAdmin);
     });
 
-    it('Should correctly accept a new admin', async function () {
-      await Timelock2.connect(deployer2).acceptAdmin();
+    it('Should correctly accept role of new admin', async function () {
+      await Timelock2.connect(deployer2).acceptAdminRole();
+      expect(await Timelock2.pendingAdminAccepted(deployer2.address)).to.equal(true);
+    });
+
+    it('Should correctly confirm the newly accepted admin', async function () {
+      await Timelock2.connect(deployer4).confirmNewAdmin();
       expect(await Timelock2.admin()).to.equal(deployer2.address);
     });
   });
