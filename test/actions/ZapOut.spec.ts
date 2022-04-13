@@ -10,9 +10,15 @@ const SwapRouterjson = require('@uniswap/v3-periphery/artifacts/contracts/SwapRo
 const PositionManagerjson = require('../artifacts/contracts/PositionManager.sol/PositionManager.json');
 const FixturesConst = require('../shared/fixtures');
 import { tokensFixture, poolFixture, mintSTDAmount } from '../shared/fixtures';
-import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, Zapper, PositionManager } from '../../typechain';
+import {
+  MockToken,
+  IUniswapV3Pool,
+  INonfungiblePositionManager,
+  DepositInterface,
+  PositionManager,
+} from '../../typechain';
 
-describe('Zapper.sol', function () {
+describe('DepositInterface.sol', function () {
   //GLOBAL VARIABLE - USE THIS
   let user: any = ethers.getSigners().then(async (signers) => {
     return signers[0];
@@ -31,7 +37,7 @@ describe('Zapper.sol', function () {
   let Factory: Contract; // the factory that will deploy all pools
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
   let SwapRouter: Contract;
-  let Zapper: Zapper;
+  let DepositInterface: DepositInterface;
   let PositionManager: PositionManager;
 
   before(async function () {
@@ -107,9 +113,9 @@ describe('Zapper.sol', function () {
     await uniswapAddressHolder.deployed();
 
     //deploy zapper contract
-    const zapperFactory = await ethers.getContractFactory('Zapper');
-    Zapper = (await zapperFactory.deploy(uniswapAddressHolder.address)) as Zapper;
-    await Zapper.deployed();
+    const DepositInterfaceFactory = await ethers.getContractFactory('DepositInterface');
+    DepositInterface = (await DepositInterfaceFactory.deploy(uniswapAddressHolder.address)) as DepositInterface;
+    await DepositInterface.deployed();
 
     const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet');
     const diamondCutFacet = await DiamondCutFacet.deploy();
@@ -138,8 +144,8 @@ describe('Zapper.sol', function () {
       .connect(liquidityProvider)
       .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
     //recipient: zapper - spender: user
-    await tokenEth.connect(user).approve(Zapper.address, ethers.utils.parseEther('100000000000000'));
-    await tokenUsdc.connect(user).approve(Zapper.address, ethers.utils.parseEther('100000000000000'));
+    await tokenEth.connect(user).approve(DepositInterface.address, ethers.utils.parseEther('100000000000000'));
+    await tokenUsdc.connect(user).approve(DepositInterface.address, ethers.utils.parseEther('100000000000000'));
     //recipient: positionManager - spender: user
     await tokenEth.connect(user).approve(PositionManager.address, ethers.utils.parseEther('100000000000000'));
     await tokenUsdc.connect(user).approve(PositionManager.address, ethers.utils.parseEther('100000000000000'));
@@ -248,87 +254,7 @@ describe('Zapper.sol', function () {
     );
   });
 
-  describe('Zapper.zapIn()', function () {
-    it('should correctly mint a position', async function () {
-      const amountIn = 1e8;
-      const fee = 3000;
-      const tickLower = 0 - 60 * 1000;
-      const tickUpper = 0 + 60 * 1000;
-      const zapInTx = await Zapper.connect(user).zapIn(
-        tokenEth.address,
-        amountIn,
-        tokenDai.address,
-        tokenUsdc.address,
-        tickLower,
-        tickUpper,
-        fee
-      );
-
-      const events: any = (await zapInTx.wait()).events;
-      const tokenId = await events[events.length - 1].args.tokenId.toNumber();
-
-      expect(user.address).to.be.equal(await NonFungiblePositionManager.ownerOf(tokenId));
-
-      const position = await NonFungiblePositionManager.positions(tokenId);
-
-      expect(position.token0).to.be.equal(tokenUsdc.address);
-      expect(position.token1).to.be.equal(tokenDai.address);
-      expect(position.fee).to.be.equal(fee);
-      expect(position.tickLower).to.be.equal(tickLower);
-      expect(position.tickUpper).to.be.equal(tickUpper);
-      expect(position.liquidity).to.gt(0);
-    });
-
-    it('should correclty zap in if one of the two tokens is tokenIn', async function () {
-      const amountIn = 1e8;
-      const fee = 3000;
-      const tickLower = 0 - 60 * 1000;
-      const tickUpper = 0 + 60 * 1000;
-      const zapInTx = await Zapper.connect(user).zapIn(
-        tokenEth.address,
-        amountIn,
-        tokenEth.address,
-        tokenUsdc.address,
-        tickLower,
-        tickUpper,
-        fee
-      );
-
-      const events: any = (await zapInTx.wait()).events;
-      const tokenId = await events[events.length - 1].args.tokenId.toNumber();
-
-      expect(user.address).to.be.equal(await NonFungiblePositionManager.ownerOf(tokenId));
-
-      const position = await NonFungiblePositionManager.positions(tokenId);
-
-      expect(position.token0).to.be.equal(tokenEth.address);
-      expect(position.token1).to.be.equal(tokenUsdc.address);
-      expect(position.fee).to.be.equal(fee);
-      expect(position.tickLower).to.be.equal(tickLower);
-      expect(position.tickUpper).to.be.equal(tickUpper);
-      expect(position.liquidity).to.gt(0);
-    });
-
-    it('should revert if pool does not exist', async function () {
-      const amountIn = 1e8;
-      const fee = 100;
-      const tickLower = 0 - 60 * 1000;
-      const tickUpper = 0 + 60 * 1000;
-      await expect(
-        Zapper.connect(user).zapIn(
-          tokenEth.address,
-          amountIn,
-          tokenEth.address,
-          tokenUsdc.address,
-          tickLower,
-          tickUpper,
-          fee
-        )
-      ).to.be.reverted;
-    });
-  });
-
-  describe('Zapper.zapOut()', function () {
+  describe('DepositInterface.zapOut()', function () {
     it('should correctly exit a position', async function () {
       await tokenEth
         .connect(user)
@@ -353,9 +279,9 @@ describe('Zapper.sol', function () {
       const tokenId = mintReceipt.events[mintReceipt.events.length - 1].args.tokenId.toNumber();
       await PositionManager.connect(user).depositUniNft(tokenId);
       const daiBalance = await tokenDai.balanceOf(user.address);
-      await NonFungiblePositionManager.connect(user).setApprovalForAll(Zapper.address, true);
+      await NonFungiblePositionManager.connect(user).setApprovalForAll(DepositInterface.address, true);
 
-      await Zapper.connect(user).zapOut(tokenId, tokenDai.address);
+      await DepositInterface.connect(user).zapOut(tokenId, tokenDai.address);
 
       await expect(NonFungiblePositionManager.ownerOf(tokenId)).to.be.reverted;
       expect(await tokenDai.balanceOf(user.address)).to.be.gt(daiBalance);
@@ -384,16 +310,16 @@ describe('Zapper.sol', function () {
       const mintReceipt: any = await mintTx.wait();
       const tokenId = mintReceipt.events[mintReceipt.events.length - 1].args.tokenId.toNumber();
       const usdcBalance = await tokenUsdc.balanceOf(user.address);
-      await NonFungiblePositionManager.connect(user).setApprovalForAll(Zapper.address, true);
+      await NonFungiblePositionManager.connect(user).setApprovalForAll(DepositInterface.address, true);
 
-      await Zapper.connect(user).zapOut(tokenId, tokenUsdc.address);
+      await DepositInterface.connect(user).zapOut(tokenId, tokenUsdc.address);
 
       await expect(NonFungiblePositionManager.ownerOf(tokenId)).to.be.reverted;
       expect(await tokenUsdc.balanceOf(user.address)).to.be.gt(usdcBalance);
     });
 
     it('should revert if user is not owner of position', async function () {
-      expect(Zapper.connect(user).zapOut(1, tokenDai.address)).to.be.reverted;
+      expect(DepositInterface.connect(user).zapOut(1, tokenDai.address)).to.be.reverted;
     });
 
     it('should revert if pool does not exist', async function () {
@@ -418,7 +344,7 @@ describe('Zapper.sol', function () {
       });
       const mintReceipt: any = await mintTx.wait();
       const tokenId = mintReceipt.events[mintReceipt.events.length - 1].args.tokenId.toNumber();
-      expect(Zapper.connect(user).zapOut(tokenId, tokenUsdt.address)).to.be.reverted;
+      expect(DepositInterface.connect(user).zapOut(tokenId, tokenUsdt.address)).to.be.reverted;
     });
   });
 });

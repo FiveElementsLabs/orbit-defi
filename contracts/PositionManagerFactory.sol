@@ -7,7 +7,7 @@ import '../interfaces/IPositionManagerFactory.sol';
 
 contract PositionManagerFactory is IPositionManagerFactory {
     address[] public positionManagers;
-    mapping(address => address) public userToPositionManager;
+    mapping(address => address) public override userToPositionManager;
 
     event PositionManagerCreated(address indexed contractAddress, address userAddress, address uniswapAddressHolder);
 
