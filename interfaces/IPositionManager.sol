@@ -19,9 +19,9 @@ interface IPositionManager {
         bool activated
     ) external;
 
+    function withdrawERC20(address tokenAddress) external;
+
     function removePositionId(uint256 index) external;
 
     function getAllUniPosition() external view returns (uint256[] memory);
-
-    function withdrawERC20(address tokenAddress) external;
 }
