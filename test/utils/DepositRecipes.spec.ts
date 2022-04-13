@@ -39,6 +39,10 @@ describe('DepositRecipes.sol', function () {
   let SwapRouter: Contract;
   let DepositRecipes: DepositRecipes;
   let PositionManager: PositionManager;
+  let PositionManagerFactory: Contract;
+  let PositionManagerFactoryFactory: ContractFactory;
+  let DiamondCutFacet: Contract;
+  let UniswapAddressHolder: Contract;
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
@@ -104,35 +108,17 @@ describe('DepositRecipes.sol', function () {
     await SwapRouter.deployed();
 
     //deploy uniswapAddressHolder
-    const uniswapAddressHolderFactory = await ethers.getContractFactory('UniswapAddressHolder');
-    const uniswapAddressHolder = await uniswapAddressHolderFactory.deploy(
+    const UniswapAddressHolderFactory = await ethers.getContractFactory('UniswapAddressHolder');
+    UniswapAddressHolder = await UniswapAddressHolderFactory.deploy(
       NonFungiblePositionManager.address,
       Factory.address,
       SwapRouter.address
     );
-    await uniswapAddressHolder.deployed();
+    await UniswapAddressHolder.deployed();
 
-    const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet');
-    const diamondCutFacet = await DiamondCutFacet.deploy();
-    await diamondCutFacet.deployed();
-
-    //deploy the PositionManagerFactory => deploy PositionManager
-    const PositionManagerFactoryFactory = await ethers.getContractFactory('PositionManagerFactory');
-    const PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
-    await PositionManagerFactory.deployed();
-
-    await PositionManagerFactory.create(user.address, diamondCutFacet.address, uniswapAddressHolder.address);
-
-    const contractsDeployed = await PositionManagerFactory.positionManagers(0);
-    PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
-
-    //deploy zapper contract
-    const DepositRecipesFactory = await ethers.getContractFactory('DepositRecipes');
-    DepositRecipes = (await DepositRecipesFactory.deploy(
-      uniswapAddressHolder.address,
-      PositionManagerFactory.address
-    )) as DepositRecipes;
-    await DepositRecipes.deployed();
+    const DiamondCutFacetFactory = await ethers.getContractFactory('DiamondCutFacet');
+    DiamondCutFacet = await DiamondCutFacetFactory.deploy();
+    await DiamondCutFacet.deployed();
 
     //APPROVE
 
@@ -146,12 +132,16 @@ describe('DepositRecipes.sol', function () {
     await tokenDai
       .connect(liquidityProvider)
       .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
-    //recipient: zapper - spender: user
-    await tokenEth.connect(user).approve(DepositRecipes.address, ethers.utils.parseEther('100000000000000'));
-    await tokenUsdc.connect(user).approve(DepositRecipes.address, ethers.utils.parseEther('100000000000000'));
-    //recipient: positionManager - spender: user
-    await tokenEth.connect(user).approve(PositionManager.address, ethers.utils.parseEther('100000000000000'));
-    await tokenUsdc.connect(user).approve(PositionManager.address, ethers.utils.parseEther('100000000000000'));
+    //recipient: NonfungiblePositionManager - spender: user
+    await tokenEth
+      .connect(user)
+      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
+    await tokenUsdc
+      .connect(user)
+      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
+    await tokenDai
+      .connect(user)
+      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
 
     // give pools some liquidity
     await NonFungiblePositionManager.connect(liquidityProvider).mint(
@@ -255,6 +245,159 @@ describe('DepositRecipes.sol', function () {
       },
       { gasLimit: 670000 }
     );
+  });
+
+  beforeEach(async function () {
+    //deploy the PositionManagerFactory => deploy PositionManager
+    PositionManagerFactoryFactory = (await ethers.getContractFactory('PositionManagerFactory')) as ContractFactory;
+    PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
+    await PositionManagerFactory.deployed();
+
+    await PositionManagerFactory.create(user.address, DiamondCutFacet.address, UniswapAddressHolder.address);
+
+    let contractsDeployed = await PositionManagerFactory.positionManagers(0);
+    PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
+
+    //deploy DepositRecipes contract
+    let DepositRecipesFactory = await ethers.getContractFactory('DepositRecipes');
+    DepositRecipes = (await DepositRecipesFactory.deploy(
+      UniswapAddressHolder.address,
+      PositionManagerFactory.address
+    )) as DepositRecipes;
+    await DepositRecipes.deployed();
+
+    //recipient: positionManager - spender: user
+    await tokenEth.connect(user).approve(DepositRecipes.address, ethers.utils.parseEther('100000000000000'));
+    await tokenUsdc.connect(user).approve(DepositRecipes.address, ethers.utils.parseEther('100000000000000'));
+    await tokenDai.connect(user).approve(DepositRecipes.address, ethers.utils.parseEther('100000000000000'));
+  });
+
+  describe('DepositRecipes.depositUniNFT()', function () {
+    it('should deposit a token and update positions array', async function () {
+      const mintTx = await NonFungiblePositionManager.connect(user).mint(
+        {
+          token0: tokenUsdc.address,
+          token1: tokenDai.address,
+          fee: 500,
+          tickLower: 0 - 60 * 1000,
+          tickUpper: 0 + 60 * 1000,
+          amount0Desired: '0x' + (1e15).toString(16),
+          amount1Desired: '0x' + (1e15).toString(16),
+          amount0Min: 0,
+          amount1Min: 0,
+          recipient: user.address,
+          deadline: Date.now() + 1000,
+        },
+        { gasLimit: 670000 }
+      );
+
+      const events: any = (await mintTx.wait()).events;
+      const tokenId = await events[events.length - 1].args.tokenId.toNumber();
+
+      await NonFungiblePositionManager.setApprovalForAll(DepositRecipes.address, true);
+      await DepositRecipes.connect(user).depositUniNft([tokenId]);
+
+      expect(await NonFungiblePositionManager.ownerOf(tokenId)).to.equal(PositionManager.address);
+      expect((await PositionManager.getAllUniPosition())[0]).to.equal(tokenId);
+    });
+
+    it('should deposit multiple tokens and update positions array', async function () {
+      let mintTx = await NonFungiblePositionManager.connect(user).mint(
+        {
+          token0: tokenUsdc.address,
+          token1: tokenDai.address,
+          fee: 3000,
+          tickLower: 0 - 60 * 1000,
+          tickUpper: 0 + 60 * 1000,
+          amount0Desired: '0x' + (1e15).toString(16),
+          amount1Desired: '0x' + (1e15).toString(16),
+          amount0Min: 0,
+          amount1Min: 0,
+          recipient: user.address,
+          deadline: Date.now() + 1000,
+        },
+        { gasLimit: 670000 }
+      );
+
+      let events: any = (await mintTx.wait()).events;
+      const tokenId1 = await events[events.length - 1].args.tokenId.toNumber();
+
+      mintTx = await NonFungiblePositionManager.connect(user).mint(
+        {
+          token0: tokenUsdc.address,
+          token1: tokenDai.address,
+          fee: 3000,
+          tickLower: 0 - 60 * 23,
+          tickUpper: 0 + 60 * 57,
+          amount0Desired: '0x' + (1e15).toString(16),
+          amount1Desired: '0x' + (1e15).toString(16),
+          amount0Min: 0,
+          amount1Min: 0,
+          recipient: user.address,
+          deadline: Date.now() + 1000,
+        },
+        { gasLimit: 670000 }
+      );
+
+      events = (await mintTx.wait()).events;
+      const tokenId2 = await events[events.length - 1].args.tokenId.toNumber();
+
+      mintTx = await NonFungiblePositionManager.connect(user).mint(
+        {
+          token0: tokenUsdc.address,
+          token1: tokenDai.address,
+          fee: 3000,
+          tickLower: 0 - 60 * 173,
+          tickUpper: 0 + 60 * 482,
+          amount0Desired: '0x' + (1e15).toString(16),
+          amount1Desired: '0x' + (1e15).toString(16),
+          amount0Min: 0,
+          amount1Min: 0,
+          recipient: user.address,
+          deadline: Date.now() + 1000,
+        },
+        { gasLimit: 670000 }
+      );
+
+      events = (await mintTx.wait()).events;
+      const tokenId3 = await events[events.length - 1].args.tokenId.toNumber();
+
+      await NonFungiblePositionManager.setApprovalForAll(DepositRecipes.address, true);
+      await DepositRecipes.connect(user).depositUniNft([tokenId1, tokenId2, tokenId3]);
+
+      expect(await NonFungiblePositionManager.ownerOf(tokenId1)).to.equal(PositionManager.address);
+      expect(await NonFungiblePositionManager.ownerOf(tokenId2)).to.equal(PositionManager.address);
+      expect(await NonFungiblePositionManager.ownerOf(tokenId3)).to.equal(PositionManager.address);
+      expect((await PositionManager.getAllUniPosition())[0]).to.equal(tokenId1);
+      expect((await PositionManager.getAllUniPosition())[1]).to.equal(tokenId2);
+      expect((await PositionManager.getAllUniPosition())[2]).to.equal(tokenId3);
+    });
+  });
+
+  describe('DepositRecipes.mintAndDeposit()', function () {
+    it('should correctly mint and deposit a token', async function () {
+      const amount0 = '0x' + (1e15).toString(16);
+      const amount1 = '0x' + (1e15).toString(16);
+      const fee = 500;
+      const tickLower = 0 - 60 * 1000;
+      const tickUpper = 0 + 60 * 1000;
+
+      const mintTx = await DepositRecipes.connect(user).mintAndDeposit(
+        tokenEth.address,
+        tokenUsdc.address,
+        amount0,
+        amount1,
+        tickLower,
+        tickUpper,
+        fee
+      );
+
+      const events: any = (await mintTx.wait()).events;
+      const tokenId = await events[events.length - 1].args.tokenId.toNumber();
+
+      expect(await NonFungiblePositionManager.ownerOf(tokenId)).to.equal(PositionManager.address);
+      expect((await PositionManager.getAllUniPosition())[0]).to.equal(tokenId);
+    });
   });
 
   describe('DepositRecipes.zapIn()', function () {
