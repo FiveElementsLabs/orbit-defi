@@ -19,7 +19,7 @@ import './actions/BaseAction.sol';
 import '../interfaces/IUniswapAddressHolder.sol';
 import './utils/Storage.sol';
 import '../interfaces/IDiamondCut.sol';
-import '../utils/Zapper.sol';
+import './utils/Zapper.sol';
 import './helpers/ERC20Helper.sol';
 
 /**
@@ -79,23 +79,21 @@ contract PositionManager is IPositionManager, ERC721Holder, Zapper {
     }
 
     ///@notice add uniswap position NFT to the position manager
-    ///@param from address of the user
     ///@param tokenIds IDs of deposited tokens
-    function depositUniNft(address from, uint256[] calldata tokenIds) external override onlyOwner {
+    function depositUniNft(uint256[] calldata tokenIds) external override onlyOwner {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
         for (uint32 i = 0; i < tokenIds.length; i++) {
             INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress())
-                .safeTransferFrom(from, address(this), tokenIds[i], '0x0');
+                .safeTransferFrom(msg.sender, address(this), tokenIds[i], '0x0');
             uniswapNFTs.push(tokenIds[i]);
-            emit DepositUni(from, tokenIds[i]);
+            emit DepositUni(msg.sender, tokenIds[i]);
         }
     }
 
     ///@notice withdraw uniswap position NFT from the position manager
-    ///@param to address of the user
     ///@param tokenId ID of withdrawn token
-    function withdrawUniNft(address to, uint256 tokenId) public override onlyOwner {
+    function withdrawUniNft(uint256 tokenId) public override onlyOwner {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
         uint256 index = uniswapNFTs.length;
@@ -108,11 +106,11 @@ contract PositionManager is IPositionManager, ERC721Holder, Zapper {
         require(index < uniswapNFTs.length, 'token ID not found!');
         INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).safeTransferFrom(
             address(this),
-            to,
+            msg.sender,
             tokenId,
             '0x0'
         );
-        emit WithdrawUni(to, tokenId);
+        emit WithdrawUni(msg.sender, tokenId);
     }
 
     ///@notice remove awareness of NFT at index
