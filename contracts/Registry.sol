@@ -37,7 +37,7 @@ contract Registry {
     ///@notice Toggle global state of a module
     ///@param _id keccak256 of module id string
     ///@param _activated boolean to activate or deactivate module
-    function toggleModule(bytes32 _id, bool _activated) external onlyGovernance {
+    function switchModuleState(bytes32 _id, bool _activated) external onlyGovernance {
         require(modules[_id].exists, 'Entry does not exist');
         modules[_id].activated = _activated;
     }
