@@ -23,7 +23,7 @@ describe('Registry.sol', function () {
     user = signers[1];
 
     //deploy the registry
-    registry = await RegistryFixture().then((registryFix) => registryFix.registryFixture);
+    registry = await RegistryFixture(deployer.address).then((registryFix) => registryFix.registryFixture);
   });
 
   describe('Deployment ', function () {

@@ -33,15 +33,15 @@ describe('Timelock.sol', function () {
     //select standard abicoder
     abiCoder = ethers.utils.defaultAbiCoder;
 
-    //deploy the registry - we need it to test the timelock features
-    registry = await RegistryFixture().then((registryFix) => registryFix.registryFixture);
-
     // deploy the timelock
     const delay = 21600; // 6 hours
     timelock = (await TimelockFixture(deployer.address, delay)).timelockFixture;
 
     // deploy an additional timelock to test admin features
     timelock2 = (await TimelockFixture(deployer4.address, delay)).timelockFixture;
+
+    //deploy the registry - we need it to test the timelock features
+    registry = (await RegistryFixture(timelock.address)).registryFixture;
   });
 
   describe('Deployment ', function () {
@@ -114,6 +114,56 @@ describe('Timelock.sol', function () {
 
       const events = txReceipt.events!;
       expect(events[0].event).to.be.equal('CancelTransaction');
+    });
+
+    it('Should correctly execute a queued transaction', async function () {
+      const target = registry.address;
+      const value = 0;
+      const signature = 'addNewContract(address)';
+      const data = abiCoder.encode(['address'], [contractAddr2]);
+      const eta = (await ethers.provider.getBlock('latest')).timestamp + 21700;
+
+      const queueTxReceipt = await (
+        await timelock.connect(deployer).queueTransaction(target, value, signature, data, eta)
+      ).wait();
+
+      const queueEvents = queueTxReceipt.events!;
+      expect(queueEvents[0].event).to.be.equal('QueueTransaction');
+
+      // Increase timestamp to satisfy timelock delay
+      // We must increase it by at least eta amount (21700 in this case)
+      const forwardInTime = 30000;
+      await ethers.provider.send('evm_increaseTime', [forwardInTime]);
+
+      const executeTxReceipt = await (
+        await timelock.connect(deployer).executeTransaction(target, value, signature, data, eta)
+      ).wait();
+
+      const executeEvents = executeTxReceipt.events!;
+      expect(executeEvents[0].event).to.be.equal('ExecuteTransaction');
+    });
+
+    it('Should revert if not enough time has passed', async function () {
+      const target = registry.address;
+      const value = 0;
+      const signature = 'addNewContract(address)';
+      const data = abiCoder.encode(['address'], [contractAddr2]);
+      const eta = (await ethers.provider.getBlock('latest')).timestamp + 21700;
+
+      const queueTxReceipt = await (
+        await timelock.connect(deployer).queueTransaction(target, value, signature, data, eta)
+      ).wait();
+
+      const queueEvents = queueTxReceipt.events!;
+      expect(queueEvents[0].event).to.be.equal('QueueTransaction');
+
+      // Increase timestamp not enough to satisfy timelock delay
+      const forwardInTime = 1000;
+      await ethers.provider.send('evm_increaseTime', [forwardInTime]);
+
+      expect(timelock.connect(deployer).executeTransaction(target, value, signature, data, eta)).to.be.revertedWith(
+        "Timelock::executeTransaction: Transaction hasn't surpassed time lock."
+      );
     });
   });
 });

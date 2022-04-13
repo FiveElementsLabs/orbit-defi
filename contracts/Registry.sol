@@ -12,12 +12,12 @@ contract Registry {
 
     mapping(address => Entry) public entries;
 
-    constructor() {
-        owner = msg.sender;
+    constructor(address _owner) {
+        owner = _owner;
     }
 
     function addNewContract(address _contractAddr) external onlyOwner {
-        require(!entries[_contractAddr].exists, 'Entry already exists');
+        require(!entries[_contractAddr].exists, 'Registry::addNewContract: Entry already exists.');
         entries[_contractAddr] = Entry({activated: true, exists: true});
     }
 
@@ -26,7 +26,7 @@ contract Registry {
     }
 
     modifier onlyOwner() {
-        require(msg.sender == owner, 'Only owner');
+        require(msg.sender == owner, 'Registry::onlyOwner: Call must come from owner.');
         _;
     }
 }
