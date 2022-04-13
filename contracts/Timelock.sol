@@ -42,7 +42,6 @@ contract Timelock {
     address public admin;
     address public pendingAdmin;
     uint256 public delay;
-    bool public admin_initialized;
 
     mapping(bytes32 => bool) public queuedTransactions;
 
@@ -52,7 +51,6 @@ contract Timelock {
 
         admin = _admin;
         delay = _delay;
-        admin_initialized = false;
     }
 
     /// @notice Sets the minimum time delay
@@ -77,9 +75,6 @@ contract Timelock {
     /// @notice Sets a new address as pending admin
     /// @param _pendingAdmin the pending admin
     function setPendingAdmin(address _pendingAdmin) public onlyAdmin {
-        // allows one time setting of admin for deployment purposes
-        require(!admin_initialized, 'Timelock::setPendingAdmin: Admin has already been set.');
-        admin_initialized = true;
         pendingAdmin = _pendingAdmin;
 
         emit NewPendingAdmin(pendingAdmin);

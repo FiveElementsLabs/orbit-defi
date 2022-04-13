@@ -58,7 +58,7 @@ describe('Registry.sol', function () {
 
         await Registry.connect(user).addNewContract(fakeId, user.address);
       } catch (err: any) {
-        expect(err.toString()).to.have.string('Only governance function');
+        expect(err.toString()).to.have.string('Registry::onlyGovernance: Call must come from governance.');
       }
     });
   });
