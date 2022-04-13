@@ -11,14 +11,7 @@ const PositionManagerjson = require('../../artifacts/contracts/PositionManager.s
 const SwapRouterjson = require('@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json');
 const FixturesConst = require('../shared/fixtures');
 import { tokensFixture, poolFixture, mintSTDAmount, routerFixture, getSelectors } from '../shared/fixtures';
-import {
-  MockToken,
-  IUniswapV3Pool,
-  INonfungiblePositionManager,
-  PositionManager,
-  TestRouter,
-  AutoCompoundModule,
-} from '../../typechain';
+import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager, TestRouter } from '../../typechain';
 
 describe('AutoCompoundModule.sol', function () {
   //GLOBAL VARIABLE - USE THIS

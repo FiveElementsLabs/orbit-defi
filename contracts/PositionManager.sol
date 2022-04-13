@@ -4,22 +4,12 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import '@openzeppelin/contracts/token/ERC721/ERC721Holder.sol';
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
-import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
-import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol';
-import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
-import '@uniswap/v3-core/contracts/libraries/FixedPoint96.sol';
-import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
-import '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol';
-import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
-import './Registry.sol';
 import '../interfaces/IPositionManager.sol';
-import './actions/BaseAction.sol';
 import '../interfaces/IUniswapAddressHolder.sol';
-import './utils/Storage.sol';
 import '../interfaces/IDiamondCut.sol';
-import 'hardhat/console.sol';
+import './helpers/ERC20Helper.sol';
+import './utils/Storage.sol';
 
 /**
  * @title   Position Manager
@@ -58,10 +48,11 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@param tokenId ID of the withdrawn NFT
     event WithdrawUni(address to, uint256 tokenId);
 
-    ///@notice emitted to return the output of doAction transaction
-    ///@param success delegate call was a success
-    ///@param data data returned by the delegate call
-    event Output(bool success, bytes data);
+    ///@notice emitted when a ERC20 is withdrawn
+    ///@param tokenAddress address of the ERC20
+    ///@param to address of the user
+    ///@param amount of the ERC20
+    event WithdrawERC20(address tokenAddress, address to, uint256 amount);
 
     uint256[] private uniswapNFTs;
 
@@ -151,8 +142,19 @@ contract PositionManager is IPositionManager, ERC721Holder {
         activatedModules[tokenId][moduleAddress] = activated;
     }
 
+    ///@notice return the state of the module for tokenId position
+    ///@param tokenId ID of the position
+    ///@param moduleAddress address of the module
     function getModuleState(uint256 tokenId, address moduleAddress) external view override returns (bool) {
         return activatedModules[tokenId][moduleAddress];
+    }
+
+    ///@notice return the all tokens of tokenAddress in the positionManager
+    ///@param tokenAddress address of the token to be withdrawn
+    function withdrawERC20(address tokenAddress) external override onlyOwner {
+        ERC20Helper._approveToken(tokenAddress, address(this), 2**256 - 1);
+        uint256 amount = ERC20Helper._withdrawTokens(tokenAddress, msg.sender, 2**256 - 1);
+        emit WithdrawERC20(tokenAddress, msg.sender, amount);
     }
 
     ///@notice modifier to check if the msg.sender is the owner
@@ -198,5 +200,10 @@ contract PositionManager is IPositionManager, ERC721Holder {
                 return(0, returndatasize())
             }
         }
+    }
+
+    receive() external payable {
+        //we need to decide what to do when the contract receives ether
+        //for now we just keep it to be reused in the future
     }
 }
