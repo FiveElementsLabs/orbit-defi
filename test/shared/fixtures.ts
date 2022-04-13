@@ -1,7 +1,7 @@
 import { Contract, ContractReceipt } from 'ethers';
 import { ethers } from 'hardhat';
 import { ContractFactory } from 'ethers';
-import { MockToken, IUniswapV3Pool, TestRouter, Registry } from '../../typechain';
+import { MockToken, IUniswapV3Pool, TestRouter, Registry, Timelock } from '../../typechain';
 const { getContractAddress } = require('@ethersproject/address');
 
 const UniswapV3Pool = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Pool.sol/UniswapV3Pool.json');
@@ -24,6 +24,10 @@ interface RegistryFixture {
   registryFixture: Registry;
 }
 
+interface TimelockFixture {
+  timelockFixture: Timelock;
+}
+
 export async function tokensFixture(name: string, decimal: number): Promise<TokensFixture> {
   const tokenFactory = await ethers.getContractFactory('MockToken');
   const tokenFixture: MockToken = (await tokenFactory.deploy(name, name, decimal)) as MockToken;
@@ -31,17 +35,15 @@ export async function tokensFixture(name: string, decimal: number): Promise<Toke
 }
 
 export async function RegistryFixture(): Promise<RegistryFixture> {
-  const signers = await ethers.getSigners();
-  const deployer = signers[0];
-  const transactionCount = await deployer.getTransactionCount();
-  const futureAddress = getContractAddress({
-    from: deployer.address,
-    nonce: transactionCount,
-  });
-  console.log(futureAddress);
   const registryFactory = await ethers.getContractFactory('Registry');
   const registryFixture: Registry = (await registryFactory.deploy()) as Registry;
   return { registryFixture };
+}
+
+export async function TimelockFixture(deployerAddress: string, delay: number): Promise<TimelockFixture> {
+  const timelockFactory = await ethers.getContractFactory('Timelock');
+  const timelockFixture: Timelock = (await timelockFactory.deploy(deployerAddress, delay)) as Timelock;
+  return { timelockFixture };
 }
 
 export async function poolFixture(
