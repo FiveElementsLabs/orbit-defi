@@ -126,6 +126,9 @@ export const keeperSetup = async () => {
   const PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
   await PositionManagerFactory.deployed();
 
+  console.log('NonFungiblePositionManager.address: ', NonFungiblePositionManager.address);
+  console.log('PositionManagerFactory.address: ', PositionManagerFactory.address);
+
   await PositionManagerFactory.create(user.address, UniswapAddressHolder.address);
 
   const contractsDeployed = await PositionManagerFactory.positionManagers(0);
@@ -199,6 +202,7 @@ export const keeperSetup = async () => {
   //give PositionManager some tokens
   await tokenEth.connect(user).transfer(PositionManager.address, ethers.utils.parseEther('100000'));
   await tokenUsdc.connect(user).transfer(PositionManager.address, ethers.utils.parseEther('100000'));
+
   //approval nfts
   await NonFungiblePositionManager.setApprovalForAll(PositionManager.address, true);
 

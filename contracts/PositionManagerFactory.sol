@@ -6,12 +6,14 @@ import './PositionManager.sol';
 
 contract PositionManagerFactory {
     address[] public positionManagers;
+    mapping(address => address) public userToPositionManager;
 
     event PositionManagerCreated(address indexed contractAddress, address userAddress, address uniswapAddressHolder);
 
     ///@notice deploy new positionManager and assign to userAddress
     ///@param _userAddress the address of the user that will be the owner of PositionManager
-    ///@param _uniswapAddressHolderAddress helper uniswapAddressHolder cause PositionManager need it in constructor
+    ///@param _diamondCutFacet the address of the DiamondCutFacet contract
+    ///@param _uniswapAddressHolderAddress the address of the UniswapAddressHolder contract
     ///@return address[] return array of PositionManager address updated with the last deployed PositionManager
     function create(
         address _userAddress,
@@ -20,8 +22,10 @@ contract PositionManagerFactory {
     ) public returns (address[] memory) {
         PositionManager manager = new PositionManager(_userAddress, _diamondCutFacet);
         positionManagers.push(address(manager));
+        userToPositionManager[_userAddress] = address(manager);
         manager.init(_userAddress, _uniswapAddressHolderAddress);
         emit PositionManagerCreated(address(manager), _userAddress, _uniswapAddressHolderAddress);
+
 
         return positionManagers;
     }
