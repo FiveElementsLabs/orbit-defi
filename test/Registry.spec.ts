@@ -3,17 +3,14 @@ import { expect } from 'chai';
 import { Contract } from 'ethers';
 const hre = require('hardhat');
 import { ethers } from 'hardhat';
-const { getContractAddress } = require('@ethersproject/address');
 import { RegistryFixture } from './shared/fixtures';
-
-import { Registry } from '../typechain';
 
 describe('Registry.sol', function () {
   let deployer: any;
   let user: any;
-  let registry: Registry;
-  const contractAddr1 = '0x00000000219ab540356cBB839Cbe05303d7705Fa';
-  const id1 = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes(contractAddr1));
+  let Registry: Contract;
+  let IdleLiquidityModule: Contract;
+  let AutoCompoundModule: Contract;
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
@@ -23,28 +20,65 @@ describe('Registry.sol', function () {
     user = signers[1];
 
     //deploy the registry
-    registry = await RegistryFixture(deployer.address).then((registryFix) => registryFix.registryFixture);
+    Registry = (await RegistryFixture(deployer.address)).registryFixture;
+
+    const zeroAddress = ethers.constants.AddressZero;
+
+    //Deploy modules
+    const IdleLiquidityModuleFactory = await ethers.getContractFactory('IdleLiquidityModule');
+    IdleLiquidityModule = (await IdleLiquidityModuleFactory.deploy(
+      zeroAddress //we don't need this contract for this test
+    )) as Contract;
+    await IdleLiquidityModule.deployed();
+
+    const AutoCompoundModuleFactory = await ethers.getContractFactory('AutoCompoundModule');
+    AutoCompoundModule = (await AutoCompoundModuleFactory.deploy(
+      zeroAddress //we don't need this contract for this test
+    )) as Contract;
+    await AutoCompoundModule.deployed();
   });
 
-  describe('Deployment ', function () {
-    it('Should assign owner at constructor', async function () {
-      expect(await registry.owner()).to.be.equal(deployer.address);
+  describe('Registry.sol - deployment ', function () {
+    it('Should assign governance at constructor', async function () {
+      expect(await Registry.governance()).to.be.equal(deployer.address);
     });
   });
-  describe('Modules update ', function () {
+
+  describe('Registry.sol - addNewContract() ', function () {
     it('Should add and activate new contract', async function () {
-      const tx = await registry.connect(deployer).addNewContract(contractAddr1);
-      const entry = await registry.entries(contractAddr1);
-      const activated = entry['activated'];
-      expect(activated).to.be.equal(true);
+      const idIdle = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('IdleLiquidityModule'));
+      await Registry.connect(deployer).addNewContract(idIdle, IdleLiquidityModule.address);
+
+      expect(await Registry.isActive(idIdle)).to.be.equal(true);
     });
 
     it('Should fail if it is not called by owner', async function () {
       try {
-        await registry.connect(user).addNewContract(contractAddr1);
+        const fakeId = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('ThisIsATest'));
+
+        await Registry.connect(user).addNewContract(fakeId, user.address);
       } catch (err: any) {
-        expect(err.toString()).to.have.string('Only owner');
+        expect(err.toString()).to.have.string('Only governance function');
       }
+    });
+  });
+
+  describe('Registry.sol - switchModuleState() ', function () {
+    it('Should be able to disactivate a contract', async function () {
+      const idAutoCompound = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('AutoCompoundModule'));
+      await Registry.connect(deployer).addNewContract(idAutoCompound, AutoCompoundModule.address);
+
+      await Registry.connect(deployer).switchModuleState(idAutoCompound, false);
+
+      expect(await Registry.isActive(idAutoCompound)).to.equal(false);
+    });
+  });
+
+  describe('Registry.sol - changeModule()', function () {
+    it('Should be able to change address for a contract', async function () {
+      const idIdle = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('IdleLiquidityModule'));
+      await Registry.changeContract(idIdle, user.address);
+      expect((await Registry.modules(idIdle)).contractAddress).to.equal(user.address);
     });
   });
 });
