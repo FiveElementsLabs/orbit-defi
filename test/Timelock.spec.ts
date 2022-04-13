@@ -1,6 +1,5 @@
 import '@nomiclabs/hardhat-ethers';
 const hre = require('hardhat');
-const { getContractAddress } = require('@ethersproject/address');
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { AbiCoder } from 'ethers/lib/utils';
@@ -12,13 +11,11 @@ describe('Timelock.sol', function () {
   let deployer2: any;
   let deployer3: any;
   let deployer4: any;
-  let user: any;
   let registry: Registry;
   let timelock: Timelock;
   let timelock2: Timelock;
   let abiCoder: AbiCoder;
-  const contractAddr1 = '0x00000000219ab540356cBB839Cbe05303d7705Fa';
-  const contractAddr2 = '0x29D7d1dd5B6f9C864d9db560D72a247c178aE86B';
+  const randomContractAddress = '0x29D7d1dd5B6f9C864d9db560D72a247c178aE86B';
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
@@ -28,7 +25,6 @@ describe('Timelock.sol', function () {
     deployer2 = signers[1];
     deployer3 = signers[2];
     deployer4 = signers[3];
-    user = signers[4];
 
     //select standard abicoder
     abiCoder = ethers.utils.defaultAbiCoder;
@@ -90,7 +86,7 @@ describe('Timelock.sol', function () {
       const target = registry.address;
       const value = 0;
       const signature = 'addNewContract(address)';
-      const data = abiCoder.encode(['address'], [contractAddr2]);
+      const data = abiCoder.encode(['address'], [randomContractAddress]);
       const eta = (await ethers.provider.getBlock('latest')).timestamp + 21700;
 
       const txReceipt = await (
@@ -105,7 +101,7 @@ describe('Timelock.sol', function () {
       const target = registry.address;
       const value = 0;
       const signature = 'addNewContract(address)';
-      const data = abiCoder.encode(['address'], [contractAddr2]);
+      const data = abiCoder.encode(['address'], [randomContractAddress]);
       const eta = (await ethers.provider.getBlock('latest')).timestamp + 21700;
 
       const txReceipt = await (
@@ -120,7 +116,7 @@ describe('Timelock.sol', function () {
       const target = registry.address;
       const value = 0;
       const signature = 'addNewContract(address)';
-      const data = abiCoder.encode(['address'], [contractAddr2]);
+      const data = abiCoder.encode(['address'], [randomContractAddress]);
       const eta = (await ethers.provider.getBlock('latest')).timestamp + 21700;
 
       const queueTxReceipt = await (
@@ -147,7 +143,7 @@ describe('Timelock.sol', function () {
       const target = registry.address;
       const value = 0;
       const signature = 'addNewContract(address)';
-      const data = abiCoder.encode(['address'], [contractAddr2]);
+      const data = abiCoder.encode(['address'], [randomContractAddress]);
       const eta = (await ethers.provider.getBlock('latest')).timestamp + 21700;
 
       const queueTxReceipt = await (
