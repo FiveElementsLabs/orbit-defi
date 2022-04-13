@@ -35,7 +35,6 @@ export const keeperSetup = async () => {
   let Factory: Contract; // the factory that will deploy all pools
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
   let PositionManager: Contract; // PositionManager contract by UniswapV3
-  let PositionManager2: Contract;
   let SwapRouter: Contract; // SwapRouter contract by UniswapV3
   let Router: Contract; //UniswapV3 Router
   let SwapToPositionRatioAction: SwapToPositionRatio; // SwapToPositionRatio contract
@@ -129,16 +128,17 @@ export const keeperSetup = async () => {
   console.log('NonFungiblePositionManager.address: ', NonFungiblePositionManager.address);
   console.log('PositionManagerFactory.address: ', PositionManagerFactory.address);
 
-  await PositionManagerFactory.create(user.address, UniswapAddressHolder.address);
+  const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet');
+  const diamondCutFacet = await DiamondCutFacet.deploy();
+  await diamondCutFacet.deployed();
+
+
+  await PositionManagerFactory.create(user.address, diamondCutFacet.address, UniswapAddressHolder.address);
 
   const contractsDeployed = await PositionManagerFactory.positionManagers(0);
   PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as Contract;
 
-  await PositionManagerFactory.create(user.address, UniswapAddressHolder.address);
-
-  const contractsDeployed2 = await PositionManagerFactory.positionManagers(1);
-  PositionManager2 = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed2)) as Contract;
-
+  
   //Deploy SwapToPositionRatio Action
   const swapToPositionRatioActionFactory = await ethers.getContractFactory('SwapToPositionRatio');
   SwapToPositionRatioAction = (await swapToPositionRatioActionFactory.deploy()) as SwapToPositionRatio;
@@ -171,10 +171,6 @@ export const keeperSetup = async () => {
   AutoCompound = await AutocompoundFactory.deploy(
     UniswapAddressHolder.address,
     100,
-    collectFeesAction.address,
-    increaseLiquidityAction.address,
-    decreaseLiquidityAction.address,
-    updateFeesAction.address
   );
   await AutoCompound.deployed();
 
@@ -269,6 +265,11 @@ export const keeperSetup = async () => {
   const tokenId2 = receipt2.events[receipt2.events.length - 1].args.tokenId;
 
   await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId2), [tokenId2]);
+  console.log(PositionManager.address)
+  console.log(await PositionManager.getAllUniPosition());
+  console.log(await PositionManagerFactory.userToPositionManager(user.address))
+  console.log(user.address)
+
 
   for (let i = 0; i < 20; i++) {
     // Do a trade to change tick
@@ -281,7 +282,6 @@ export const keeperSetup = async () => {
     Pool0,
     NonFungiblePositionManager,
     PositionManager,
-    PositionManager2,
     PositionManagerFactory,
     SwapRouter,
     SwapToPositionRatioAction,
