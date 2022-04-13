@@ -106,8 +106,11 @@ contract PositionManager is IPositionManager, ERC721Holder, Zapper {
 
     ///@notice remove awareness of NFT at index
     ///@param index index of the NFT in the uniswapNFTs array
-    function removePositionId(uint256 index) external override {
-        require(msg.sender == address(this), 'only position manager can remove position');
+    function removePositionId(uint256 index) public override {
+        require(
+            msg.sender == address(this),
+            'PositionManager::removePositionId: only PositionManager can remove a position'
+        );
         if (uniswapNFTs.length > 1) {
             uniswapNFTs[index] = uniswapNFTs[uniswapNFTs.length - 1];
             uniswapNFTs.pop();
@@ -165,7 +168,7 @@ contract PositionManager is IPositionManager, ERC721Holder, Zapper {
     modifier onlyOwner() {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
-        require(msg.sender == Storage.owner, 'Only owner');
+        require(msg.sender == Storage.owner, 'PositionManager::modifier: Only owner can call this function');
         _;
     }
 
@@ -173,7 +176,10 @@ contract PositionManager is IPositionManager, ERC721Holder, Zapper {
     modifier onlyOwnerOrModule() {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
-        require((msg.sender == Storage.owner), 'Only owner or module');
+        require(
+            (msg.sender == Storage.owner),
+            'PositionManager::modifier: Only owner or module can call this function'
+        );
         _;
     }
 
@@ -185,7 +191,7 @@ contract PositionManager is IPositionManager, ERC721Holder, Zapper {
             Storage.slot := position
         }
         address facet = Storage.selectorToFacetAndPosition[msg.sig].facetAddress;
-        require(facet != address(0), 'Diamond: Function does not exist');
+        require(facet != address(0), 'PositionManager::Fallback: Function does not exist');
         ///@dev Execute external function from facet using delegatecall and return any value.
 
         assembly {

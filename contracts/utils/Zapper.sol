@@ -46,7 +46,7 @@ contract Zapper {
         int24 tickUpper,
         uint24 fee
     ) public returns (uint256 tokenId) {
-        require(token0 != token1, 'token0 and token1 cannot be the same');
+        require(token0 != token1, 'Zapper::zapIn: token0 and token1 cannot be the same');
         (token0, token1) = _reorderTokens(token0, token1);
 
         ERC20Helper._pullTokensIfNeeded(tokenIn, msg.sender, amountIn);
