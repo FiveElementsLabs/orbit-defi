@@ -1,0 +1,38 @@
+name: Hardhat & Slither CI on security branch
+
+on:
+  push:
+    branches: [security]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [16.x]
+        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'yarn'
+      - run: yarn install
+      - run: npx --version
+
+      - run: npx hardhat typechain
+      - run: echo "🎉 Hardhat Typechain passed."
+
+      - run: npx hardhat test
+      - run: echo "🎉 Hardhat Test passed."
+
+      - run: npx hardhat coverage
+      - run: echo "🎉 Hardhat Coverage passed."
+
+      # Slither security static code checks
+      - run: pip3 install slither-analyzer
+      - run: slither .
+      - run: echo "🎉 Slither Test passed."
