@@ -23,15 +23,6 @@ jobs:
       - run: yarn install
       - run: npx --version
 
-      - run: npx hardhat typechain
-      - run: echo "🎉 Hardhat Typechain passed."
-
-      - run: npx hardhat test
-      - run: echo "🎉 Hardhat Test passed."
-
-      - run: npx hardhat coverage
-      - run: echo "🎉 Hardhat Coverage passed."
-
       # Slither security static code checks
       - run: pip3 install slither-analyzer
       - run: slither .
