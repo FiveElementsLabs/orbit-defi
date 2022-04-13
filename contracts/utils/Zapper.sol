@@ -5,6 +5,7 @@ pragma abicoder v2;
 
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
+import '../../interfaces/IPositionManager.sol';
 import '../helpers/SwapHelper.sol';
 import '../helpers/NFTHelper.sol';
 import '../helpers/ERC20Helper.sol';
@@ -149,7 +150,7 @@ contract Zapper {
         }
 
         ERC20Helper._approveToken(tokenOut, address(this), amount0 + amount1);
-        ERC20Helper._withdrawTokens(tokenOut, msg.sender, amount0 + amount1);
+        ERC20Helper._withdrawTokens(tokenOut, IPositionManager(msg.sender).getOwner(), amount0 + amount1);
     }
 
     function _swapToTokenOut(

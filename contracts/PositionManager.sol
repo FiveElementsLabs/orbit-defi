@@ -155,6 +155,11 @@ contract PositionManager is IPositionManager, ERC721Holder {
         return activatedModules[tokenId][moduleAddress];
     }
 
+    function getOwner() external view override returns (address) {
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+        return Storage.owner;
+    }
+
     ///@notice modifier to check if the msg.sender is the owner
     modifier onlyOwner() {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
