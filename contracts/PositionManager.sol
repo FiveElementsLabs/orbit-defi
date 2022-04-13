@@ -103,9 +103,9 @@ contract PositionManager is IPositionManager, ERC721Holder {
         emit WithdrawUni(msg.sender, tokenId);
     }
 
-    ///@notice remove awareness of NFT at index
+    ///@notice remove awareness of UniswapV3 NFT at index
     ///@param index index of the NFT in the uniswapNFTs array
-    function removePositionId(uint256 index) public override {
+    function removePositionIdAtIndex(uint256 index) internal {
         require(
             msg.sender == address(this),
             'PositionManager::removePositionId: only PositionManager can remove a position'
@@ -118,9 +118,20 @@ contract PositionManager is IPositionManager, ERC721Holder {
         }
     }
 
+    ///@notice remove awareness of _id UniswapV3 NFT
+    ///@param _id ID of the NFT to remove
+    function removePositionId(uint256 _id) public override {
+        for (uint256 i = 0; i < uniswapNFTs.length; i++) {
+            if (uniswapNFTs[i] == _id) {
+                removePositionIdAtIndex(i);
+                return;
+            }
+        }
+    }
+
     ///@notice add tokenId in the uniswapNFTs array
     ///@param tokenId ID of the added NFT
-    function pushPositionId(uint256 tokenId) public {
+    function pushPositionId(uint256 tokenId) public override {
         //TODO: this needs a modifier or a require!
         uniswapNFTs.push(tokenId);
     }
