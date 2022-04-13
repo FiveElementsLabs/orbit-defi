@@ -39,32 +39,18 @@ describe('Registry.sol', function () {
     await AutoCompoundModule.deployed();
   });
 
-  describe('Deployment ', function () {
+  describe('Registry.sol - deployment ', function () {
     it('Should assign governance at constructor', async function () {
       expect(await Registry.governance()).to.be.equal(deployer.address);
     });
   });
-  describe('Modules update ', function () {
+
+  describe('Registry.sol - addNewContract() ', function () {
     it('Should add and activate new contract', async function () {
       const idIdle = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('IdleLiquidityModule'));
       await Registry.connect(deployer).addNewContract(idIdle, IdleLiquidityModule.address);
 
       expect(await Registry.isActive(idIdle)).to.be.equal(true);
-    });
-
-    it('Should be able to disactivate a contract', async function () {
-      const idAutoCompound = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('AutoCompoundModule'));
-      await Registry.connect(deployer).addNewContract(idAutoCompound, AutoCompoundModule.address);
-
-      await Registry.connect(deployer).switchModuleState(idAutoCompound, false);
-
-      expect(await Registry.isActive(idAutoCompound)).to.equal(false);
-    });
-
-    it('Should be able to change address for a contract', async function () {
-      const idIdle = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('IdleLiquidityModule'));
-      await Registry.changeContract(idIdle, user.address);
-      expect((await Registry.modules(idIdle)).contractAddress).to.equal(user.address);
     });
 
     it('Should fail if it is not called by owner', async function () {
@@ -75,6 +61,25 @@ describe('Registry.sol', function () {
       } catch (err: any) {
         expect(err.toString()).to.have.string('Only governance function');
       }
+    });
+  });
+
+  describe('Registry.sol - switchModuleState() ', function () {
+    it('Should be able to disactivate a contract', async function () {
+      const idAutoCompound = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('AutoCompoundModule'));
+      await Registry.connect(deployer).addNewContract(idAutoCompound, AutoCompoundModule.address);
+
+      await Registry.connect(deployer).switchModuleState(idAutoCompound, false);
+
+      expect(await Registry.isActive(idAutoCompound)).to.equal(false);
+    });
+  });
+
+  describe('Registry.sol - changeModule()', function () {
+    it('Should be able to change address for a contract', async function () {
+      const idIdle = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('IdleLiquidityModule'));
+      await Registry.changeContract(idIdle, user.address);
+      expect((await Registry.modules(idIdle)).contractAddress).to.equal(user.address);
     });
   });
 });
