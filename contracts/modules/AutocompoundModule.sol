@@ -7,50 +7,39 @@ import '../../interfaces/IPositionManager.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
 import '../helpers/NFTHelper.sol';
 import '../helpers/ERC20Helper.sol';
+import '../utils/Storage.sol';
+import '../actions/CollectFees.sol';
+import '../actions/IncreaseLiquidity.sol';
+import '../actions/UpdateUncollectedFees.sol';
 
 contract AutoCompoundModule {
     //TODO: setup registry
     IUniswapAddressHolder addressHolder;
-    address collectFeeAddress;
-    address increaseLiquidityAddress;
-    address decreaseLiquidityAddress;
-    address updateFeesAddress;
 
-    constructor(
-        address _addressHolder,
-        address _collectFeeAddress,
-        address _increaseLiquidityAddress,
-        address _decreaseLiquidityAddress,
-        address _updateFeesAddress
-    ) {
+    ///@notice constructor of autoCompoundModule
+    ///@param _addressHolder the address of the uniswap address holder contract
+    constructor(address _addressHolder) {
         addressHolder = IUniswapAddressHolder(_addressHolder);
-        collectFeeAddress = _collectFeeAddress;
-        increaseLiquidityAddress = _increaseLiquidityAddress;
-        decreaseLiquidityAddress = _decreaseLiquidityAddress;
-        updateFeesAddress = _updateFeesAddress;
     }
 
     ///@notice executes our recipe for autocompounding
-    ///@param positionManagerAddress address of the position manager
-    function autoCompoundFees(address positionManagerAddress, uint256 feesThreshold) public {
-        IPositionManager positionManager = IPositionManager(positionManagerAddress);
-        //check if autocompound is active
-        if (
-            true /*positionManager.isAutoCompound()*/
-        ) {
-            //TODO: check if autocompound module is active
-            uint256[] memory positions = positionManager.getAllUniPosition();
-            for (uint256 i = 0; i < positions.length; i++) {
-                if (checkIfCompoundIsNeeded(positionManagerAddress, positions[i], feesThreshold)) {
-                    bytes memory data = positionManager.doAction(collectFeeAddress, abi.encode(positions[i]));
+    ///@param positionManager address of the position manager
+    ///@param tokenId id of the token to autocompound
+    ///@param feesThreshold threshold of the fees to autocompound
+    function autoCompoundFees(
+        IPositionManager positionManager,
+        uint256 tokenId,
+        uint256 feesThreshold
+    ) public {
+        ///@dev check if autocompound is active
+        if (positionManager.getModuleState(tokenId, address(this))) {
+            ///@dev check if compound need to be done
+            if (checkIfCompoundIsNeeded(address(positionManager), tokenId, feesThreshold)) {
+                (uint256 amount0Desired, uint256 amount1Desired) = ICollectFees(address(positionManager)).collectFees(
+                    tokenId
+                );
 
-                    (uint256 amount0Collected, uint256 amount1Collected) = abi.decode(data, (uint256, uint256));
-
-                    data = positionManager.doAction(
-                        increaseLiquidityAddress,
-                        abi.encode(positions[i], amount0Collected, amount1Collected)
-                    );
-                }
+                IIncreaseLiquidity(address(positionManager)).increaseLiquidity(tokenId, amount0Desired, amount1Desired);
             }
         }
     }
@@ -58,15 +47,16 @@ contract AutoCompoundModule {
     ///@notice checks the position status
     ///@param positionManagerAddress address of the position manager
     ///@param tokenId token id of the position
+    ///@param feesThreshold threshold of the fees to autocompound
     ///@return true if the position needs to be collected
     function checkIfCompoundIsNeeded(
         address positionManagerAddress,
         uint256 tokenId,
         uint256 feesThreshold
     ) internal returns (bool) {
-        bytes memory data = IPositionManager(positionManagerAddress).doAction(updateFeesAddress, abi.encode(tokenId));
+        (uint256 uncollectedFees0, uint256 uncollectedFees1) = IUpdateUncollectedFees(positionManagerAddress)
+            .updateUncollectedFees(tokenId);
 
-        (uint256 uncollectedFees0, uint256 uncollectedFees1) = abi.decode(data, (uint256, uint256));
         (uint256 amount0, uint256 amount1) = NFTHelper._getAmountsfromTokenId(
             tokenId,
             INonfungiblePositionManager(addressHolder.nonfungiblePositionManagerAddress()),

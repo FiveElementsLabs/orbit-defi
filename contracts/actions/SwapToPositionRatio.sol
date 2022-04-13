@@ -8,21 +8,11 @@ import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import '../helpers/SwapHelper.sol';
 import '../helpers/NFTHelper.sol';
 import '../helpers/ERC20Helper.sol';
+import '../utils/Storage.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
 
-///@notice action to swap to an exact position ratio
-contract SwapToPositionRatio {
-    IUniswapAddressHolder public uniswapAddressHolder;
-
-    ///@notice input the decoder expects
-    ///@param token0Address address of first token of the pool
-    ///@param token1Address address of second token of the pool
-    ///@param fee fee tier of the pool
-    ///@param amount0In actual token0 amount to be deposited
-    ///@param amount1In actual token1 amount to be deposited
-    ///@param tickLower lower tick of position
-    ///@param tickUpper upper tick of position
-    struct InputStruct {
+interface ISwapToPositionRatio {
+    struct SwapToPositionInput {
         address token0Address;
         address token1Address;
         uint24 fee;
@@ -32,30 +22,45 @@ contract SwapToPositionRatio {
         int24 tickUpper;
     }
 
-    ///@notice output the encoder produces
-    ///@param amount0Out the new value of amount0
-    ///@param amount1Out the new value of amount1
-    struct OutputStruct {
-        uint256 amount0Out;
-        uint256 amount1Out;
-    }
+    function swapToPositionRatio(SwapToPositionInput memory inputs)
+        external
+        returns (uint256 amount0Out, uint256 amount1Out);
+}
 
-    ///@notice executes the action of the contract (swapToPositionRatio), should be the only function visible from the outside
-    ///@param inputs input bytes to be decoded according to InputStruct
-    ///@return outputs outputs encoded according OutputStruct
-    function doAction(bytes memory inputs) public returns (OutputStruct memory outputs) {
-        InputStruct memory inputsStruct = decodeInputs(inputs);
-        outputs = swapToPositionRatio(inputsStruct);
+///@notice action to swap to an exact position ratio
+contract SwapToPositionRatio {
+    event SwapToPositionRatioEvent(uint256 amount0Out, uint256 amount1Out);
+
+    ///@notice input the decoder expects
+    ///@param token0Address address of first token of the pool
+    ///@param token1Address address of second token of the pool
+    ///@param fee fee tier of the pool
+    ///@param amount0In actual token0 amount to be deposited
+    ///@param amount1In actual token1 amount to be deposited
+    ///@param tickLower lower tick of position
+    ///@param tickUpper upper tick of position
+    struct SwapToPositionInput {
+        address token0Address;
+        address token1Address;
+        uint24 fee;
+        uint256 amount0In;
+        uint256 amount1In;
+        int24 tickLower;
+        int24 tickUpper;
     }
 
     ///@notice performs swap to optimal ratio for the position at tickLower and tickUpper
-    ///@param inputs input bytes to be decoded according to InputStruct
-    ///@return outputs outputs encoded according OutputStruct
-    function swapToPositionRatio(InputStruct memory inputs) internal returns (OutputStruct memory outputs) {
-        address uniswapV3FactoryAddress = uniswapAddressHolder.uniswapV3FactoryAddress();
+    ///@param inputs input bytes to be decoded according to SwapToPositionInput
+    ///@param amount0Out the new value of amount0
+    ///@param amount1Out the new value of amount1
+    function swapToPositionRatio(SwapToPositionInput memory inputs)
+        public
+        returns (uint256 amount0Out, uint256 amount1Out)
+    {
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
         address poolAddress = NFTHelper._getPoolAddress(
-            uniswapV3FactoryAddress,
+            Storage.uniswapAddressHolder.uniswapV3FactoryAddress(),
             inputs.token0Address,
             inputs.token1Address,
             inputs.fee
@@ -81,11 +86,13 @@ contract SwapToPositionRatio {
             ///@notice return the new amount of the token swapped and the token returned
             ///@dev token0AddressIn true amount 0 - amountToSwap  ------ amount 1 + amountSwapped
             ///@dev token0AddressIn false amount 0 + amountSwapped  ------ amount 1 - amountToSwap
-            outputs = OutputStruct({
-                amount0Out: token0AddressIn ? inputs.amount0In - amountToSwap : inputs.amount0In + amountSwapped,
-                amount1Out: token0AddressIn ? inputs.amount1In + amountSwapped : inputs.amount1In - amountToSwap
-            });
+            amount0Out = token0AddressIn ? inputs.amount0In - amountToSwap : inputs.amount0In + amountSwapped;
+            amount1Out = token0AddressIn ? inputs.amount1In + amountSwapped : inputs.amount1In - amountToSwap;
+        } else {
+            amount0Out = inputs.amount0In;
+            amount1Out = inputs.amount1In;
         }
+        emit SwapToPositionRatioEvent(amount0Out, amount1Out);
     }
 
     ///@notice swaps token0 for token1
@@ -99,7 +106,8 @@ contract SwapToPositionRatio {
         uint24 fee,
         uint256 amount0In
     ) internal returns (uint256 amount1Out) {
-        ISwapRouter swapRouter = ISwapRouter(uniswapAddressHolder.swapRouterAddress());
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+        ISwapRouter swapRouter = ISwapRouter(Storage.uniswapAddressHolder.swapRouterAddress());
 
         ERC20Helper._approveToken(token0Address, address(swapRouter), 2**256 - 1);
         ERC20Helper._approveToken(token1Address, address(swapRouter), 2**256 - 1);
@@ -109,37 +117,12 @@ contract SwapToPositionRatio {
             tokenOut: token1Address,
             fee: fee,
             recipient: address(this),
-            deadline: block.timestamp + 1000,
+            deadline: block.timestamp + 120,
             amountIn: amount0In,
             amountOutMinimum: 0,
             sqrtPriceLimitX96: 0
         });
 
         amount1Out = swapRouter.exactInputSingle(swapParams);
-    }
-
-    ///@notice decodes inputs to InputStruct
-    ///@param inputBytes input bytes to be decoded
-    ///@return input decoded input struct
-    function decodeInputs(bytes memory inputBytes) internal pure returns (InputStruct memory input) {
-        (
-            address token0Address,
-            address token1Address,
-            uint24 fee,
-            uint256 amount0In,
-            uint256 amount1In,
-            int24 tickLower,
-            int24 tickUpper
-        ) = abi.decode(inputBytes, (address, address, uint24, uint256, uint256, int24, int24));
-
-        input = InputStruct({
-            token0Address: token0Address,
-            token1Address: token1Address,
-            fee: fee,
-            amount0In: amount0In,
-            amount1In: amount1In,
-            tickLower: tickLower,
-            tickUpper: tickUpper
-        });
     }
 }

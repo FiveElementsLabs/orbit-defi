@@ -23,6 +23,7 @@ describe('PositionManagerFactory.sol', function () {
   let uniswapAddressHolder: UniswapAddressHolder;
   let Router: ISwapRouter;
   let poolI: any;
+  let diamondCutFacet: any;
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
@@ -78,6 +79,10 @@ describe('PositionManagerFactory.sol', function () {
     )) as UniswapAddressHolder;
     await uniswapAddressHolder.deployed();
 
+    // deploy DiamondCutFacet ----------------------------------------------------------------------
+    const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet');
+    diamondCutFacet = await DiamondCutFacet.deploy();
+    await diamondCutFacet.deployed();
     await token0
       .connect(signers[0])
       .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'));
@@ -96,7 +101,7 @@ describe('PositionManagerFactory.sol', function () {
 
       [owner] = await ethers.getSigners();
 
-      await PositionManagerFactoryInstance.create(owner.address, uniswapAddressHolder.address);
+      await PositionManagerFactoryInstance.create(owner.address, diamondCutFacet.address, uniswapAddressHolder.address);
 
       const deployedContract = await PositionManagerFactoryInstance.positionManagers(0);
       const PositionManagerInstance = await ethers.getContractAt(PositionManagerContract.abi, deployedContract);
