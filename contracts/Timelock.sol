@@ -54,10 +54,7 @@ contract Timelock {
         admin_initialized = false;
     }
 
-    receive() external payable {}
-
-    function setDelay(uint256 _delay) public {
-        require(msg.sender == address(this), 'Timelock::setDelay: Call must come from Timelock.');
+    function setDelay(uint256 _delay) public onlyAdmin {
         require(_delay >= MINIMUM_DELAY, 'Timelock::setDelay: Delay must exceed minimum delay.');
         require(_delay <= MAXIMUM_DELAY, 'Timelock::setDelay: Delay must not exceed maximum delay.');
         delay = _delay;
@@ -73,14 +70,10 @@ contract Timelock {
         emit NewAdmin(admin);
     }
 
-    function setPendingAdmin(address _pendingAdmin) public {
+    function setPendingAdmin(address _pendingAdmin) public onlyAdmin {
         // allows one time setting of admin for deployment purposes
-        if (admin_initialized) {
-            require(msg.sender == address(this), 'Timelock::setPendingAdmin: Call must come from Timelock.');
-        } else {
-            require(msg.sender == admin, 'Timelock::setPendingAdmin: First call must come from admin.');
-            admin_initialized = true;
-        }
+        require(!admin_initialized, 'Timelock::setPendingAdmin: Admin has already been set.');
+        admin_initialized = true;
         pendingAdmin = _pendingAdmin;
 
         emit NewPendingAdmin(pendingAdmin);
@@ -92,8 +85,7 @@ contract Timelock {
         string memory signature,
         bytes memory data,
         uint256 eta
-    ) public returns (bytes32) {
-        require(msg.sender == admin, 'Timelock::queueTransaction: Call must come from admin.');
+    ) public onlyAdmin returns (bytes32) {
         require(
             eta >= getBlockTimestamp().add(delay),
             'Timelock::queueTransaction: Estimated execution block must satisfy delay.'
@@ -112,9 +104,7 @@ contract Timelock {
         string memory signature,
         bytes memory data,
         uint256 eta
-    ) public {
-        require(msg.sender == admin, 'Timelock::cancelTransaction: Call must come from admin.');
-
+    ) public onlyAdmin {
         bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
         queuedTransactions[txHash] = false;
 
@@ -127,9 +117,7 @@ contract Timelock {
         string memory signature,
         bytes memory data,
         uint256 eta
-    ) public payable returns (bytes memory) {
-        require(msg.sender == admin, 'Timelock::executeTransaction: Call must come from admin.');
-
+    ) public payable onlyAdmin returns (bytes memory) {
         bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
         require(queuedTransactions[txHash], "Timelock::executeTransaction: Transaction hasn't been queued.");
         require(getBlockTimestamp() >= eta, "Timelock::executeTransaction: Transaction hasn't surpassed time lock.");
@@ -156,5 +144,10 @@ contract Timelock {
     function getBlockTimestamp() internal view returns (uint256) {
         // solium-disable-next-line security/no-block-members
         return block.timestamp;
+    }
+
+    modifier onlyAdmin() {
+        require(msg.sender == admin, 'Timelock::onlyAdmin: Call must come from admin.');
+        _;
     }
 }
