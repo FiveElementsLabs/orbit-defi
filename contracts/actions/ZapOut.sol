@@ -10,13 +10,15 @@ import '../utils/Storage.sol';
 import '../helpers/NFTHelper.sol';
 import '../helpers/ERC20Helper.sol';
 
-interface IZapOut {}
+interface IZapOut {
+    function zapOut(uint256 tokenId, address tokenOut) external;
+}
 
-contract ZapOut {
+contract ZapOut is IZapOut {
     ///@notice burns a uni NFT with a single output token, the output token can be different from the two position tokens
     ///@param tokenId id of the NFT to burn
     ///@param tokenOut address of output token
-    function zapOut(uint256 tokenId, address tokenOut) public {
+    function zapOut(uint256 tokenId, address tokenOut) public override {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         INonfungiblePositionManager nonfungiblePositionManager = INonfungiblePositionManager(
             Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()

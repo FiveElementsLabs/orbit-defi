@@ -38,11 +38,6 @@ contract PositionManager is IPositionManager, ERC721Holder {
 
     mapping(uint256 => mapping(address => bool)) public activatedModules;
 
-    ///@notice emitted when a position is created
-    ///@param from address of the user
-    ///@param tokenId ID of the minted NFT
-    event DepositUni(address indexed from, uint256 tokenId);
-
     ///@notice emitted when a position is withdrawn
     ///@param to address of the user
     ///@param tokenId ID of the withdrawn NFT
@@ -66,19 +61,6 @@ contract PositionManager is IPositionManager, ERC721Holder {
     struct Module {
         address moduleAddress;
         bool activated;
-    }
-
-    ///@notice add uniswap position NFT to the position manager
-    ///@param tokenIds IDs of deposited tokens
-    function depositUniNft(uint256[] calldata tokenIds) external override onlyOwner {
-        StorageStruct storage Storage = PositionManagerStorage.getStorage();
-
-        for (uint32 i = 0; i < tokenIds.length; i++) {
-            INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress())
-                .safeTransferFrom(msg.sender, address(this), tokenIds[i], '0x0');
-            uniswapNFTs.push(tokenIds[i]);
-            emit DepositUni(msg.sender, tokenIds[i]);
-        }
     }
 
     ///@notice withdraw uniswap position NFT from the position manager

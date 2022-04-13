@@ -31,6 +31,26 @@ contract DepositInterface {
     ///@param tokenId the id of the minted NFT
     event MintedNFT(uint256 tokenId);
 
+    ///@notice emitted when a position is created
+    ///@param from address of the user
+    ///@param tokenId ID of the minted NFT
+    event DepositUni(address indexed from, uint256 tokenId);
+
+    ///@notice add uniswap position NFT to the position manager
+    ///@param tokenIds IDs of deposited tokens
+    function depositUniNft(uint256[] calldata tokenIds) external {
+        for (uint32 i = 0; i < tokenIds.length; i++) {
+            nonfungiblePositionManager.safeTransferFrom(
+                msg.sender,
+                positionManagerFactory.userToPositionManager(msg.sender),
+                tokenIds[i],
+                '0x0'
+            );
+            IPositionManager(positionManagerFactory.userToPositionManager(msg.sender)).pushPositionId(tokenIds[i]);
+            emit DepositUni(msg.sender, tokenIds[i]);
+        }
+    }
+
     function mintAndDeposit(
         address token0,
         address token1,
