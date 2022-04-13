@@ -155,7 +155,7 @@ describe('AutoCompoundModule.sol', function () {
 
     //deploy AutoCompound Module
     const AutocompoundFactory = await ethers.getContractFactory('AutoCompoundModule');
-    autoCompound = await AutocompoundFactory.deploy(uniswapAddressHolder.address, 100);
+    autoCompound = await AutocompoundFactory.deploy(uniswapAddressHolder.address);
     await autoCompound.deployed();
 
     //select standard abicoder
@@ -277,7 +277,7 @@ describe('AutoCompoundModule.sol', function () {
 
     const position = await NonFungiblePositionManager.positions(2);
     //collect and reinvest fees
-    await autoCompound.autoCompoundFees(PositionManager.address, tokenId);
+    await autoCompound.connect(user).autoCompoundFees(PositionManager.address, 2, 30);
     const positionPost = await NonFungiblePositionManager.positions(2);
     expect(positionPost.liquidity).to.lt(position.liquidity);
   });
@@ -298,12 +298,12 @@ describe('AutoCompoundModule.sol', function () {
 
     const position = await NonFungiblePositionManager.positions(2);
     //collect and reinvest fees
-    await autoCompound.connect(user).autoCompoundFees(PositionManager.address, 2);
+    await autoCompound.connect(user).autoCompoundFees(PositionManager.address, 2, 1);
     const positionPost = await NonFungiblePositionManager.positions(2);
     expect(positionPost.liquidity).to.gt(position.liquidity);
   });
 
   it('should revert if position Manager does not exist', async function () {
-    await expect(autoCompound.connect(user).autoCompoundFees(Factory.address));
+    await expect(autoCompound.connect(user).autoCompoundFees(Factory.address, 2, 30));
   });
 });
