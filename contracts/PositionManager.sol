@@ -144,12 +144,15 @@ contract PositionManager is IPositionManager, ERC721Holder {
         activatedModules[tokenId][moduleAddress] = activated;
     }
 
+    ///@notice return the state of the module for tokenId position
+    ///@param tokenId ID of the position
+    ///@param moduleAddress address of the module
     function getModuleState(uint256 tokenId, address moduleAddress) external view override returns (bool) {
         return activatedModules[tokenId][moduleAddress];
     }
 
     ///@notice return the all tokens of tokenAddress in the positionManager
-    ///@param tokenAddress address of the token
+    ///@param tokenAddress address of the token to be withdrawn
     function withdrawERC20(address tokenAddress) external override onlyOwner {
         ERC20Helper._approveToken(tokenAddress, address(this), 2**256 - 1);
         ERC20Helper._withdrawTokens(tokenAddress, msg.sender, 2**256 - 1);
