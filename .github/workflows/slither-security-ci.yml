@@ -1,4 +1,4 @@
-name: Hardhat & Slither CI on security branch
+name: Slither CI on security branch
 
 on:
   push:
