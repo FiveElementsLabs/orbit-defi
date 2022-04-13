@@ -48,6 +48,7 @@ contract ZapOut is IZapOut {
         );
 
         nonfungiblePositionManager.burn(tokenId);
+        IPositionManager(address(this)).removePositionId(tokenId);
 
         if (tokenOut != token0) {
             amount0 = _swapToTokenOut(tokenOut, token0, amount0);
@@ -61,6 +62,11 @@ contract ZapOut is IZapOut {
         ERC20Helper._withdrawTokens(tokenOut, Storage.owner, amount0 + amount1);
     }
 
+    ///@notice performs the swap to tokenOut
+    ///@param tokenOut address of output token
+    ///@param tokenIn address of input token
+    ///@param amountIn amount of input token
+    ///@return amountOut of output token
     function _swapToTokenOut(
         address tokenOut,
         address tokenIn,

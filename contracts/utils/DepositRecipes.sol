@@ -51,6 +51,15 @@ contract DepositRecipes {
         }
     }
 
+    ///@notice mint uniswapV3 NFT and deposit in the position manager
+    ///@param token0 the first token to be deposited
+    ///@param token1 the second token to be deposited
+    ///@param amount0 the amount of the first token to be deposited
+    ///@param amount1 the amount of the second token to be deposited
+    ///@param tickLower the lower bound of the position range
+    ///@param tickUpper the upper bound of the position range
+    ///@param fee fee tier of the pool to be deposited in
+    ///@return tokenId the ID of the minted NFT
     function mintAndDeposit(
         address token0,
         address token1,
