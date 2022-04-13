@@ -7,7 +7,7 @@ const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/Unisw
 const NonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json');
 const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json');
 const SwapRouterjson = require('@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json');
-const PositionManagerjson = require('../artifacts/contracts/PositionManager.sol/PositionManager.json');
+const PositionManagerjson = require('../../artifacts/contracts/PositionManager.sol/PositionManager.json');
 const FixturesConst = require('../shared/fixtures');
 import { tokensFixture, poolFixture, mintSTDAmount } from '../shared/fixtures';
 import {
@@ -112,11 +112,6 @@ describe('DepositRecipes.sol', function () {
     );
     await uniswapAddressHolder.deployed();
 
-    //deploy zapper contract
-    const DepositRecipesFactory = await ethers.getContractFactory('DepositRecipes');
-    DepositRecipes = (await DepositRecipesFactory.deploy(uniswapAddressHolder.address)) as DepositRecipes;
-    await DepositRecipes.deployed();
-
     const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet');
     const diamondCutFacet = await DiamondCutFacet.deploy();
     await diamondCutFacet.deployed();
@@ -130,6 +125,14 @@ describe('DepositRecipes.sol', function () {
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
+
+    //deploy zapper contract
+    const DepositRecipesFactory = await ethers.getContractFactory('DepositRecipes');
+    DepositRecipes = (await DepositRecipesFactory.deploy(
+      uniswapAddressHolder.address,
+      PositionManagerFactory.address
+    )) as DepositRecipes;
+    await DepositRecipes.deployed();
 
     //APPROVE
 
@@ -273,8 +276,7 @@ describe('DepositRecipes.sol', function () {
       const events: any = (await zapInTx.wait()).events;
       const tokenId = await events[events.length - 1].args.tokenId.toNumber();
 
-      expect(user.address).to.be.equal(await NonFungiblePositionManager.ownerOf(tokenId));
-
+      expect(PositionManager.address).to.be.equal(await NonFungiblePositionManager.ownerOf(tokenId));
       const position = await NonFungiblePositionManager.positions(tokenId);
 
       expect(position.token0).to.be.equal(tokenUsdc.address);
@@ -303,7 +305,7 @@ describe('DepositRecipes.sol', function () {
       const events: any = (await zapInTx.wait()).events;
       const tokenId = await events[events.length - 1].args.tokenId.toNumber();
 
-      expect(user.address).to.be.equal(await NonFungiblePositionManager.ownerOf(tokenId));
+      expect(PositionManager.address).to.be.equal(await NonFungiblePositionManager.ownerOf(tokenId));
 
       const position = await NonFungiblePositionManager.positions(tokenId);
 
