@@ -19,7 +19,8 @@ import './actions/BaseAction.sol';
 import '../interfaces/IUniswapAddressHolder.sol';
 import './utils/Storage.sol';
 import '../interfaces/IDiamondCut.sol';
-import '../interfaces/IZapper.sol';
+import '../utils/Zapper.sol';
+import './helpers/ERC20Helper.sol';
 
 /**
  * @title   Position Manager
@@ -30,7 +31,7 @@ import '../interfaces/IZapper.sol';
  * @notice  vault works for multiple positions
  */
 
-contract PositionManager is IPositionManager, ERC721Holder {
+contract PositionManager is IPositionManager, ERC721Holder, Zapper {
     constructor(address _owner, address _diamondCutFacet) payable {
         PositionManagerStorage.setContractOwner(_owner);
 

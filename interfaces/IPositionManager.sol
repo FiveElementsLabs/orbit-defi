@@ -11,6 +11,8 @@ interface IPositionManager {
 
     function withdrawUniNft(address to, uint256 tokenId) external;
 
+    function zapOut(uint256 tokenId, address tokenOut) external;
+
     function getModuleState(uint256 tokenId, address moduleAddress) external view returns (bool);
 
     function toggleModule(
