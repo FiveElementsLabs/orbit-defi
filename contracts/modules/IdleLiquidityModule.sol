@@ -24,51 +24,18 @@ contract IdleLiquidityModule {
         uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
     }
 
-    ///@notice checkDistance from ticklower tickupper from tick of the pools
-    ///@param tokenId tokenId of the position
-    ///@param positionManager address of the position manager
-    ///@return int24 distance from ticklower tickupper from tick of the pools and return the minimum distance
-    function _checkDistanceFromRange(uint256 tokenId, IPositionManager positionManager) internal view returns (int24) {
-        (
-            ,
-            ,
-            address token0,
-            address token1,
-            uint24 fee,
-            int24 tickLower,
-            int24 tickUpper,
-            ,
-            ,
-            ,
-            ,
-
-        ) = INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).positions(tokenId);
-
-        IUniswapV3Pool pool = IUniswapV3Pool(
-            NFTHelper._getPoolAddress(uniswapAddressHolder.uniswapV3FactoryAddress(), token0, token1, fee)
-        );
-        (, int24 tick, , , , , ) = pool.slot0();
-
-        int24 distanceFromUpper = tickUpper - tick;
-        int24 distanceFromLower = tick - tickLower;
-
-        return distanceFromLower <= distanceFromUpper ? distanceFromLower : distanceFromUpper;
-    }
-
     ///@notice check if the position is in the range of the pools and return rebalance the position swapping the tokens
     ///@param tokenId tokenId of the position
     ///@param positionManager address of the position manager
     function rebalance(
         uint256 tokenId,
         IPositionManager positionManager,
-        uint24 tickDistance
+        uint24 rebalanceDistance
     ) public {
-        int24 tickDiff = _checkDistanceFromRange(tokenId, positionManager);
+        int24 tickDistance = _checkDistanceFromRange(tokenId, positionManager);
         if (positionManager.getModuleState(tokenId, address(this))) {
-            int24 tickDiff = _checkDistanceFromRange(tokenId, positionManager);
-
-            ///@dev rebalance only if the position's range is outside of the tick of the pool (tickDiff < 0) and the position is far enough from tick of the pool
-            if (tickDiff < 0 && tickDistance <= uint24(tickDiff)) {
+            ///@dev rebalance only if the position's range is outside of the tick of the pool (tickDistance < 0) and the position is far enough from tick of the pool
+            if (tickDistance < 0 && rebalanceDistance <= uint24(tickDistance)) {
                 (
                     ,
                     ,
@@ -114,6 +81,37 @@ contract IdleLiquidityModule {
                 );
             }
         }
+    }
+
+    ///@notice checkDistance from ticklower tickupper from tick of the pools
+    ///@param tokenId tokenId of the position
+    ///@param positionManager address of the position manager
+    ///@return int24 distance from ticklower tickupper from tick of the pools and return the minimum distance
+    function _checkDistanceFromRange(uint256 tokenId, IPositionManager positionManager) internal view returns (int24) {
+        (
+            ,
+            ,
+            address token0,
+            address token1,
+            uint24 fee,
+            int24 tickLower,
+            int24 tickUpper,
+            ,
+            ,
+            ,
+            ,
+
+        ) = INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).positions(tokenId);
+
+        IUniswapV3Pool pool = IUniswapV3Pool(
+            NFTHelper._getPoolAddress(uniswapAddressHolder.uniswapV3FactoryAddress(), token0, token1, fee)
+        );
+        (, int24 tick, , , , , ) = pool.slot0();
+
+        int24 distanceFromUpper = tickUpper - tick;
+        int24 distanceFromLower = tick - tickLower;
+
+        return distanceFromLower <= distanceFromUpper ? distanceFromLower : distanceFromUpper;
     }
 
     ///@notice calc tickLower and tickUpper with the same delta as the position but with tick of the pool in center
