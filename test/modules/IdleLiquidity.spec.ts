@@ -232,7 +232,7 @@ describe('IdleLiquidityModule.sol', function () {
         amount1Desired: '0x' + (1e9).toString(16),
         amount0Min: 0,
         amount1Min: 0,
-        recipient: user.address,
+        recipient: PositionManager.address,
         deadline: Date.now() + 1000,
       },
       { gasLimit: 670000 }
@@ -240,10 +240,9 @@ describe('IdleLiquidityModule.sol', function () {
 
     const receipt: any = await txMint.wait();
     tokenId = receipt.events[receipt.events.length - 1].args.tokenId;
+    PositionManager.pushPositionId(tokenId);
     // user approve autocompound module
     await PositionManager.toggleModule(tokenId, IdleLiquidityModule.address, true);
-
-    await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
   });
 
   describe('IdleLiquidityModule - rebalance', function () {

@@ -209,7 +209,7 @@ describe('DecreaseLiquidity.sol', function () {
         amount1Desired: '0x' + (1e10).toString(16),
         amount0Min: 0,
         amount1Min: 0,
-        recipient: user.address,
+        recipient: PositionManager.address,
         deadline: Date.now() + 1000,
       },
       { gasLimit: 670000 }
@@ -217,6 +217,7 @@ describe('DecreaseLiquidity.sol', function () {
 
     const mintReceipt = (await txMint.wait()) as any;
     tokenId = mintReceipt.events[mintReceipt.events.length - 1].args.tokenId;
+    await PositionManager.pushPositionId(tokenId);
     DecreaseLiquidityFallback = (await ethers.getContractAt(
       'IDecreaseLiquidity',
       PositionManager.address
@@ -225,8 +226,6 @@ describe('DecreaseLiquidity.sol', function () {
 
   describe('DecreaseLiquidityAction.sol - decreaseLiquidity', function () {
     it('should correctly perform the decrease liquidity action', async function () {
-      await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
-
       const position: any = await NonFungiblePositionManager.connect(user).positions(tokenId);
 
       const amount0Desired = '0x' + (5e9).toString(16);
@@ -238,8 +237,6 @@ describe('DecreaseLiquidity.sol', function () {
     });
 
     it('should correctly decrease liquidity of the NFT position', async function () {
-      await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
-
       const liquidityBefore: any = await NonFungiblePositionManager.positions(tokenId);
 
       const amount0Desired = '0x' + (1000).toString(16);
@@ -252,8 +249,6 @@ describe('DecreaseLiquidity.sol', function () {
     });
 
     it('should remove all the liquidity if we try to remove more than the total amount', async function () {
-      await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
-
       const amount0Desired = '0x' + (1e35).toString(16);
       const amount1Desired = '0x' + (1e35).toString(16);
 
