@@ -268,12 +268,16 @@ export const keeperSetup = async () => {
   await DepositRecipes.connect(user).depositUniNft([tokenId2]);
 
   if (debug) {
+    console.log('**********************************************************************');
+    console.log('eth: ', tokenEth.address);
+    console.log('usdc: ', tokenUsdc.address);
+    console.log('user: ', user.address);
     console.log('NonFungiblePositionManager.address: ', NonFungiblePositionManager.address);
     console.log('PositionManagerFactory.address: ', PositionManagerFactory.address);
-    console.log('PositionManager.address', PositionManager.address);
-    console.log('DepositRecipes.address', DepositRecipes.address);
-    console.log('PositionManager.getAllUniPosition()', await PositionManager.getAllUniPosition());
-    console.log('user', user.address);
+    console.log('PositionManager.address: ', PositionManager.address);
+    console.log('DepositRecipes.address: ', DepositRecipes.address);
+    console.log('PositionManager.getAllUniPosition(): ', await PositionManager.getAllUniPosition());
+    console.log('**********************************************************************');
   }
 
   for (let i = 0; i < 20; i++) {
