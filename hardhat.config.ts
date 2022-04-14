@@ -60,11 +60,18 @@ export default {
     },
   },
   networks: {
-    localhost: {
-      gas: 120000000,
-      blockGasLimit: 0x1fffffffffffff,
-      allowUnlimitedContractSize: true,
-      timeout: 1800000,
+    hardhat: {
+      forking: {
+        enabled: true,
+        url: 'https://mainnet.infura.io/v3/40569e7ec95f471092ea6435931221ba',
+        chainId: 31337,
+      },
+      mining: {
+        auto: true,
+      },
     },
+  },
+  mocha: {
+    timeout: 100000,
   },
 };
