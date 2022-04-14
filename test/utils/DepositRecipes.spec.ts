@@ -372,6 +372,31 @@ describe('DepositRecipes.sol', function () {
       expect((await PositionManager.getAllUniPosition())[1]).to.equal(tokenId2);
       expect((await PositionManager.getAllUniPosition())[2]).to.equal(tokenId3);
     });
+
+    it('should revert if user is not owner', async function () {
+      const mintTx = await NonFungiblePositionManager.connect(liquidityProvider).mint(
+        {
+          token0: tokenUsdc.address,
+          token1: tokenDai.address,
+          fee: 500,
+          tickLower: 0 - 60 * 1000,
+          tickUpper: 0 + 60 * 1000,
+          amount0Desired: '0x' + (1e15).toString(16),
+          amount1Desired: '0x' + (1e15).toString(16),
+          amount0Min: 0,
+          amount1Min: 0,
+          recipient: liquidityProvider.address,
+          deadline: Date.now() + 1000,
+        },
+        { gasLimit: 670000 }
+      );
+
+      const events: any = (await mintTx.wait()).events;
+      const tokenId = await events[events.length - 1].args.tokenId.toNumber();
+
+      await NonFungiblePositionManager.setApprovalForAll(DepositRecipes.address, true);
+      await expect(DepositRecipes.connect(user).depositUniNft([tokenId])).to.be.reverted;
+    });
   });
 
   describe('DepositRecipes.mintAndDeposit()', function () {
@@ -397,6 +422,46 @@ describe('DepositRecipes.sol', function () {
 
       expect(await NonFungiblePositionManager.ownerOf(tokenId)).to.equal(PositionManager.address);
       expect((await PositionManager.getAllUniPosition())[0]).to.equal(tokenId);
+    });
+
+    it('should revert if pool does not exist', async function () {
+      const amount0 = '0x' + (1e15).toString(16);
+      const amount1 = '0x' + (1e15).toString(16);
+      const fee = 2393;
+      const tickLower = 0 - 60 * 1000;
+      const tickUpper = 0 + 60 * 1000;
+
+      await expect(
+        DepositRecipes.connect(user).mintAndDeposit(
+          tokenEth.address,
+          tokenUsdc.address,
+          amount0,
+          amount1,
+          tickLower,
+          tickUpper,
+          fee
+        )
+      ).to.be.reverted;
+    });
+
+    it('should revert if ticks are not multiples of tick spacing', async function () {
+      const amount0 = '0x' + (1e15).toString(16);
+      const amount1 = '0x' + (1e15).toString(16);
+      const fee = 3000;
+      const tickLower = 0 - 734;
+      const tickUpper = 0 + 3459;
+
+      await expect(
+        DepositRecipes.connect(user).mintAndDeposit(
+          tokenEth.address,
+          tokenUsdc.address,
+          amount0,
+          amount1,
+          tickLower,
+          tickUpper,
+          fee
+        )
+      ).to.be.reverted;
     });
   });
 
@@ -471,6 +536,26 @@ describe('DepositRecipes.sol', function () {
           amountIn,
           tokenEth.address,
           tokenUsdc.address,
+          tickLower,
+          tickUpper,
+          fee
+        )
+      ).to.be.reverted;
+    });
+
+    it('should revert if ticks are not multiples of tick spacing', async function () {
+      const amount0 = '0x' + (1e15).toString(16);
+      const amount1 = '0x' + (1e15).toString(16);
+      const fee = 3000;
+      const tickLower = 0 - 734;
+      const tickUpper = 0 + 3459;
+
+      await expect(
+        DepositRecipes.connect(user).mintAndDeposit(
+          tokenEth.address,
+          tokenUsdc.address,
+          amount0,
+          amount1,
           tickLower,
           tickUpper,
           fee
