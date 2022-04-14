@@ -75,7 +75,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
                 i = uniswapNFTs.length;
             }
         }
-        require(index < uniswapNFTs.length, 'token ID not found!');
+        require(index < uniswapNFTs.length, 'PositionManager::withdrawUniNFT: token ID not found!');
         INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).safeTransferFrom(
             address(this),
             msg.sender,
@@ -161,7 +161,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
     modifier onlyOwner() {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
-        require(msg.sender == Storage.owner, 'PositionManager::modifier: Only owner can call this function');
+        require(msg.sender == Storage.owner, 'PositionManager::onlyOwner: Only owner can call this function');
         _;
     }
 
@@ -171,7 +171,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
 
         require(
             (msg.sender == Storage.owner),
-            'PositionManager::modifier: Only owner or module can call this function'
+            'PositionManager::onlyOwnerOrModule: Only owner or module can call this function'
         );
         _;
     }
