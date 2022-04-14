@@ -1,6 +1,5 @@
 import '@nomiclabs/hardhat-ethers';
-import { expect } from 'chai';
-import { ContractFactory, Contract, BigNumber } from 'ethers';
+import { ContractFactory, Contract } from 'ethers';
 import { AbiCoder } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 const hre = require('hardhat');
@@ -10,8 +9,10 @@ const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/
 const PositionManagerjson = require('../artifacts/contracts/PositionManager.sol/PositionManager.json');
 const SwapRouterjson = require('@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json');
 const FixturesConst = require('../test/shared/fixtures');
-import { tokensFixture, poolFixture, mintSTDAmount, routerFixture } from '../test/shared/fixtures';
+import { tokensFixture, poolFixture, routerFixture } from '../test/shared/fixtures';
 import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, SwapToPositionRatio } from '../typechain';
+
+const debug = process.env.NODE_ENV !== 'production';
 
 export const keeperSetup = async () => {
   //GLOBAL VARIABLE - USE THIS
@@ -125,14 +126,19 @@ export const keeperSetup = async () => {
   const PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
   await PositionManagerFactory.deployed();
 
-  console.log('NonFungiblePositionManager.address: ', NonFungiblePositionManager.address);
-  console.log('PositionManagerFactory.address: ', PositionManagerFactory.address);
-
   const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet');
   const diamondCutFacet = await DiamondCutFacet.deploy();
   await diamondCutFacet.deployed();
 
   await PositionManagerFactory.create(user.address, diamondCutFacet.address, UniswapAddressHolder.address);
+
+  //Deploy DepositRecipes
+  const DepositRecipesFactory = await ethers.getContractFactory('DepositRecipes');
+  const DepositRecipes = (await DepositRecipesFactory.deploy(
+    UniswapAddressHolder.address,
+    PositionManagerFactory.address
+  )) as Contract;
+  await DepositRecipes.deployed();
 
   const contractsDeployed = await PositionManagerFactory.positionManagers(0);
   PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as Contract;
@@ -196,6 +202,7 @@ export const keeperSetup = async () => {
 
   //approval nfts
   await NonFungiblePositionManager.setApprovalForAll(PositionManager.address, true);
+  await NonFungiblePositionManager.setApprovalForAll(DepositRecipes.address, true);
 
   // give pool some liquidity
   await NonFungiblePositionManager.connect(liquidityProvider).mint(
@@ -236,7 +243,7 @@ export const keeperSetup = async () => {
   const receipt: any = await txMint.wait();
   const tokenId = receipt.events[receipt.events.length - 1].args.tokenId;
 
-  await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
+  await DepositRecipes.connect(user).depositUniNft([tokenId]);
 
   //mint NFT
   const txMint2 = await NonFungiblePositionManager.connect(user).mint(
@@ -258,12 +265,16 @@ export const keeperSetup = async () => {
 
   const receipt2: any = await txMint2.wait();
   const tokenId2 = receipt2.events[receipt2.events.length - 1].args.tokenId;
+  await DepositRecipes.connect(user).depositUniNft([tokenId2]);
 
-  await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId2), [tokenId2]);
-  console.log(PositionManager.address);
-  console.log(await PositionManager.getAllUniPosition());
-  console.log(await PositionManagerFactory.userToPositionManager(user.address));
-  console.log(user.address);
+  if (debug) {
+    console.log('NonFungiblePositionManager.address: ', NonFungiblePositionManager.address);
+    console.log('PositionManagerFactory.address: ', PositionManagerFactory.address);
+    console.log('PositionManager.address', PositionManager.address);
+    console.log('DepositRecipes.address', DepositRecipes.address);
+    console.log('PositionManager.getAllUniPosition()', await PositionManager.getAllUniPosition());
+    console.log('user', user.address);
+  }
 
   for (let i = 0; i < 20; i++) {
     // Do a trade to change tick
