@@ -38,11 +38,6 @@ contract PositionManager is IPositionManager, ERC721Holder {
 
     mapping(uint256 => mapping(address => bool)) public activatedModules;
 
-    ///@notice emitted when a position is created
-    ///@param from address of the user
-    ///@param tokenId ID of the minted NFT
-    event DepositUni(address indexed from, uint256 tokenId);
-
     ///@notice emitted when a position is withdrawn
     ///@param to address of the user
     ///@param tokenId ID of the withdrawn NFT
@@ -68,24 +63,9 @@ contract PositionManager is IPositionManager, ERC721Holder {
         bool activated;
     }
 
-    ///@notice add uniswap position NFT to the position manager
-    ///@param from address of the user
-    ///@param tokenIds IDs of deposited tokens
-    function depositUniNft(address from, uint256[] calldata tokenIds) external override onlyOwner {
-        StorageStruct storage Storage = PositionManagerStorage.getStorage();
-
-        for (uint32 i = 0; i < tokenIds.length; i++) {
-            INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress())
-                .safeTransferFrom(from, address(this), tokenIds[i], '0x0');
-            uniswapNFTs.push(tokenIds[i]);
-            emit DepositUni(from, tokenIds[i]);
-        }
-    }
-
     ///@notice withdraw uniswap position NFT from the position manager
-    ///@param to address of the user
     ///@param tokenId ID of withdrawn token
-    function withdrawUniNft(address to, uint256 tokenId) public override onlyOwner {
+    function withdrawUniNft(uint256 tokenId) public override onlyOwner {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
         uint256 index = uniswapNFTs.length;
@@ -95,20 +75,23 @@ contract PositionManager is IPositionManager, ERC721Holder {
                 i = uniswapNFTs.length;
             }
         }
-        require(index < uniswapNFTs.length, 'token ID not found!');
+        require(index < uniswapNFTs.length, 'PositionManager::withdrawUniNFT: token ID not found!');
         INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).safeTransferFrom(
             address(this),
-            to,
+            msg.sender,
             tokenId,
             '0x0'
         );
-        emit WithdrawUni(to, tokenId);
+        emit WithdrawUni(msg.sender, tokenId);
     }
 
-    ///@notice remove awareness of NFT at index
+    ///@notice remove awareness of UniswapV3 NFT at index
     ///@param index index of the NFT in the uniswapNFTs array
-    function removePositionId(uint256 index) external override {
-        require(msg.sender == address(this), 'only position manager can remove position');
+    function removePositionIdAtIndex(uint256 index) internal {
+        require(
+            msg.sender == address(this),
+            'PositionManager::removePositionId: only PositionManager can remove a position'
+        );
         if (uniswapNFTs.length > 1) {
             uniswapNFTs[index] = uniswapNFTs[uniswapNFTs.length - 1];
             uniswapNFTs.pop();
@@ -117,9 +100,21 @@ contract PositionManager is IPositionManager, ERC721Holder {
         }
     }
 
+    ///@notice remove awareness of _id UniswapV3 NFT
+    ///@param _id ID of the NFT to remove
+    function removePositionId(uint256 _id) public override {
+        for (uint256 i = 0; i < uniswapNFTs.length; i++) {
+            if (uniswapNFTs[i] == _id) {
+                removePositionIdAtIndex(i);
+                return;
+            }
+        }
+    }
+
     ///@notice add tokenId in the uniswapNFTs array
     ///@param tokenId ID of the added NFT
-    function pushPositionId(uint256 tokenId) public {
+    function pushPositionId(uint256 tokenId) public override {
+        //TODO: this needs a modifier or a require!
         uniswapNFTs.push(tokenId);
     }
 
@@ -149,6 +144,11 @@ contract PositionManager is IPositionManager, ERC721Holder {
         return activatedModules[tokenId][moduleAddress];
     }
 
+    function getOwner() external view override returns (address) {
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+        return Storage.owner;
+    }
+
     ///@notice return the all tokens of tokenAddress in the positionManager
     ///@param tokenAddress address of the token to be withdrawn
     function withdrawERC20(address tokenAddress) external override onlyOwner {
@@ -161,7 +161,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
     modifier onlyOwner() {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
-        require(msg.sender == Storage.owner, 'Only owner');
+        require(msg.sender == Storage.owner, 'PositionManager::onlyOwner: Only owner can call this function');
         _;
     }
 
@@ -169,7 +169,10 @@ contract PositionManager is IPositionManager, ERC721Holder {
     modifier onlyOwnerOrModule() {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
-        require((msg.sender == Storage.owner), 'Only owner or module');
+        require(
+            (msg.sender == Storage.owner),
+            'PositionManager::onlyOwnerOrModule: Only owner or module can call this function'
+        );
         _;
     }
 
@@ -181,7 +184,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
             Storage.slot := position
         }
         address facet = Storage.selectorToFacetAndPosition[msg.sig].facetAddress;
-        require(facet != address(0), 'Diamond: Function does not exist');
+        require(facet != address(0), 'PositionManager::Fallback: Function does not exist');
         ///@dev Execute external function from facet using delegatecall and return any value.
 
         assembly {

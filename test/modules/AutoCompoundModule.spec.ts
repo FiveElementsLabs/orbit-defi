@@ -36,7 +36,7 @@ describe('AutoCompoundModule.sol', function () {
 
   let Factory: Contract; // the factory that will deploy all pools
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
-  let PositionManager: Contract; //Our smart vault named PositionManager
+  let PositionManager: PositionManager; //Our smart vault named PositionManager
   let Router: TestRouter; //Our router to perform swap
   let SwapRouter: Contract;
   let collectFeesAction: Contract;
@@ -208,7 +208,7 @@ describe('AutoCompoundModule.sol', function () {
         amount1Desired: '0x' + (1e10).toString(16),
         amount0Min: 0,
         amount1Min: 0,
-        recipient: user.address,
+        recipient: PositionManager.address,
         deadline: Date.now() + 1000,
       },
       { gasLimit: 670000 }
@@ -217,7 +217,7 @@ describe('AutoCompoundModule.sol', function () {
     const receipt: any = await mintTx.wait();
     tokenId = receipt.events[receipt.events.length - 1].args.tokenId;
 
-    await PositionManager.connect(user).depositUniNft(user.address, [tokenId]);
+    await PositionManager.pushPositionId(tokenId);
 
     // user approve autocompound module
     await PositionManager.toggleModule(2, autoCompound.address, true);
