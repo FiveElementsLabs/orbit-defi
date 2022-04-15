@@ -11,7 +11,8 @@ import '../helpers/SwapHelper.sol';
 import '../helpers/NFTHelper.sol';
 import '../helpers/ERC20Helper.sol';
 
-///@notice Zapper is a utility contract that allows user to enter/exit Uniswap V3 position with a single token
+///@notice DepositRecipes allows user to fill their position manager with UniswapV3 positions
+///        by depositing an already minted NFT or by minting directly a new one
 contract DepositRecipes {
     IUniswapAddressHolder public uniswapAddressHolder;
     ISwapRouter swapRouter;
