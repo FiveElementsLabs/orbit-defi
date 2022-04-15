@@ -126,7 +126,6 @@ contract ZapOut is IZapOut {
         uint24 fee
     ) public view returns (uint128 liquidity) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
-
         return
             IUniswapV3Pool(
                 NFTHelper._getPoolAddress(Storage.uniswapAddressHolder.uniswapV3FactoryAddress(), token0, token1, fee)
