@@ -298,7 +298,7 @@ describe('DepositRecipes.sol', function () {
       await DepositRecipes.connect(user).depositUniNft([tokenId]);
 
       expect(await NonFungiblePositionManager.ownerOf(tokenId)).to.equal(PositionManager.address);
-      expect((await PositionManager.getAllUniPosition())[0]).to.equal(tokenId);
+      expect((await PositionManager.getAllUniPositions())[0]).to.equal(tokenId);
     });
 
     it('should deposit multiple tokens and update positions array', async function () {
@@ -368,9 +368,9 @@ describe('DepositRecipes.sol', function () {
       expect(await NonFungiblePositionManager.ownerOf(tokenId1)).to.equal(PositionManager.address);
       expect(await NonFungiblePositionManager.ownerOf(tokenId2)).to.equal(PositionManager.address);
       expect(await NonFungiblePositionManager.ownerOf(tokenId3)).to.equal(PositionManager.address);
-      expect((await PositionManager.getAllUniPosition())[0]).to.equal(tokenId1);
-      expect((await PositionManager.getAllUniPosition())[1]).to.equal(tokenId2);
-      expect((await PositionManager.getAllUniPosition())[2]).to.equal(tokenId3);
+      expect((await PositionManager.getAllUniPositions())[0]).to.equal(tokenId1);
+      expect((await PositionManager.getAllUniPositions())[1]).to.equal(tokenId2);
+      expect((await PositionManager.getAllUniPositions())[2]).to.equal(tokenId3);
     });
 
     it('should revert if user is not owner', async function () {
@@ -421,7 +421,7 @@ describe('DepositRecipes.sol', function () {
       const tokenId = await events[events.length - 1].args.tokenId.toNumber();
 
       expect(await NonFungiblePositionManager.ownerOf(tokenId)).to.equal(PositionManager.address);
-      expect((await PositionManager.getAllUniPosition())[0]).to.equal(tokenId);
+      expect((await PositionManager.getAllUniPositions())[0]).to.equal(tokenId);
     });
 
     it('should revert if pool does not exist', async function () {

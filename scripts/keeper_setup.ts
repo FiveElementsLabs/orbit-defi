@@ -261,7 +261,7 @@ export const keeperSetup = async () => {
 
   await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId2), [tokenId2]);
   console.log(PositionManager.address);
-  console.log(await PositionManager.getAllUniPosition());
+  console.log(await PositionManager.getAllUniPositions());
   console.log(await PositionManagerFactory.userToPositionManager(user.address));
   console.log(user.address);
 

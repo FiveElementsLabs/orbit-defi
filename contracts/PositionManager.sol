@@ -120,7 +120,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
 
     ///@notice return the IDs of the uniswap positions
     ///@return array of IDs
-    function getAllUniPosition() external view override returns (uint256[] memory) {
+    function getAllUniPositions() external view override returns (uint256[] memory) {
         uint256[] memory uniswapNFTsMemory = uniswapNFTs;
         return uniswapNFTsMemory;
     }
