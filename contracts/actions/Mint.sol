@@ -10,6 +10,7 @@ import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.s
 import '../helpers/ERC20Helper.sol';
 import '../helpers/NFTHelper.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
+import '../../interfaces/IPositionManager.sol';
 import '../utils/Storage.sol';
 
 interface IMint {
@@ -115,7 +116,7 @@ contract Mint {
             Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()
         ).mint(params);
 
-        //TODO: push TokenID to positon manager's positions list
+        IPositionManager(address(this)).pushPositionId(tokenId);
         emit DepositUni(msg.sender, tokenId);
     }
 }

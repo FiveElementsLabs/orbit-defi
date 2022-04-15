@@ -114,7 +114,13 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@notice add tokenId in the uniswapNFTs array
     ///@param tokenId ID of the added NFT
     function pushPositionId(uint256 tokenId) public override {
-        //TODO: this needs a modifier or a require!
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+        require(
+            INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(
+                tokenId
+            ) == address(this),
+            'PositionManager::pushPositionId: tokenId is not owned by this contract'
+        );
         uniswapNFTs.push(tokenId);
     }
 
