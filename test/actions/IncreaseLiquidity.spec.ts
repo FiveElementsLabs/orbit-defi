@@ -210,7 +210,7 @@ describe('IncreaseLiquidity.sol', function () {
         amount1Desired: '0x' + (1e10).toString(16),
         amount0Min: 0,
         amount1Min: 0,
-        recipient: user.address,
+        recipient: PositionManager.address,
         deadline: Date.now() + 1000,
       },
       { gasLimit: 670000 }
@@ -218,12 +218,11 @@ describe('IncreaseLiquidity.sol', function () {
 
     const mintReceipt = (await txMint.wait()) as any;
     tokenId = mintReceipt.events[mintReceipt.events.length - 1].args.tokenId;
+    await PositionManager.pushPositionId(tokenId);
   });
 
   describe('IncreaseLiquidity.increaseLiquidity()', function () {
     it('should correctly perform the add liquidity action', async function () {
-      await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
-
       const poolTokenId = 1;
       const liquidityBefore = (await NonFungiblePositionManager.positions(poolTokenId)).liquidity;
 
@@ -240,7 +239,6 @@ describe('IncreaseLiquidity.sol', function () {
     });
 
     it('should correctly add liquidity to the NFT position', async function () {
-      await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
       const liquidityBefore = await Pool0.liquidity();
 
       const poolTokenId = 1;
@@ -262,8 +260,6 @@ describe('IncreaseLiquidity.sol', function () {
     });
 
     it('should revert if no tokens are sent', async function () {
-      await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
-
       const poolTokenId = 1;
       const amount0Desired = 0;
       const amount1Desired = 0;

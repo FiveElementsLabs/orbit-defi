@@ -3,10 +3,11 @@
 pragma solidity 0.7.6;
 
 import './PositionManager.sol';
+import '../interfaces/IPositionManagerFactory.sol';
 
-contract PositionManagerFactory {
+contract PositionManagerFactory is IPositionManagerFactory {
     address[] public positionManagers;
-    mapping(address => address) public userToPositionManager;
+    mapping(address => address) public override userToPositionManager;
 
     event PositionManagerCreated(address indexed contractAddress, address userAddress, address uniswapAddressHolder);
 
@@ -19,13 +20,12 @@ contract PositionManagerFactory {
         address _userAddress,
         address _diamondCutFacet,
         address _uniswapAddressHolderAddress
-    ) public returns (address[] memory) {
+    ) public override returns (address[] memory) {
         PositionManager manager = new PositionManager(_userAddress, _diamondCutFacet);
         positionManagers.push(address(manager));
         userToPositionManager[_userAddress] = address(manager);
         manager.init(_userAddress, _uniswapAddressHolderAddress);
         emit PositionManagerCreated(address(manager), _userAddress, _uniswapAddressHolderAddress);
-
 
         return positionManagers;
     }
@@ -33,7 +33,7 @@ contract PositionManagerFactory {
     ///@notice get all positionManager array of address
     ///@dev array need to return with a custom function to get all the array
     ///@return address[] return the array of positionManager
-    function getAllPositionManagers() public view returns (address[] memory) {
+    function getAllPositionManagers() public view override returns (address[] memory) {
         return positionManagers;
     }
 }
