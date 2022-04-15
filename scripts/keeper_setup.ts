@@ -121,6 +121,11 @@ export const keeperSetup = async () => {
   )) as Contract;
   await UniswapAddressHolder.deployed();
 
+  // deploy Registry
+  const Registry = await ethers.getContractFactory('Registry');
+  const registry = await Registry.deploy(user.address);
+  await registry.deployed();
+
   //deploy the PositionManagerFactory => deploy PositionManager
   const PositionManagerFactoryFactory = await ethers.getContractFactory('PositionManagerFactory');
   const PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
@@ -130,7 +135,12 @@ export const keeperSetup = async () => {
   const diamondCutFacet = await DiamondCutFacet.deploy();
   await diamondCutFacet.deployed();
 
-  await PositionManagerFactory.create(user.address, diamondCutFacet.address, UniswapAddressHolder.address);
+  await PositionManagerFactory.create(
+    user.address,
+    diamondCutFacet.address,
+    UniswapAddressHolder.address,
+    registry.address
+  );
 
   //Deploy DepositRecipes
   const DepositRecipesFactory = await ethers.getContractFactory('DepositRecipes');

@@ -43,6 +43,7 @@ describe('DepositRecipes.sol', function () {
   let PositionManagerFactoryFactory: ContractFactory;
   let DiamondCutFacet: Contract;
   let UniswapAddressHolder: Contract;
+  let registry: Contract;
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
@@ -119,6 +120,11 @@ describe('DepositRecipes.sol', function () {
     const DiamondCutFacetFactory = await ethers.getContractFactory('DiamondCutFacet');
     DiamondCutFacet = await DiamondCutFacetFactory.deploy();
     await DiamondCutFacet.deployed();
+
+    // deploy Registry
+    const Registry = await ethers.getContractFactory('Registry');
+    registry = await Registry.deploy(user.address);
+    await registry.deployed();
 
     //APPROVE
 
@@ -253,7 +259,12 @@ describe('DepositRecipes.sol', function () {
     PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
     await PositionManagerFactory.deployed();
 
-    await PositionManagerFactory.create(user.address, DiamondCutFacet.address, UniswapAddressHolder.address);
+    await PositionManagerFactory.create(
+      user.address,
+      DiamondCutFacet.address,
+      UniswapAddressHolder.address,
+      registry.address
+    );
 
     let contractsDeployed = await PositionManagerFactory.positionManagers(0);
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
