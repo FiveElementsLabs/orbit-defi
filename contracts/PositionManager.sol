@@ -159,6 +159,8 @@ contract PositionManager is IPositionManager, ERC721Holder {
         return activatedModules[tokenId][moduleAddress];
     }
 
+    ///@notice return the address of this position manager owner
+    ///@return address of the owner
     function getOwner() external view override returns (address) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         return Storage.owner;
@@ -180,13 +182,14 @@ contract PositionManager is IPositionManager, ERC721Holder {
         _;
     }
 
-    function _calledFromActiveModule(address moduleAddress) internal view returns (bool isCalledFromActiveModule) {
+    ///@notice function to check if an address corresponds to an active module (or this contract)
+    ///@param _address input address
+    ///@return isCalledFromActiveModule boolean
+    function _calledFromActiveModule(address _address) internal view returns (bool isCalledFromActiveModule) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         bytes32[] memory keys = Storage.registry.getModuleKeys();
         for (uint256 i = 0; i < keys.length; i++) {
-            if (
-                Storage.registry.moduleAddress(keys[i]) == moduleAddress && Storage.registry.isActive(keys[i]) == true
-            ) {
+            if (Storage.registry.moduleAddress(keys[i]) == _address && Storage.registry.isActive(keys[i]) == true) {
                 isCalledFromActiveModule = true;
                 i = keys.length;
             }

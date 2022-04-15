@@ -47,10 +47,15 @@ contract Registry is IRegistry {
         modules[_id].activated = _activated;
     }
 
+    ///@notice Get the keys for all modules
+    ///@return bytes32[] all module keys
     function getModuleKeys() external view override returns (bytes32[] memory) {
         return moduleKeys;
     }
 
+    ///@notice Get the address of a module for a given key
+    ///@param _id keccak256 of module id string
+    ///@return address of the module
     function moduleAddress(bytes32 _id) external view override returns (address) {
         return modules[_id].contractAddress;
     }
