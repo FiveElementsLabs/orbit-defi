@@ -100,6 +100,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@param tokenId ID of the NFT to remove
     function removePositionId(uint256 tokenId) public override {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
+        ///@dev if ownerOf reverts, tokenId is non existent or it has been burned
         try
             INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(
                 tokenId
