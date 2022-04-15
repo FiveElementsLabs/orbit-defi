@@ -65,28 +65,6 @@ contract Mint {
     {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
-        address poolAddress = NFTHelper._getPoolAddress(
-            Storage.uniswapAddressHolder.uniswapV3FactoryAddress(),
-            inputs.token0Address,
-            inputs.token1Address,
-            inputs.fee
-        );
-
-        uint128 liquidity = NFTHelper._getLiquidityFromAmount(
-            inputs.amount0Desired,
-            inputs.amount1Desired,
-            inputs.tickLower,
-            inputs.tickUpper,
-            poolAddress
-        );
-
-        (uint256 amount0, uint256 amount1) = NFTHelper._getAmountFromLiquidity(
-            liquidity,
-            inputs.tickLower,
-            inputs.tickUpper,
-            poolAddress
-        );
-
         ERC20Helper._approveToken(
             inputs.token0Address,
             Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress(),
@@ -104,8 +82,8 @@ contract Mint {
             fee: inputs.fee,
             tickLower: inputs.tickLower,
             tickUpper: inputs.tickUpper,
-            amount0Desired: amount0,
-            amount1Desired: amount1,
+            amount0Desired: inputs.amount0Desired,
+            amount1Desired: inputs.amount1Desired,
             amount0Min: 0,
             amount1Min: 0,
             recipient: address(this),
