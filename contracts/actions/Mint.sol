@@ -3,13 +3,8 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
-import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '../helpers/ERC20Helper.sol';
-import '../helpers/NFTHelper.sol';
-import '../../interfaces/IUniswapAddressHolder.sol';
 import '../../interfaces/IPositionManager.sol';
 import '../utils/Storage.sol';
 
@@ -68,12 +63,12 @@ contract Mint {
         ERC20Helper._approveToken(
             inputs.token0Address,
             Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress(),
-            2**256 - 1
+            inputs.amount1Desired
         );
         ERC20Helper._approveToken(
             inputs.token1Address,
             Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress(),
-            2**256 - 1
+            inputs.amount1Desired
         );
 
         INonfungiblePositionManager.MintParams memory params = INonfungiblePositionManager.MintParams({
