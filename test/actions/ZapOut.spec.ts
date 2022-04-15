@@ -271,11 +271,6 @@ describe('ZapOut.sol', function () {
     await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
 
     ZapOutFallback = (await ethers.getContractAt('IZapOut', PositionManager.address)) as ZapOut;
-    //TODO: resolve this one
-    await registry.addNewContract(
-      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('ThisShouldNotExist')),
-      ZapOutFallback.address
-    );
   });
 
   describe('ZapOut.sol', function () {

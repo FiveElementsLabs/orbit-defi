@@ -200,7 +200,10 @@ contract PositionManager is IPositionManager, ERC721Holder {
     }
 
     fallback() external payable {
-        require(_calledFromActiveModule(msg.sender), 'PositionManager::fallback: Only modules can call this function');
+        require(
+            _calledFromActiveModule(msg.sender) || msg.sender == address(this),
+            'PositionManager::fallback: Only active modules can call this function'
+        );
         StorageStruct storage Storage;
         bytes32 position = PositionManagerStorage.key;
         ///@dev get diamond storage position
