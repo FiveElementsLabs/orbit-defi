@@ -88,10 +88,6 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@notice remove awareness of UniswapV3 NFT at index
     ///@param index index of the NFT in the uniswapNFTs array
     function removePositionIdAtIndex(uint256 index) internal {
-        require(
-            msg.sender == address(this),
-            'PositionManager::removePositionId: only PositionManager can remove a position'
-        );
         if (uniswapNFTs.length > 1) {
             uniswapNFTs[index] = uniswapNFTs[uniswapNFTs.length - 1];
             uniswapNFTs.pop();
@@ -100,11 +96,24 @@ contract PositionManager is IPositionManager, ERC721Holder {
         }
     }
 
-    ///@notice remove awareness of _id UniswapV3 NFT
-    ///@param _id ID of the NFT to remove
-    function removePositionId(uint256 _id) public override {
+    ///@notice remove awareness of tokenId UniswapV3 NFT
+    ///@param tokenId ID of the NFT to remove
+    function removePositionId(uint256 tokenId) public override {
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+        try
+            INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(
+                tokenId
+            )
+        returns (address owner) {
+            require(
+                owner != address(this),
+                'PositionManager::removePositionId: positionManager is still owner of the token!'
+            );
+        } catch {
+            //do nothing
+        }
         for (uint256 i = 0; i < uniswapNFTs.length; i++) {
-            if (uniswapNFTs[i] == _id) {
+            if (uniswapNFTs[i] == tokenId) {
                 removePositionIdAtIndex(i);
                 return;
             }
