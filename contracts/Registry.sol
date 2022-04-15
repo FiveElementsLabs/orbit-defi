@@ -12,6 +12,7 @@ contract Registry {
     }
 
     mapping(bytes32 => Entry) public modules;
+    bytes32[] public moduleKeys;
 
     constructor(address _governance) {
         governance = _governance;
@@ -29,6 +30,7 @@ contract Registry {
     function addNewContract(bytes32 _id, address _contractAddress) external onlyGovernance {
         require(!modules[_id].exists, 'Registry::addNewContract: Entry already exists.');
         modules[_id] = Entry({contractAddress: _contractAddress, activated: true, exists: true});
+        moduleKeys.push(_id);
     }
 
     ///@notice Changes a module's address
