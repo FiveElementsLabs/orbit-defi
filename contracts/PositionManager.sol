@@ -85,17 +85,6 @@ contract PositionManager is IPositionManager, ERC721Holder {
         emit WithdrawUni(msg.sender, tokenId);
     }
 
-    ///@notice remove awareness of UniswapV3 NFT at index
-    ///@param index index of the NFT in the uniswapNFTs array
-    function removePositionIdAtIndex(uint256 index) internal {
-        if (uniswapNFTs.length > 1) {
-            uniswapNFTs[index] = uniswapNFTs[uniswapNFTs.length - 1];
-            uniswapNFTs.pop();
-        } else {
-            delete uniswapNFTs;
-        }
-    }
-
     ///@notice remove awareness of tokenId UniswapV3 NFT
     ///@param tokenId ID of the NFT to remove
     function removePositionId(uint256 tokenId) public override {
@@ -115,7 +104,12 @@ contract PositionManager is IPositionManager, ERC721Holder {
         }
         for (uint256 i = 0; i < uniswapNFTs.length; i++) {
             if (uniswapNFTs[i] == tokenId) {
-                removePositionIdAtIndex(i);
+                if (uniswapNFTs.length > 1) {
+                    uniswapNFTs[i] = uniswapNFTs[uniswapNFTs.length - 1];
+                    uniswapNFTs.pop();
+                } else {
+                    delete uniswapNFTs;
+                }
                 return;
             }
         }
