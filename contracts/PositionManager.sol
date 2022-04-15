@@ -63,12 +63,6 @@ contract PositionManager is IPositionManager, ERC721Holder {
         Storage.registry = IRegistry(_registry);
     }
 
-    //TODO: refactor of user parameters
-    struct Module {
-        address moduleAddress;
-        bool activated;
-    }
-
     ///@notice withdraw uniswap position NFT from the position manager
     ///@param tokenId ID of withdrawn token
     function withdrawUniNft(uint256 tokenId) public override onlyOwner {
