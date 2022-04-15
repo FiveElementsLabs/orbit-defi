@@ -4,6 +4,7 @@ pragma abicoder v2;
 
 import '../../interfaces/IUniswapAddressHolder.sol';
 import '../../interfaces/IDiamondCut.sol';
+import '../../interfaces/IRegistry.sol';
 
 struct FacetAddressAndPosition {
     address facetAddress;
@@ -25,6 +26,7 @@ struct StorageStruct {
     address[] facetAddresses;
     IUniswapAddressHolder uniswapAddressHolder;
     address owner;
+    IRegistry registry;
 }
 
 library PositionManagerStorage {

@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.6;
+pragma abicoder v2;
+
+import '../interfaces/IRegistry.sol';
 
 /// @title Stores all the modules addresses
-contract Registry {
+contract Registry is IRegistry {
     address public governance;
-
-    struct Entry {
-        address contractAddress;
-        bool activated;
-        bool exists;
-    }
 
     mapping(bytes32 => Entry) public modules;
     bytes32[] public moduleKeys;
@@ -50,10 +47,18 @@ contract Registry {
         modules[_id].activated = _activated;
     }
 
+    function getModuleKeys() external view override returns (bytes32[] memory) {
+        return moduleKeys;
+    }
+
+    function moduleAddress(bytes32 _id) external view override returns (address) {
+        return modules[_id].contractAddress;
+    }
+
     ///@notice Get the state of a module
     ///@param _id keccak256 of module id string
     ///@return bool activated
-    function isActive(bytes32 _id) public view returns (bool) {
+    function isActive(bytes32 _id) public view override returns (bool) {
         return modules[_id].activated;
     }
 

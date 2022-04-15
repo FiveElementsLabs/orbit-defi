@@ -15,16 +15,18 @@ contract PositionManagerFactory is IPositionManagerFactory {
     ///@param _userAddress the address of the user that will be the owner of PositionManager
     ///@param _diamondCutFacet the address of the DiamondCutFacet contract
     ///@param _uniswapAddressHolderAddress the address of the UniswapAddressHolder contract
+    ///@param _registryAddress the address of the Registry contract
     ///@return address[] return array of PositionManager address updated with the last deployed PositionManager
     function create(
         address _userAddress,
         address _diamondCutFacet,
-        address _uniswapAddressHolderAddress
+        address _uniswapAddressHolderAddress,
+        address _registryAddress
     ) public override returns (address[] memory) {
         PositionManager manager = new PositionManager(_userAddress, _diamondCutFacet);
         positionManagers.push(address(manager));
         userToPositionManager[_userAddress] = address(manager);
-        manager.init(_userAddress, _uniswapAddressHolderAddress);
+        manager.init(_userAddress, _uniswapAddressHolderAddress, _registryAddress);
         emit PositionManagerCreated(address(manager), _userAddress, _uniswapAddressHolderAddress);
 
         return positionManagers;

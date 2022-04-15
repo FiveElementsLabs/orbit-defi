@@ -8,6 +8,7 @@ import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.s
 import '../interfaces/IPositionManager.sol';
 import '../interfaces/IUniswapAddressHolder.sol';
 import '../interfaces/IDiamondCut.sol';
+import '../interfaces/IRegistry.sol';
 import './helpers/ERC20Helper.sol';
 import './utils/Storage.sol';
 
@@ -51,10 +52,15 @@ contract PositionManager is IPositionManager, ERC721Holder {
 
     uint256[] private uniswapNFTs;
 
-    function init(address _owner, address _uniswapAddressHolder) public {
+    function init(
+        address _owner,
+        address _uniswapAddressHolder,
+        address _registry
+    ) public {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         Storage.owner = _owner;
         Storage.uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
+        Storage.registry = IRegistry(_registry);
     }
 
     //TODO: refactor of user parameters
@@ -180,18 +186,21 @@ contract PositionManager is IPositionManager, ERC721Holder {
         _;
     }
 
-    ///@notice modifier to check if the msg.sender is the owner or a module
-    modifier onlyOwnerOrModule() {
+    function _calledFromActiveModule(address moduleAddress) internal view returns (bool isCalledFromActiveModule) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
-
-        require(
-            (msg.sender == Storage.owner),
-            'PositionManager::onlyOwnerOrModule: Only owner or module can call this function'
-        );
-        _;
+        bytes32[] memory keys = Storage.registry.getModuleKeys();
+        for (uint256 i = 0; i < keys.length; i++) {
+            if (
+                Storage.registry.moduleAddress(keys[i]) == moduleAddress && Storage.registry.isActive(keys[i]) == true
+            ) {
+                isCalledFromActiveModule = true;
+                i = keys.length;
+            }
+        }
     }
 
     fallback() external payable {
+        require(_calledFromActiveModule(msg.sender), 'PositionManager::fallback: Only modules can call this function');
         StorageStruct storage Storage;
         bytes32 position = PositionManagerStorage.key;
         ///@dev get diamond storage position
