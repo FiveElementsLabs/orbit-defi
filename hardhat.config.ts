@@ -56,5 +56,9 @@ export default {
       allowUnlimitedContractSize: true,
       timeout: 1800000,
     },
+    mumbai: {
+      url: 'https://polygon-mumbai.g.alchemy.com/v2/mUKm3cdZmLfDUkWQfH4PFWvWoIPI7chM',
+      accounts: ['063b6d5c1358b3689dd713f0b9be34c8858ca95a26e4031a803ec30f5936cf18'],
+    },
   },
 };
