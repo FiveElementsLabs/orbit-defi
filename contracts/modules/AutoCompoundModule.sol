@@ -6,7 +6,6 @@ pragma abicoder v2;
 import '../../interfaces/IPositionManager.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
 import '../helpers/NFTHelper.sol';
-import '../helpers/ERC20Helper.sol';
 import '../utils/Storage.sol';
 import '../actions/CollectFees.sol';
 import '../actions/IncreaseLiquidity.sol';
@@ -33,7 +32,7 @@ contract AutoCompoundModule {
         ///@dev check if autocompound is active
         if (positionManager.getModuleState(tokenId, address(this))) {
             ///@dev check if compound need to be done
-            if (checkIfCompoundIsNeeded(address(positionManager), tokenId, feesThreshold)) {
+            if (_checkIfCompoundIsNeeded(address(positionManager), tokenId, feesThreshold)) {
                 (uint256 amount0Desired, uint256 amount1Desired) = ICollectFees(address(positionManager)).collectFees(
                     tokenId
                 );
@@ -48,7 +47,7 @@ contract AutoCompoundModule {
     ///@param tokenId token id of the position
     ///@param feesThreshold threshold of the fees to autocompound
     ///@return true if the position needs to be collected
-    function checkIfCompoundIsNeeded(
+    function _checkIfCompoundIsNeeded(
         address positionManagerAddress,
         uint256 tokenId,
         uint256 feesThreshold
