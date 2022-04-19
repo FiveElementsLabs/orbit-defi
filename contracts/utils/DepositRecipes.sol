@@ -8,7 +8,7 @@ import '../../interfaces/IUniswapAddressHolder.sol';
 import '../../interfaces/IPositionManager.sol';
 import '../../interfaces/IPositionManagerFactory.sol';
 import '../helpers/SwapHelper.sol';
-import '../helpers/NFTHelper.sol';
+import '../helpers/UniswapNFTHelper.sol';
 import '../helpers/ERC20Helper.sol';
 
 ///@notice DepositRecipes allows user to fill their position manager with UniswapV3 positions
@@ -119,7 +119,7 @@ contract DepositRecipes {
         ERC20Helper._pullTokensIfNeeded(tokenIn, msg.sender, amountIn);
 
         (, int24 tickPool, , , , , ) = IUniswapV3Pool(
-            NFTHelper._getPoolAddress(uniswapAddressHolder.uniswapV3FactoryAddress(), token0, token1, fee)
+            UniswapNFTHelper._getPool(uniswapAddressHolder.uniswapV3FactoryAddress(), token0, token1, fee)
         ).slot0();
         uint256 ratioE18 = SwapHelper.getRatioFromRange(tickPool, tickLower, tickUpper);
         uint256 amountInTo0 = (amountIn * 1e18) / (ratioE18 + 1e18);

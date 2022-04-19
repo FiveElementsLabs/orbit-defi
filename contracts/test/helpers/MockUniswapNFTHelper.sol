@@ -3,9 +3,9 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import '../../helpers/NFTHelper.sol';
+import '../../helpers/UniswapNFTHelper.sol';
 
-contract MockNFTHelper {
+contract MockUniswapNFTHelper {
     ///@notice contract to interact with NFT helper for testing
 
     ///@notice get the pool address
@@ -14,13 +14,13 @@ contract MockNFTHelper {
     ///@param token1 address of the token1
     ///@param fee fee tier of the pool
     ///@return address address of the pool
-    function getPoolAddress(
+    function getPool(
         address factory,
         address token0,
         address token1,
         uint24 fee
     ) public view returns (address) {
-        return NFTHelper._getPoolAddress(factory, token0, token1, fee);
+        return UniswapNFTHelper._getPool(factory, token0, token1, fee);
     }
 
     ///@notice get the address of the pool from the tokenId
@@ -33,7 +33,7 @@ contract MockNFTHelper {
         INonfungiblePositionManager nonfungiblePositionManager,
         address factory
     ) public view returns (address) {
-        return NFTHelper._getPoolFromTokenId(tokenId, nonfungiblePositionManager, factory);
+        return UniswapNFTHelper._getPoolFromTokenId(tokenId, nonfungiblePositionManager, factory);
     }
 
     ///@notice get the address of the tpkens from the tokenId
@@ -41,12 +41,12 @@ contract MockNFTHelper {
     ///@param nonfungiblePositionManager instance of the nonfungiblePositionManager given by the caller (address)
     ///@return token0address address of the token0
     ///@return token1address address of the token1
-    function getTokenAddress(uint256 tokenId, INonfungiblePositionManager nonfungiblePositionManager)
+    function getTokens(uint256 tokenId, INonfungiblePositionManager nonfungiblePositionManager)
         public
         view
         returns (address token0address, address token1address)
     {
-        return NFTHelper._getTokenAddress(tokenId, nonfungiblePositionManager);
+        return UniswapNFTHelper._getTokens(tokenId, nonfungiblePositionManager);
     }
 
     ///@notice get the amount of tokens from liquidity and tick ranges
@@ -56,13 +56,13 @@ contract MockNFTHelper {
     ///@param poolAddress address of the pool
     ///@return uint256 amount of token0
     ///@return uint256 amount of token1
-    function getAmountFromLiquidity(
+    function getAmountsFromLiquidity(
         uint128 liquidity,
         int24 tickLower,
         int24 tickUpper,
         address poolAddress
     ) public view returns (uint256, uint256) {
-        return NFTHelper._getAmountFromLiquidity(liquidity, tickLower, tickUpper, poolAddress);
+        return UniswapNFTHelper._getAmountsFromLiquidity(liquidity, tickLower, tickUpper, poolAddress);
     }
 
     ///@notice Computes the amount of liquidity for a given amount of token0, token1
@@ -72,13 +72,13 @@ contract MockNFTHelper {
     ///@param tickUpper upper tick range
     ///@param poolAddress The address of the pool
     ///@return uint128 The amount of liquidity received
-    function getLiquidityFromAmount(
+    function getLiquidityFromAmounts(
         uint256 token0,
         uint256 token1,
         int24 tickLower,
         int24 tickUpper,
         address poolAddress
     ) public view returns (uint128) {
-        return NFTHelper._getLiquidityFromAmount(token0, token1, tickLower, tickUpper, poolAddress);
+        return UniswapNFTHelper._getLiquidityFromAmounts(token0, token1, tickLower, tickUpper, poolAddress);
     }
 }
