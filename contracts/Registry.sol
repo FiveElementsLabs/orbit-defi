@@ -25,10 +25,7 @@ contract Registry is IRegistry {
     ///@param _id keccak256 of module id string
     ///@param _contractAddress address of the new module
     function addNewContract(bytes32 _id, address _contractAddress) external onlyGovernance {
-        require(
-            modules[_id].contractAddress == 0x0000000000000000000000000000000000000000,
-            'Registry::addNewContract: Entry already exists.'
-        );
+        require(modules[_id].contractAddress == address(0), 'Registry::addNewContract: Entry already exists.');
         modules[_id] = Entry({contractAddress: _contractAddress, activated: true});
         moduleKeys.push(_id);
     }
@@ -37,10 +34,7 @@ contract Registry is IRegistry {
     ///@param _id keccak256 of module id string
     ///@param _newContractAddress address of the new module
     function changeContract(bytes32 _id, address _newContractAddress) external onlyGovernance {
-        require(
-            modules[_id].contractAddress != 0x0000000000000000000000000000000000000000,
-            'Registry::changeContract: Entry does not exist.'
-        );
+        require(modules[_id].contractAddress != address(0), 'Registry::changeContract: Entry does not exist.');
         //Begin timelock
         modules[_id].contractAddress = _newContractAddress;
     }
@@ -49,10 +43,7 @@ contract Registry is IRegistry {
     ///@param _id keccak256 of module id string
     ///@param _activated boolean to activate or deactivate module
     function switchModuleState(bytes32 _id, bool _activated) external onlyGovernance {
-        require(
-            modules[_id].contractAddress != 0x0000000000000000000000000000000000000000,
-            'Registry::switchModuleState: Entry does not exist.'
-        );
+        require(modules[_id].contractAddress != address(0), 'Registry::switchModuleState: Entry does not exist.');
         modules[_id].activated = _activated;
     }
 
