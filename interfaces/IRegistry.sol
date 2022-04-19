@@ -6,7 +6,6 @@ interface IRegistry {
     struct Entry {
         address contractAddress;
         bool activated;
-        bool exists;
     }
 
     function getModuleKeys() external view returns (bytes32[] memory);
