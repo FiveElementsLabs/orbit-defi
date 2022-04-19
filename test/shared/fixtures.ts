@@ -98,6 +98,7 @@ export async function getSelectors(contract: any) {
   return selectors;
 }
 
+//find the slot in memory of the balance of the tokenAddress and return it
 export async function findbalanceSlot(MockToken: any, user: any) {
   const encode = (types: any, values: any) => ethers.utils.defaultAbiCoder.encode(types, values);
   const account = user.address;
