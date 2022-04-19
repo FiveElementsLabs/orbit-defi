@@ -5,18 +5,7 @@ pragma solidity ^0.6.11;
 import '@aave/protocol-v2/contracts/interfaces/ILendingPool.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
-import 'hardhat/console.sol';
-
 contract AaveModule {
-    ///try deposit here
-    /*
-     function deposit(
-    address asset,
-    uint256 amount,
-    address onBehalfOf,
-    uint16 referralCode
-    ) 
-    */
     ILendingPool public LendingPool;
 
     constructor(address _lendingPool) public {

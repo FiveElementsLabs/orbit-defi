@@ -9,31 +9,8 @@ const PositionManagerjson = require('../../artifacts/contracts/PositionManager.s
 const LendingPooljson = require('@aave/protocol-v2/artifacts/contracts/protocol/lendingpool/LendingPool.sol/LendingPool.json');
 
 const FixturesConst = require('../shared/fixtures');
-import { tokensFixture, poolFixture, mintSTDAmount, getSelectors } from '../shared/fixtures';
+import { tokensFixture, poolFixture, mintSTDAmount, getSelectors, findbalanceSlot } from '../shared/fixtures';
 import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager } from '../../typechain';
-
-async function findbalanceSlot(MockToken: any, user: any) {
-  const encode = (types: any, values: any) => ethers.utils.defaultAbiCoder.encode(types, values);
-  const account = user.address;
-  const probeA = encode(['uint'], [10]);
-  const probeB = encode(['uint'], [2]);
-  for (let i = 0; i < 100; i++) {
-    let probedSlot = ethers.utils.keccak256(encode(['address', 'uint'], [account, i]));
-    // remove padding for JSON RPC
-    while (probedSlot.startsWith('0x0')) probedSlot = '0x' + probedSlot.slice(3);
-    const prev = await hre.network.provider.send('eth_getStorageAt', [MockToken.address, probedSlot, 'latest']);
-    // make sure the probe will change the slot value
-    const probe = prev === probeA ? probeB : probeA;
-
-    await hre.network.provider.send('hardhat_setStorageAt', [MockToken.address, probedSlot, probe]);
-
-    const balance = await MockToken.balanceOf(account);
-    // reset to previous value
-    if (!balance.eq(ethers.BigNumber.from(probe)))
-      await hre.network.provider.send('hardhat_setStorageAt', [MockToken.address, probedSlot, prev]);
-    if (balance.eq(ethers.BigNumber.from(probe))) return i;
-  }
-}
 
 describe('AaveDeposit.sol', function () {
   //GLOBAL VARIABLE - USE THIS
@@ -165,7 +142,6 @@ describe('AaveDeposit.sol', function () {
   describe('AaveDepositAction - depositToAave', function () {
     it('should deposit 10000 token to aave LendingPool', async function () {
       const balanceBefore = await usdcMock.balanceOf(PositionManager.address);
-      //const colletaralBefore = (await LendingPool.getUserAccountData(PositionManager.address)).totalCollateralETH;
 
       await AaveDepositFallback.depositToAave(usdcMock.address, '10000', LendingPool.address);
       const balanceAfter = await usdcMock.balanceOf(PositionManager.address);

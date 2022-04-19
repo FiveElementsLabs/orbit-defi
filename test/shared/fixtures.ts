@@ -2,6 +2,8 @@ import { Contract, ContractReceipt } from 'ethers';
 import { ethers } from 'hardhat';
 import { ContractFactory } from 'ethers';
 import { MockToken, IUniswapV3Pool, TestRouter, Registry, Timelock } from '../../typechain';
+const hre = require('hardhat');
+
 const { getContractAddress } = require('@ethersproject/address');
 
 const UniswapV3Pool = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Pool.sol/UniswapV3Pool.json');
@@ -94,4 +96,27 @@ export async function getSelectors(contract: any) {
   selectors.contract = contract;
 
   return selectors;
+}
+
+export async function findbalanceSlot(MockToken: any, user: any) {
+  const encode = (types: any, values: any) => ethers.utils.defaultAbiCoder.encode(types, values);
+  const account = user.address;
+  const probeA = encode(['uint'], [10]);
+  const probeB = encode(['uint'], [2]);
+  for (let i = 0; i < 100; i++) {
+    let probedSlot = ethers.utils.keccak256(encode(['address', 'uint'], [account, i]));
+    // remove padding for JSON RPC
+    while (probedSlot.startsWith('0x0')) probedSlot = '0x' + probedSlot.slice(3);
+    const prev = await hre.network.provider.send('eth_getStorageAt', [MockToken.address, probedSlot, 'latest']);
+    // make sure the probe will change the slot value
+    const probe = prev === probeA ? probeB : probeA;
+
+    await hre.network.provider.send('hardhat_setStorageAt', [MockToken.address, probedSlot, probe]);
+
+    const balance = await MockToken.balanceOf(account);
+    // reset to previous value
+    if (!balance.eq(ethers.BigNumber.from(probe)))
+      await hre.network.provider.send('hardhat_setStorageAt', [MockToken.address, probedSlot, prev]);
+    if (balance.eq(ethers.BigNumber.from(probe))) return i;
+  }
 }
