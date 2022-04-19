@@ -3,10 +3,12 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
+import '@aave/protocol-v2/contracts/interfaces/ILendingPool.sol';
 import '@openzeppelin/contracts/token/ERC721/ERC721Holder.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '../interfaces/IPositionManager.sol';
 import '../interfaces/IUniswapAddressHolder.sol';
+import '../interfaces/IAaveAddressHolder.sol';
 import '../interfaces/IDiamondCut.sol';
 import '../interfaces/IRegistry.sol';
 import './helpers/ERC20Helper.sol';
@@ -51,17 +53,31 @@ contract PositionManager is IPositionManager, ERC721Holder {
     event WithdrawERC20(address tokenAddress, address to, uint256 amount);
 
     uint256[] private uniswapNFTs;
-    uint256[] private aavePositions;
+
+    struct AavePosition {
+        uint256 id;
+        uint256 shares;
+    }
+
+    struct AaveToken {
+        AavePosition[] positions;
+        uint256 sharesEmitted;
+    }
+
+    mapping(address => AaveToken) private aaveTokens;
+    uint256 private aaveIdCounter = 0;
 
     function init(
         address _owner,
         address _uniswapAddressHolder,
-        address _registry
+        address _registry,
+        address _aaveAddressHolder
     ) public {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         Storage.owner = _owner;
         Storage.uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
         Storage.registry = IRegistry(_registry);
+        Storage.aaveAddressHolder = IAaveAddressHolder(_aaveAddressHolder);
     }
 
     ///@notice withdraw uniswap position NFT from the position manager
@@ -136,15 +152,29 @@ contract PositionManager is IPositionManager, ERC721Holder {
         return uniswapNFTsMemory;
     }
 
+    ///@notice add awareness of aave position to positionManager
+    ///@param token address of token deposited
+    ///@param amount of token deposited
     function pushAavePosition(address token, uint256 amount) public {
-        //calc the share in token
-        uint256 share = someFunction(token, amount);
-        aavePositions.push(share);
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+
+        //when i deposit into aave i get one share for each token deposited * shares_emitted/total_amount_already_deposited
+        if (aaveTokens[token].sharesEmitted == 0) {
+            uint256 shares = amount;
+        } else {
+            uint256 shares = (amount * aaveTokens[token].sharesEmitted) /
+                ILendingPool(Storage.aaveAddressHolder.lendingPoolAddress()).currentATokenBalance();
+        }
+
+        aaveTokens[token].positions.push(TokenPosition({id: aaveIdCounter, shares: shares}));
+        aaveTokens[token].sharesEmitted += shares;
+        aaveIdCounter++;
     }
 
-    function removeAavePositionAtIndex(uint256 index) public {
-        aavePositions[index] = aavePositions[aavePositions.length - 1];
-        aavePositions.pop();
+    ///@notice remove awareness of aave position from positionManager
+    function removeAavePosition(address token, uint256 id) public {
+        aaveTokens[token].positions[i] = aaveTokens[token].positions[aaveTokens[token].positions.length - 1];
+        aaveTokens[token].positions.pop();
     }
 
     ///@notice toggle module state, activated (true) or not (false)
