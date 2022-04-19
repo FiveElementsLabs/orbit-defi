@@ -22,15 +22,15 @@ const deployPositionManager = async function () {
   //deploy the PositionManagerFactory => deploy PositionManager
   const PositionManagerFactory = await ethers.getContractAt(
     'PositionManagerFactory',
-    '0x59b5B9290203D35Eb35751d09c3f8921Fd357120'
+    '0xB717C31a9cF41485771e9c5D7CFCeF9Ca089532a'
   );
 
   await PositionManagerFactory.create(
     user.address,
-    '0x605EFf56e8e51991f77F959b8711768Fb8dede5f',
-    '0xF351458322143eE6EAd5ad88E04F811eCD058D9b',
+    '0x1b025669feE0BB63d91Eb31949A595D2e4B678c4',
+    '0x8082BF0cdCCd19De8Eea995Dbf077cf0A8b1dEeA',
     {
-      gasLimit: 1000000,
+      gasLimit: 5000000,
     }
   );
 
@@ -96,11 +96,8 @@ const createPosition = async function () {
     },
     { gasLimit: 3000000 }
   );
-
+  console.log(mintTx);
   const receipt: any = await mintTx.wait();
-  const tokenId = receipt.events[receipt.events.length - 1].args.tokenId;
-
-  console.log(tokenId);
 };
 
 const deposit = async function () {
@@ -111,14 +108,14 @@ const deposit = async function () {
     '0xC36442b4a4522E871399CD717aBDD847Ab11FE88'
   );
 
-  const PositionManager = await ethers.getContractAtFromArtifact(PMjson, '0x0706B0f415aF0D9324fA0E73b4E10295e1b09ed8');
+  const PositionManager = await ethers.getContractAtFromArtifact(PMjson, '0xd9e1eAF3AFA2c5C041339e0D39f848FF80d8Ef62 ');
 
   await NonFungiblePositionManager.setApprovalForAll(PositionManager.address, true);
 
-  await PositionManager.depositUniNft(user.address, [1516], { gasLimit: 3000000 });
+  //await PositionManager.depositUniNft(user.address, [1517], { gasLimit: 3000000 });
 };
 
-//deploy('PositionManagerFactory', []);
+//deploy('DepositRecipes', []);
 //deployPositionManager();
 /* addCutFunction(
   'UpdateUncollectedFees',
@@ -126,6 +123,7 @@ const deposit = async function () {
   '0x0706B0f415aF0D9324fA0E73b4E10295e1b09ed8'
 ); */
 //createPosition();
+
 //deposit();
 
 // Actions
