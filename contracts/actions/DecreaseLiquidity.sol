@@ -4,7 +4,7 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import '../helpers/ERC20Helper.sol';
-import '../helpers/NFTHelper.sol';
+import '../helpers/UniswapNFTHelper.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
 import '../utils/Storage.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
@@ -55,7 +55,7 @@ contract DecreaseLiquidity {
         ).positions(tokenId);
 
         IUniswapV3Pool pool = IUniswapV3Pool(
-            NFTHelper._getPoolFromTokenId(
+            UniswapNFTHelper._getPoolFromTokenId(
                 tokenId,
                 INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()),
                 Storage.uniswapAddressHolder.uniswapV3FactoryAddress()

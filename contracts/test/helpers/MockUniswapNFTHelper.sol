@@ -3,9 +3,9 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import '../../helpers/NFTHelper.sol';
+import '../../helpers/UniswapNFTHelper.sol';
 
-contract MockNFTHelper {
+contract MockUniswapNFTHelper {
     ///@notice contract to interact with NFT helper for testing
 
     ///@notice get the pool address
@@ -20,7 +20,7 @@ contract MockNFTHelper {
         address token1,
         uint24 fee
     ) public view returns (address) {
-        return NFTHelper._getPool(factory, token0, token1, fee);
+        return UniswapNFTHelper._getPool(factory, token0, token1, fee);
     }
 
     ///@notice get the address of the pool from the tokenId
@@ -33,7 +33,7 @@ contract MockNFTHelper {
         INonfungiblePositionManager nonfungiblePositionManager,
         address factory
     ) public view returns (address) {
-        return NFTHelper._getPoolFromTokenId(tokenId, nonfungiblePositionManager, factory);
+        return UniswapNFTHelper._getPoolFromTokenId(tokenId, nonfungiblePositionManager, factory);
     }
 
     ///@notice get the address of the tpkens from the tokenId
@@ -46,7 +46,7 @@ contract MockNFTHelper {
         view
         returns (address token0address, address token1address)
     {
-        return NFTHelper._getTokens(tokenId, nonfungiblePositionManager);
+        return UniswapNFTHelper._getTokens(tokenId, nonfungiblePositionManager);
     }
 
     ///@notice get the amount of tokens from liquidity and tick ranges
@@ -62,7 +62,7 @@ contract MockNFTHelper {
         int24 tickUpper,
         address poolAddress
     ) public view returns (uint256, uint256) {
-        return NFTHelper._getAmountsFromLiquidity(liquidity, tickLower, tickUpper, poolAddress);
+        return UniswapNFTHelper._getAmountsFromLiquidity(liquidity, tickLower, tickUpper, poolAddress);
     }
 
     ///@notice Computes the amount of liquidity for a given amount of token0, token1
@@ -79,6 +79,6 @@ contract MockNFTHelper {
         int24 tickUpper,
         address poolAddress
     ) public view returns (uint128) {
-        return NFTHelper._getLiquidityFromAmounts(token0, token1, tickLower, tickUpper, poolAddress);
+        return UniswapNFTHelper._getLiquidityFromAmounts(token0, token1, tickLower, tickUpper, poolAddress);
     }
 }

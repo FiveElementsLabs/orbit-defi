@@ -11,7 +11,7 @@ import '../../interfaces/IUniswapAddressHolder.sol';
 import '../../interfaces/IPositionManager.sol';
 
 import '../helpers/ERC20Helper.sol';
-import '../helpers/NFTHelper.sol';
+import '../helpers/UniswapNFTHelper.sol';
 import '../utils/Storage.sol';
 
 interface IIncreaseLiquidity {
@@ -33,7 +33,7 @@ contract IncreaseLiquidity {
 
         require(amount0Desired > 0 || amount1Desired > 0, 'send some tokens to increase liquidity');
 
-        (address token0Address, address token1Address) = NFTHelper._getTokens(
+        (address token0Address, address token1Address) = UniswapNFTHelper._getTokens(
             tokenId,
             INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress())
         );
