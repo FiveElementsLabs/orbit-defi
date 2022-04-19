@@ -4,7 +4,6 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
-
 import '../utils/Storage.sol';
 import '../../interfaces/IPositionManager.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
@@ -62,7 +61,7 @@ contract ClosePosition {
 
         INonfungiblePositionManager.CollectParams memory collectparams = INonfungiblePositionManager.CollectParams({
             tokenId: tokenId,
-            recipient: returnTokenToUser ? msg.sender : address(this),
+            recipient: returnTokenToUser ? Storage.owner : address(this),
             amount0Max: 2**128 - 1,
             amount1Max: 2**128 - 1
         });
@@ -73,10 +72,10 @@ contract ClosePosition {
         //remove id from position manager array
         IPositionManager(address(this)).removePositionId(tokenId);
 
-        //return the tokenId and tokens closed
-        return (tokenId, token0Closed, token1Closed);
-
         //delete the position from the position manager
         emit CloseUniPosition(address(this), tokenId);
+
+        //return the tokenId and tokens closed
+        return (tokenId, token0Closed, token1Closed);
     }
 }

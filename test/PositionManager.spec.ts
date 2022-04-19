@@ -118,12 +118,22 @@ describe('PositionManager.sol', function () {
     const diamondCutFacet = await DiamondCutFacet.deploy();
     await diamondCutFacet.deployed();
 
+    // deploy Registry
+    const Registry = await ethers.getContractFactory('Registry');
+    const registry = await Registry.deploy(user.address);
+    await registry.deployed();
+
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactoryFactory = await ethers.getContractFactory('PositionManagerFactory');
     const PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
     await PositionManagerFactory.deployed();
 
-    await PositionManagerFactory.create(user.address, diamondCutFacet.address, uniswapAddressHolder.address);
+    await PositionManagerFactory.create(
+      user.address,
+      diamondCutFacet.address,
+      uniswapAddressHolder.address,
+      registry.address
+    );
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
@@ -179,9 +189,8 @@ describe('PositionManager.sol', function () {
     await tokenEth.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
     await tokenUsdc.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
     await tokenDai.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
-    /* //recipient: MintAction - spender: user
-    await tokenEth.connect(user).approve(MintAction.address, ethers.utils.parseEther('100000000000000'));
-    await tokenUsdc.connect(user).approve(MintAction.address, ethers.utils.parseEther('100000000000000')); */
+    //approval user to registry for test
+    await registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
 
     await NonFungiblePositionManager.setApprovalForAll(PositionManager.address, true);
 
@@ -226,72 +235,6 @@ describe('PositionManager.sol', function () {
     tokenId = mintReceipt.events[mintReceipt.events.length - 1].args.tokenId;
   });
 
-  describe('PositionManager - depositUniNft', function () {
-    it('should deposit a single UNI NFT', async function () {
-      const oldOwner = await NonFungiblePositionManager.ownerOf(tokenId);
-
-      await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
-
-      expect(oldOwner).to.be.not.equal(await NonFungiblePositionManager.ownerOf(tokenId));
-      expect(PositionManager.address).to.be.equal(await NonFungiblePositionManager.ownerOf(tokenId));
-    });
-
-    it('should deposit multiple UNI NFTs', async function () {
-      const txMint = await NonFungiblePositionManager.connect(user).mint(
-        {
-          token0: tokenEth.address,
-          token1: tokenUsdc.address,
-          fee: 3000,
-          tickLower: 0 - 60 * 1000,
-          tickUpper: 0 + 60 * 1000,
-          amount0Desired: '0x' + (1e18).toString(16),
-          amount1Desired: '0x' + (1e18).toString(16),
-          amount0Min: 0,
-          amount1Min: 0,
-          recipient: user.address,
-          deadline: Date.now() + 1000,
-        },
-        { gasLimit: 670000 }
-      );
-
-      const mintReceipt = (await txMint.wait()) as any;
-      const newTokenId = mintReceipt.events[mintReceipt.events.length - 1].args.tokenId;
-
-      await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [
-        tokenId,
-        newTokenId,
-      ]);
-
-      expect(PositionManager.address).to.be.equal(await NonFungiblePositionManager.ownerOf(tokenId));
-      expect(PositionManager.address).to.be.equal(await NonFungiblePositionManager.ownerOf(newTokenId));
-    });
-  });
-  describe('PositionManager - withdrawUniNft', function () {
-    it('Should withdraw a single UNI NFT', async function () {
-      await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
-
-      await PositionManager.connect(user).withdrawUniNft(user.address, tokenId);
-
-      expect(await user.address).to.equal(await NonFungiblePositionManager.ownerOf(tokenId));
-    });
-    it('Should revert if token does not exist', async function () {
-      await expect(PositionManager.connect(user).withdrawUniNft(user.address, 1000)).to.be.reverted;
-    });
-  });
-
-  describe('PositionManager - OnlyUser Modifier', function () {
-    it('depositUniNft', async function () {
-      await expect(
-        PositionManager.connect(trader).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId])
-      ).to.be.reverted;
-    });
-
-    it('withdrawUniNft', async function () {
-      await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
-
-      await expect(PositionManager.connect(trader).withdrawUniNft(user.address, tokenId)).to.be.reverted;
-    });
-  });
   describe('PositionManager - DiamondCut', function () {
     it('should add a new action and call it', async function () {
       // add actions to position manager using diamond cut

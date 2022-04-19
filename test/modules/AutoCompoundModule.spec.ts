@@ -11,7 +11,14 @@ const PositionManagerjson = require('../../artifacts/contracts/PositionManager.s
 const SwapRouterjson = require('@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json');
 const FixturesConst = require('../shared/fixtures');
 import { tokensFixture, poolFixture, mintSTDAmount, routerFixture, getSelectors } from '../shared/fixtures';
-import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager, TestRouter } from '../../typechain';
+import {
+  MockToken,
+  IUniswapV3Pool,
+  INonfungiblePositionManager,
+  PositionManager,
+  TestRouter,
+  AutoCompoundModule,
+} from '../../typechain';
 
 describe('AutoCompoundModule.sol', function () {
   //GLOBAL VARIABLE - USE THIS
@@ -36,7 +43,7 @@ describe('AutoCompoundModule.sol', function () {
 
   let Factory: Contract; // the factory that will deploy all pools
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
-  let PositionManager: Contract; //Our smart vault named PositionManager
+  let PositionManager: PositionManager; //Our smart vault named PositionManager
   let Router: TestRouter; //Our router to perform swap
   let SwapRouter: Contract;
   let collectFeesAction: Contract;
@@ -119,12 +126,22 @@ describe('AutoCompoundModule.sol', function () {
     const diamondCutFacet = await DiamondCutFacet.deploy();
     await diamondCutFacet.deployed();
 
+    // deploy Registry
+    const Registry = await ethers.getContractFactory('Registry');
+    const registry = await Registry.deploy(user.address);
+    await registry.deployed();
+
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactoryFactory = await ethers.getContractFactory('PositionManagerFactory');
     const PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
     await PositionManagerFactory.deployed();
 
-    await PositionManagerFactory.create(user.address, diamondCutFacet.address, uniswapAddressHolder.address);
+    await PositionManagerFactory.create(
+      user.address,
+      diamondCutFacet.address,
+      uniswapAddressHolder.address,
+      registry.address
+    );
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
@@ -172,6 +189,12 @@ describe('AutoCompoundModule.sol', function () {
     //recipient: positionManager - spender: user
     await tokenEth.connect(user).approve(PositionManager.address, ethers.utils.parseEther('100000000000000'));
     await tokenUsdc.connect(user).approve(PositionManager.address, ethers.utils.parseEther('100000000000000'));
+    //approval user to registry for test
+    await registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
+    await registry.addNewContract(
+      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('AutoCompoundModule')),
+      autoCompound.address
+    );
 
     await NonFungiblePositionManager.setApprovalForAll(PositionManager.address, true);
     //recipient: Router - spender: trader
@@ -208,7 +231,7 @@ describe('AutoCompoundModule.sol', function () {
         amount1Desired: '0x' + (1e10).toString(16),
         amount0Min: 0,
         amount1Min: 0,
-        recipient: user.address,
+        recipient: PositionManager.address,
         deadline: Date.now() + 1000,
       },
       { gasLimit: 670000 }
@@ -217,7 +240,7 @@ describe('AutoCompoundModule.sol', function () {
     const receipt: any = await mintTx.wait();
     tokenId = receipt.events[receipt.events.length - 1].args.tokenId;
 
-    await PositionManager.connect(user).depositUniNft(user.address, [tokenId]);
+    await PositionManager.pushPositionId(tokenId);
 
     // user approve autocompound module
     await PositionManager.toggleModule(2, autoCompound.address, true);
