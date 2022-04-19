@@ -18,7 +18,7 @@ contract AaveModule {
         LendingPool.deposit(token0, 1000, address(this), 0);
     }
 
-    function withdrawToAave(address token0) public {
+    function withdrawFromAave(address token0) public {
         LendingPool.withdraw(token0, 1000, address(this));
     }
 }
