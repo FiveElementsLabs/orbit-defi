@@ -2,6 +2,7 @@ pragma solidity ^0.6.11;
 
 import '@aave/protocol-v2/contracts/protocol/lendingpool/LendingPool.sol';
 import '@aave/protocol-v2/contracts/interfaces/ILendingPool.sol';
+import 'hardhat/console.sol';
 
 contract AaveModule {
     ///try deposit here
@@ -20,6 +21,12 @@ contract AaveModule {
     }
 
     function depositToAave(address token0) public {
-        LendingPool.deposit(token0, 1000, msg.sender, 0);
+        IERC20(token0).approve(address(LendingPool), 1000000);
+
+        LendingPool.deposit(token0, 1000, address(this), 0);
+    }
+
+    function withdrawToAave(address token0) public {
+        LendingPool.withdraw(token0, 1000, address(this));
     }
 }

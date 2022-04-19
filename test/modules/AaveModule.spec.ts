@@ -277,102 +277,20 @@ describe('AaveModule.sol', function () {
       UniswapV3Pool,
       '0x8ad599c3A0ff1De082011EFDDc58f1908eb6e6D8'
     );
-    console.log('token0: ', await poolUsdcEth.token0());
-    console.log('token1: ', await poolUsdcEth.token1());
-    console.log('fee: ', await poolUsdcEth.fee());
-
-    console.log('balanceUsdc: ', await usdcMock.balanceOf(user.address));
-    console.log('balanceEth: ', await ethMock.balanceOf(user.address));
-
-    /*
-      {
-        token0: tokenEth.address,
-        token1: tokenUsdc.address,
-        fee: 3000,
-        tickLower: 0 - 60 * 10,
-        tickUpper: 0 + 60 * 10,
-        amount0Desired: '0x' + (1e7).toString(16),
-        amount1Desired: '0x' + (1e7).toString(16),
-        amount0Min: 0,
-        amount1Min: 0,
-        recipient: user.address,
-        deadline: Date.now() + 1000,
-      },
-      */
-    usdcMock.connect(user).approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000'));
-    ethMock.connect(user).approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000'));
-    const mintTx = await NonFungiblePositionManager.connect(user).mint(
-      [
-        usdcMock.address,
-        ethMock.address,
-        3000,
-        0 - 60 * 10,
-        0 + 60 * 10,
-        '0x' + (1e7).toString(16),
-        '0x' + (1e7).toString(16),
-        0,
-        0,
-        user.address,
-        Date.now() + 1000,
-      ],
-      { gasLimit: 670000 }
-    );
-
-    const receipt: any = await mintTx.wait();
-    tokenId = receipt.events[receipt.events.length - 1].args.tokenId;
-    console.log('tokenId: ', tokenId);
-
-    await PositionManager.connect(user).depositUniNft(user.address, [tokenId]);
-
-    // user approve autocompound module
-    await PositionManager.toggleModule(2, autoCompound.address, true);
-    // ----------------------------------------------------------------------------------------------------
-
-    // add actions to position manager using diamond pattern
-    const cut = [];
-    const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 };
-
-    cut.push({
-      facetAddress: collectFeesAction.address,
-      action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(collectFeesAction),
-    });
-    cut.push({
-      facetAddress: increaseLiquidityAction.address,
-      action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(increaseLiquidityAction),
-    });
-    cut.push({
-      facetAddress: decreaseLiquidityAction.address,
-      action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(decreaseLiquidityAction),
-    });
-    cut.push({
-      facetAddress: updateFeesAction.address,
-      action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(updateFeesAction),
-    });
-
-    const diamondCut = await ethers.getContractAt('IDiamondCut', PositionManager.address);
-
-    const tx = await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
   });
   it('should deposit some token', async function () {
     const before = await LendingPool.getUserAccountData(user.address);
 
     const balanceBefore = await ethMock.balanceOf(user.address);
-    const resp = await LendingPool.deposit(ethMock.address, 1000000000, user.address, 0);
+    //const resp = await LendingPool.deposit(ethMock.address, 1000000000, user.address, 0);
+    ethMock.connect(user).transfer(AaveModule.address, '100000');
+    await ethMock.approve(AaveModule.address, ethers.utils.parseEther('1000000000000000'));
+    const resp = await AaveModule.depositToAave(ethMock.address);
 
     const after = await LendingPool.getUserAccountData(user.address);
-    console.log('stateUserBefore: ', before);
-    console.log('stateUserAfter: ', after);
 
     const balanceAfter = await ethMock.balanceOf(user.address);
-    console.log('balanceBefore', balanceBefore.toString());
-    console.log('balanceAfter', balanceAfter.toString());
-    await LendingPool.withdraw(ethMock.address, 500000000, user.address);
 
-    console.log(await LendingPool.getUserAccountData(user.address));
-    //const res = await AaveModule.depositToAave(usdcMock.address);
+    await AaveModule.withdrawToAave(ethMock.address);
   });
 });
