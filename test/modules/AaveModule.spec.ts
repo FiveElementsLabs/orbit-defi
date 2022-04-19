@@ -122,12 +122,6 @@ describe('AaveModule.sol', function () {
       NonFungiblePositionManagerjson['bytecode'],
       user
     );
-    /*  NonFungiblePositionManager = (await NonFungiblePositionManagerFactory.deploy(
-      Factory.address,
-      tokenEth.address,
-      NonFungiblePositionManagerDescriptor.address
-    )) as INonfungiblePositionManager;
-    await NonFungiblePositionManager.deployed(); */
 
     NonFungiblePositionManager = await ethers.getContractAtFromArtifact(
       NonFungiblePositionManagerjson,
@@ -240,9 +234,6 @@ describe('AaveModule.sol', function () {
 
     await hre.network.provider.send('hardhat_setStorageAt', [ethMock.address, probedSlotEth, valueEth]);
 
-    /* Router = (await routerFixture()).ruoterDeployFixture;
-    await Router.connect(user).swap('0x8ad599c3A0ff1De082011EFDDc58f1908eb6e6D8', false, ethers.utils.parseEther('1')); */
-
     await usdcMock.connect(user).approve(LendingPool.address, ethers.utils.parseEther('1000000000'));
     await ethMock.connect(user).approve(LendingPool.address, ethers.utils.parseEther('1000000000'));
     const balanceAfter = await usdcMock.connect(user).balanceOf(user.address);
@@ -282,7 +273,6 @@ describe('AaveModule.sol', function () {
     const before = await LendingPool.getUserAccountData(user.address);
 
     const balanceBefore = await ethMock.balanceOf(user.address);
-    //const resp = await LendingPool.deposit(ethMock.address, 1000000000, user.address, 0);
     ethMock.connect(user).transfer(AaveModule.address, '100000');
     await ethMock.approve(AaveModule.address, ethers.utils.parseEther('1000000000000000'));
     const resp = await AaveModule.depositToAave(ethMock.address);
