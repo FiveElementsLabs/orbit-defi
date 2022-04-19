@@ -43,6 +43,7 @@ describe('DepositRecipes.sol', function () {
   let PositionManagerFactoryFactory: ContractFactory;
   let DiamondCutFacet: Contract;
   let UniswapAddressHolder: Contract;
+  let registry: Contract;
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
@@ -119,6 +120,11 @@ describe('DepositRecipes.sol', function () {
     const DiamondCutFacetFactory = await ethers.getContractFactory('DiamondCutFacet');
     DiamondCutFacet = await DiamondCutFacetFactory.deploy();
     await DiamondCutFacet.deployed();
+
+    // deploy Registry
+    const Registry = await ethers.getContractFactory('Registry');
+    registry = await Registry.deploy(user.address);
+    await registry.deployed();
 
     //APPROVE
 
@@ -253,7 +259,12 @@ describe('DepositRecipes.sol', function () {
     PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
     await PositionManagerFactory.deployed();
 
-    await PositionManagerFactory.create(user.address, DiamondCutFacet.address, UniswapAddressHolder.address);
+    await PositionManagerFactory.create(
+      user.address,
+      DiamondCutFacet.address,
+      UniswapAddressHolder.address,
+      registry.address
+    );
 
     let contractsDeployed = await PositionManagerFactory.positionManagers(0);
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
@@ -298,7 +309,7 @@ describe('DepositRecipes.sol', function () {
       await DepositRecipes.connect(user).depositUniNft([tokenId]);
 
       expect(await NonFungiblePositionManager.ownerOf(tokenId)).to.equal(PositionManager.address);
-      expect((await PositionManager.getAllUniPosition())[0]).to.equal(tokenId);
+      expect((await PositionManager.getAllUniPositions())[0]).to.equal(tokenId);
     });
 
     it('should deposit multiple tokens and update positions array', async function () {
@@ -368,9 +379,9 @@ describe('DepositRecipes.sol', function () {
       expect(await NonFungiblePositionManager.ownerOf(tokenId1)).to.equal(PositionManager.address);
       expect(await NonFungiblePositionManager.ownerOf(tokenId2)).to.equal(PositionManager.address);
       expect(await NonFungiblePositionManager.ownerOf(tokenId3)).to.equal(PositionManager.address);
-      expect((await PositionManager.getAllUniPosition())[0]).to.equal(tokenId1);
-      expect((await PositionManager.getAllUniPosition())[1]).to.equal(tokenId2);
-      expect((await PositionManager.getAllUniPosition())[2]).to.equal(tokenId3);
+      expect((await PositionManager.getAllUniPositions())[0]).to.equal(tokenId1);
+      expect((await PositionManager.getAllUniPositions())[1]).to.equal(tokenId2);
+      expect((await PositionManager.getAllUniPositions())[2]).to.equal(tokenId3);
     });
 
     it('should revert if user is not owner', async function () {
@@ -421,7 +432,7 @@ describe('DepositRecipes.sol', function () {
       const tokenId = await events[events.length - 1].args.tokenId.toNumber();
 
       expect(await NonFungiblePositionManager.ownerOf(tokenId)).to.equal(PositionManager.address);
-      expect((await PositionManager.getAllUniPosition())[0]).to.equal(tokenId);
+      expect((await PositionManager.getAllUniPositions())[0]).to.equal(tokenId);
     });
 
     it('should revert if pool does not exist', async function () {

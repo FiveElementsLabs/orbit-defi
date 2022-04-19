@@ -29,7 +29,7 @@ async function main() {
         positionManagerAddress
       )) as PositionManager;
 
-      const positionIds = await positionManagerContract.getAllUniPosition();
+      const positionIds = await positionManagerContract.getAllUniPositions();
 
       for (const positionId of positionIds) {
         if (debug) console.log(`-- Rebalancing position ID: ${positionId}`);
@@ -52,7 +52,7 @@ async function main() {
         positionManagerAddress
       )) as PositionManager;
 
-      const positionIds = await positionManagerContract.getAllUniPosition();
+      const positionIds = await positionManagerContract.getAllUniPositions();
 
       for (const positionId of positionIds) {
         if (debug) console.log(`-- Autocompounding position ID: ${positionId}`);

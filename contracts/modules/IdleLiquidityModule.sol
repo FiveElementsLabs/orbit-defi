@@ -11,7 +11,6 @@ import '../actions/ClosePosition.sol';
 import '../actions/SwapToPositionRatio.sol';
 import '../actions/Mint.sol';
 import '../helpers/NFTHelper.sol';
-import '../helpers/ERC20Helper.sol';
 
 ///@title Idle Liquidity Module to manage liquidity for a user position
 contract IdleLiquidityModule {
@@ -32,34 +31,20 @@ contract IdleLiquidityModule {
         IPositionManager positionManager,
         uint24 rebalanceDistance
     ) public {
-        int24 tickDistance = _checkDistanceFromRange(tokenId, positionManager);
+        int24 tickDistance = _checkDistanceFromRange(tokenId);
         if (positionManager.getModuleState(tokenId, address(this))) {
             ///@dev rebalance only if the position's range is outside of the tick of the pool (tickDistance < 0) and the position is far enough from tick of the pool
             if (tickDistance < 0 && rebalanceDistance <= uint24(tickDistance)) {
-                (
-                    ,
-                    ,
-                    address token0,
-                    address token1,
-                    uint24 fee,
-                    ,
-                    ,
-                    uint128 liquidity,
-                    ,
-                    ,
-                    ,
-
-                ) = INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).positions(
-                        tokenId
-                    );
+                (, , address token0, address token1, uint24 fee, , , , , , , ) = INonfungiblePositionManager(
+                    uniswapAddressHolder.nonfungiblePositionManagerAddress()
+                ).positions(tokenId);
 
                 ///@dev calc tickLower and tickUpper with the same delta as the position but with tick of the pool in center
                 (int24 tickLower, int24 tickUpper) = _calcTick(tokenId, fee);
 
                 ///@dev call closePositionAction
-                (uint256 tokenId, uint256 amount0Closed, uint256 amount1Closed) = IClosePosition(
-                    address(positionManager)
-                ).closePosition(tokenId, false);
+                (, uint256 amount0Closed, uint256 amount1Closed) = IClosePosition(address(positionManager))
+                    .closePosition(tokenId, false);
 
                 ///@dev call swapToPositionAction to perform the swap
                 (uint256 token0Swapped, uint256 token1Swapped) = ISwapToPositionRatio(address(positionManager))
@@ -85,9 +70,8 @@ contract IdleLiquidityModule {
 
     ///@notice checkDistance from ticklower tickupper from tick of the pools
     ///@param tokenId tokenId of the position
-    ///@param positionManager address of the position manager
     ///@return int24 distance from ticklower tickupper from tick of the pools and return the minimum distance
-    function _checkDistanceFromRange(uint256 tokenId, IPositionManager positionManager) internal view returns (int24) {
+    function _checkDistanceFromRange(uint256 tokenId) internal view returns (int24) {
         (
             ,
             ,

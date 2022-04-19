@@ -8,6 +8,7 @@ import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.s
 import '../interfaces/IPositionManager.sol';
 import '../interfaces/IUniswapAddressHolder.sol';
 import '../interfaces/IDiamondCut.sol';
+import '../interfaces/IRegistry.sol';
 import './helpers/ERC20Helper.sol';
 import './utils/Storage.sol';
 
@@ -51,16 +52,15 @@ contract PositionManager is IPositionManager, ERC721Holder {
 
     uint256[] private uniswapNFTs;
 
-    function init(address _owner, address _uniswapAddressHolder) public {
+    function init(
+        address _owner,
+        address _uniswapAddressHolder,
+        address _registry
+    ) public {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         Storage.owner = _owner;
         Storage.uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
-    }
-
-    //TODO: refactor of user parameters
-    struct Module {
-        address moduleAddress;
-        bool activated;
+        Storage.registry = IRegistry(_registry);
     }
 
     ///@notice withdraw uniswap position NFT from the position manager
@@ -85,27 +85,31 @@ contract PositionManager is IPositionManager, ERC721Holder {
         emit WithdrawUni(msg.sender, tokenId);
     }
 
-    ///@notice remove awareness of UniswapV3 NFT at index
-    ///@param index index of the NFT in the uniswapNFTs array
-    function removePositionIdAtIndex(uint256 index) internal {
-        require(
-            msg.sender == address(this),
-            'PositionManager::removePositionId: only PositionManager can remove a position'
-        );
-        if (uniswapNFTs.length > 1) {
-            uniswapNFTs[index] = uniswapNFTs[uniswapNFTs.length - 1];
-            uniswapNFTs.pop();
-        } else {
-            delete uniswapNFTs;
+    ///@notice remove awareness of tokenId UniswapV3 NFT
+    ///@param tokenId ID of the NFT to remove
+    function removePositionId(uint256 tokenId) public override {
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+        ///@dev if ownerOf reverts, tokenId is non existent or it has been burned
+        try
+            INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(
+                tokenId
+            )
+        returns (address owner) {
+            require(
+                owner != address(this),
+                'PositionManager::removePositionId: positionManager is still owner of the token!'
+            );
+        } catch {
+            //do nothing
         }
-    }
-
-    ///@notice remove awareness of _id UniswapV3 NFT
-    ///@param _id ID of the NFT to remove
-    function removePositionId(uint256 _id) public override {
         for (uint256 i = 0; i < uniswapNFTs.length; i++) {
-            if (uniswapNFTs[i] == _id) {
-                removePositionIdAtIndex(i);
+            if (uniswapNFTs[i] == tokenId) {
+                if (uniswapNFTs.length > 1) {
+                    uniswapNFTs[i] = uniswapNFTs[uniswapNFTs.length - 1];
+                    uniswapNFTs.pop();
+                } else {
+                    delete uniswapNFTs;
+                }
                 return;
             }
         }
@@ -114,13 +118,19 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@notice add tokenId in the uniswapNFTs array
     ///@param tokenId ID of the added NFT
     function pushPositionId(uint256 tokenId) public override {
-        //TODO: this needs a modifier or a require!
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+        require(
+            INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(
+                tokenId
+            ) == address(this),
+            'PositionManager::pushPositionId: tokenId is not owned by this contract'
+        );
         uniswapNFTs.push(tokenId);
     }
 
     ///@notice return the IDs of the uniswap positions
     ///@return array of IDs
-    function getAllUniPosition() external view override returns (uint256[] memory) {
+    function getAllUniPositions() external view override returns (uint256[] memory) {
         uint256[] memory uniswapNFTsMemory = uniswapNFTs;
         return uniswapNFTsMemory;
     }
@@ -144,6 +154,8 @@ contract PositionManager is IPositionManager, ERC721Holder {
         return activatedModules[tokenId][moduleAddress];
     }
 
+    ///@notice return the address of this position manager owner
+    ///@return address of the owner
     function getOwner() external view override returns (address) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         return Storage.owner;
@@ -165,18 +177,25 @@ contract PositionManager is IPositionManager, ERC721Holder {
         _;
     }
 
-    ///@notice modifier to check if the msg.sender is the owner or a module
-    modifier onlyOwnerOrModule() {
+    ///@notice function to check if an address corresponds to an active module (or this contract)
+    ///@param _address input address
+    ///@return isCalledFromActiveModule boolean
+    function _calledFromActiveModule(address _address) internal view returns (bool isCalledFromActiveModule) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
-
-        require(
-            (msg.sender == Storage.owner),
-            'PositionManager::onlyOwnerOrModule: Only owner or module can call this function'
-        );
-        _;
+        bytes32[] memory keys = Storage.registry.getModuleKeys();
+        for (uint256 i = 0; i < keys.length; i++) {
+            if (Storage.registry.moduleAddress(keys[i]) == _address && Storage.registry.isActive(keys[i]) == true) {
+                isCalledFromActiveModule = true;
+                i = keys.length;
+            }
+        }
     }
 
     fallback() external payable {
+        require(
+            _calledFromActiveModule(msg.sender) || msg.sender == address(this),
+            'PositionManager::fallback: Only active modules can call this function'
+        );
         StorageStruct storage Storage;
         bytes32 position = PositionManagerStorage.key;
         ///@dev get diamond storage position

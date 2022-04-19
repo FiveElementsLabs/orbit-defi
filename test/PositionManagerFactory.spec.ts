@@ -3,7 +3,7 @@ import '@nomiclabs/hardhat-ethers';
 import { Contract, ContractFactory } from 'ethers';
 import { ethers } from 'hardhat';
 import { tokensFixture, poolFixture, routerFixture } from './shared/fixtures';
-import { MockToken, INonfungiblePositionManager, ISwapRouter, UniswapAddressHolder } from '../typechain';
+import { MockToken, INonfungiblePositionManager, ISwapRouter, UniswapAddressHolder, Registry } from '../typechain';
 
 const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json');
 const PositionManagerContract = require('../artifacts/contracts/PositionManager.sol/PositionManager.json');
@@ -24,6 +24,7 @@ describe('PositionManagerFactory.sol', function () {
   let Router: ISwapRouter;
   let poolI: any;
   let diamondCutFacet: any;
+  let registry: any;
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
@@ -79,6 +80,11 @@ describe('PositionManagerFactory.sol', function () {
     )) as UniswapAddressHolder;
     await uniswapAddressHolder.deployed();
 
+    //deploy registry
+    const registryFactory = await ethers.getContractFactory('Registry');
+    registry = await registryFactory.deploy(user.address);
+    await registry.deployed();
+
     // deploy DiamondCutFacet ----------------------------------------------------------------------
     const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet');
     diamondCutFacet = await DiamondCutFacet.deploy();
@@ -101,7 +107,12 @@ describe('PositionManagerFactory.sol', function () {
 
       [owner] = await ethers.getSigners();
 
-      await PositionManagerFactoryInstance.create(owner.address, diamondCutFacet.address, uniswapAddressHolder.address);
+      await PositionManagerFactoryInstance.create(
+        owner.address,
+        diamondCutFacet.address,
+        uniswapAddressHolder.address,
+        registry.address
+      );
 
       const deployedContract = await PositionManagerFactoryInstance.positionManagers(0);
       const PositionManagerInstance = await ethers.getContractAt(PositionManagerContract.abi, deployedContract);

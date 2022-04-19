@@ -118,12 +118,22 @@ describe('PositionManager.sol', function () {
     const diamondCutFacet = await DiamondCutFacet.deploy();
     await diamondCutFacet.deployed();
 
+    // deploy Registry
+    const Registry = await ethers.getContractFactory('Registry');
+    const registry = await Registry.deploy(user.address);
+    await registry.deployed();
+
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactoryFactory = await ethers.getContractFactory('PositionManagerFactory');
     const PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
     await PositionManagerFactory.deployed();
 
-    await PositionManagerFactory.create(user.address, diamondCutFacet.address, uniswapAddressHolder.address);
+    await PositionManagerFactory.create(
+      user.address,
+      diamondCutFacet.address,
+      uniswapAddressHolder.address,
+      registry.address
+    );
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
@@ -179,9 +189,8 @@ describe('PositionManager.sol', function () {
     await tokenEth.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
     await tokenUsdc.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
     await tokenDai.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
-    /* //recipient: MintAction - spender: user
-    await tokenEth.connect(user).approve(MintAction.address, ethers.utils.parseEther('100000000000000'));
-    await tokenUsdc.connect(user).approve(MintAction.address, ethers.utils.parseEther('100000000000000')); */
+    //approval user to registry for test
+    await registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
 
     await NonFungiblePositionManager.setApprovalForAll(PositionManager.address, true);
 

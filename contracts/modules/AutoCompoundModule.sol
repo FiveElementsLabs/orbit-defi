@@ -13,7 +13,6 @@ import '../actions/IncreaseLiquidity.sol';
 import '../actions/UpdateUncollectedFees.sol';
 
 contract AutoCompoundModule {
-    //TODO: setup registry
     IUniswapAddressHolder addressHolder;
 
     ///@notice constructor of autoCompoundModule
