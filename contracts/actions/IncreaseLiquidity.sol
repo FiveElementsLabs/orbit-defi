@@ -19,6 +19,10 @@ interface IIncreaseLiquidity {
 
 ///@notice action to increase the liquidity of a V3 position
 contract IncreaseLiquidity {
+    ///@notice increase the liquidity of a UniswapV3 position
+    ///@param tokenId the id of the position token
+    ///@param amount0Desired the desired amount of token0
+    ///@param amount1Desired the desired amount of token1
     function increaseLiquidity(
         uint256 tokenId,
         uint256 amount0Desired,
@@ -47,13 +51,6 @@ contract IncreaseLiquidity {
             amount1Desired
         );
 
-        /* IERC20 token0 = IERC20(token0Address);
-        IERC20 token1 = IERC20(token1Address);
-
-        //TODO: pulling from msg.sender is not how we want the code to work and returning tokens to msg.sender is not optimal.
-        ERC20Helper._pullTokensIfNeeded(token0Address, msg.sender, amount0Desired);
-        ERC20Helper._pullTokensIfNeeded(token1Address, msg.sender, amount1Desired); */
-
         INonfungiblePositionManager.IncreaseLiquidityParams memory params = INonfungiblePositionManager
             .IncreaseLiquidityParams({
                 tokenId: tokenId,
@@ -66,8 +63,5 @@ contract IncreaseLiquidity {
         INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).increaseLiquidity(
                 params
             );
-
-        /* if (amount0 < amount0Desired) token0.transfer(Storage.owner, amount0Desired - amount0);
-        if (amount1 < amount1Desired) token1.transfer(Storage.owner, amount1Desired - amount1); */
     }
 }
