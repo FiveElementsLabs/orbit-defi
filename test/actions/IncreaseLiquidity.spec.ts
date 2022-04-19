@@ -116,12 +116,22 @@ describe('IncreaseLiquidity.sol', function () {
     const diamondCutFacet = await DiamondCutFacet.deploy();
     await diamondCutFacet.deployed();
 
+    // deploy Registry
+    const Registry = await ethers.getContractFactory('Registry');
+    const registry = await Registry.deploy(user.address);
+    await registry.deployed();
+
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactory = await ethers
       .getContractFactory('PositionManagerFactory')
       .then((contract) => contract.deploy().then((deploy) => deploy.deployed()));
 
-    await PositionManagerFactory.create(user.address, diamondCutFacet.address, UniswapAddressHolder.address);
+    await PositionManagerFactory.create(
+      user.address,
+      diamondCutFacet.address,
+      UniswapAddressHolder.address,
+      registry.address
+    );
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
@@ -155,6 +165,8 @@ describe('IncreaseLiquidity.sol', function () {
     //recipient: PositionManager - spender: user
     await tokenEth.connect(user).approve(PositionManager.address, ethers.utils.parseEther('100000000000000'));
     await tokenUsdc.connect(user).approve(PositionManager.address, ethers.utils.parseEther('100000000000000'));
+    //approval user to registry for test
+    await registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
 
     //give PositionManager some tokens
     await tokenEth.connect(user).transfer(PositionManager.address, ethers.utils.parseEther('10000000'));
@@ -210,7 +222,7 @@ describe('IncreaseLiquidity.sol', function () {
         amount1Desired: '0x' + (1e10).toString(16),
         amount0Min: 0,
         amount1Min: 0,
-        recipient: user.address,
+        recipient: PositionManager.address,
         deadline: Date.now() + 1000,
       },
       { gasLimit: 670000 }
@@ -218,12 +230,11 @@ describe('IncreaseLiquidity.sol', function () {
 
     const mintReceipt = (await txMint.wait()) as any;
     tokenId = mintReceipt.events[mintReceipt.events.length - 1].args.tokenId;
+    await PositionManager.pushPositionId(tokenId);
   });
 
   describe('IncreaseLiquidity.increaseLiquidity()', function () {
     it('should correctly perform the add liquidity action', async function () {
-      await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
-
       const poolTokenId = 1;
       const liquidityBefore = (await NonFungiblePositionManager.positions(poolTokenId)).liquidity;
 
@@ -240,7 +251,6 @@ describe('IncreaseLiquidity.sol', function () {
     });
 
     it('should correctly add liquidity to the NFT position', async function () {
-      await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
       const liquidityBefore = await Pool0.liquidity();
 
       const poolTokenId = 1;
@@ -262,8 +272,6 @@ describe('IncreaseLiquidity.sol', function () {
     });
 
     it('should revert if no tokens are sent', async function () {
-      await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
-
       const poolTokenId = 1;
       const amount0Desired = 0;
       const amount1Desired = 0;

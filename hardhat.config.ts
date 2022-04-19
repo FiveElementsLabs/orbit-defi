@@ -69,6 +69,13 @@ export default {
       mining: {
         auto: true,
       },
+    localhost: {
+      port: 8545,
+      chainId: 31337,
+      gas: 30000000,
+      blockGasLimit: 0x1fffffffffffff,
+      allowUnlimitedContractSize: true,
+      timeout: 1800000,
     },
   },
   mocha: {

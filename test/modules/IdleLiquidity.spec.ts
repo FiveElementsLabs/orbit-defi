@@ -115,12 +115,22 @@ describe('IdleLiquidityModule.sol', function () {
     const diamondCutFacet = await DiamondCutFacet.deploy();
     await diamondCutFacet.deployed();
 
+    // deploy Registry
+    const Registry = await ethers.getContractFactory('Registry');
+    const registry = await Registry.deploy(user.address);
+    await registry.deployed();
+
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactoryFactory = await ethers.getContractFactory('PositionManagerFactory');
     const PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
     await PositionManagerFactory.deployed();
 
-    await PositionManagerFactory.create(user.address, diamondCutFacet.address, uniswapAddressHolder.address);
+    await PositionManagerFactory.create(
+      user.address,
+      diamondCutFacet.address,
+      uniswapAddressHolder.address,
+      registry.address
+    );
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
@@ -177,6 +187,12 @@ describe('IdleLiquidityModule.sol', function () {
     await tokenUsdc.connect(liquidityProvider).approve(Router.address, ethers.utils.parseEther('1000000000000'));
     //approval nfts
     await NonFungiblePositionManager.setApprovalForAll(PositionManager.address, true);
+    //approval user to registry for test
+    await registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
+    await registry.addNewContract(
+      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('IdleLiquidityModule')),
+      IdleLiquidityModule.address
+    );
 
     // give pool some liquidity
     await NonFungiblePositionManager.connect(liquidityProvider).mint(
@@ -232,7 +248,7 @@ describe('IdleLiquidityModule.sol', function () {
         amount1Desired: '0x' + (1e9).toString(16),
         amount0Min: 0,
         amount1Min: 0,
-        recipient: user.address,
+        recipient: PositionManager.address,
         deadline: Date.now() + 1000,
       },
       { gasLimit: 670000 }
@@ -240,10 +256,9 @@ describe('IdleLiquidityModule.sol', function () {
 
     const receipt: any = await txMint.wait();
     tokenId = receipt.events[receipt.events.length - 1].args.tokenId;
+    PositionManager.pushPositionId(tokenId);
     // user approve autocompound module
     await PositionManager.toggleModule(tokenId, IdleLiquidityModule.address, true);
-
-    await PositionManager.connect(user).depositUniNft(await NonFungiblePositionManager.ownerOf(tokenId), [tokenId]);
   });
 
   describe('IdleLiquidityModule - rebalance', function () {
@@ -260,20 +275,20 @@ describe('IdleLiquidityModule.sol', function () {
 
       expect(await NonFungiblePositionManager.ownerOf(tokenId)).to.equal(PositionManager.address);
       await expect(NonFungiblePositionManager.ownerOf(tokenId.add(1))).to.be.reverted;
-      expect((await NonFungiblePositionManager.positions(tokenId)).tickLower).to.be.lt(tick);
-      expect((await NonFungiblePositionManager.positions(tokenId)).tickUpper).to.be.lt(tick);
+      expect(Math.abs((await NonFungiblePositionManager.positions(tokenId)).tickLower)).to.be.lt(Math.abs(tick));
+      expect(Math.abs((await NonFungiblePositionManager.positions(tokenId)).tickUpper)).to.be.lt(Math.abs(tick));
 
-      await IdleLiquidityModule.rebalance(tokenId, PositionManager.address);
+      await IdleLiquidityModule.rebalance(tokenId, PositionManager.address, 10);
 
       await expect(NonFungiblePositionManager.ownerOf(tokenId)).to.be.reverted;
       expect(await NonFungiblePositionManager.ownerOf(tokenId.add(1))).to.equal(PositionManager.address);
-      expect((await NonFungiblePositionManager.positions(tokenId.add(1))).tickLower).to.be.lt(tick);
-      expect((await NonFungiblePositionManager.positions(tokenId.add(1))).tickUpper).to.be.gt(tick);
+      expect(Math.abs((await NonFungiblePositionManager.positions(tokenId.add(1))).tickLower)).to.be.lt(Math.abs(tick));
+      expect(Math.abs((await NonFungiblePositionManager.positions(tokenId.add(1))).tickUpper)).to.be.gt(Math.abs(tick));
     });
 
     it('should faild cause inesistent tokenId', async function () {
       try {
-        await IdleLiquidityModule.rebalance(tokenId.add(1), PositionManager.address);
+        await IdleLiquidityModule.rebalance(tokenId.add(1), PositionManager.address, 100);
       } catch (error: any) {
         expect(error.message).to.include('Invalid token ID');
       }

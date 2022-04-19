@@ -67,12 +67,14 @@ library ERC20Helper {
         address token,
         address to,
         uint256 amount
-    ) internal {
+    ) internal returns (uint256 amountOut) {
         uint256 balance = _getBalance(token, address(this));
         if (balance < amount) {
-            amount = balance;
+            amountOut = balance;
+        } else {
+            amountOut = amount;
         }
-        IERC20(token).safeTransferFrom(address(this), to, amount);
+        IERC20(token).safeTransferFrom(address(this), to, amountOut);
     }
 
     ///@notice get the balance of the token for the given address
