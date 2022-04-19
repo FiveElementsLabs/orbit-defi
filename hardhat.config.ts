@@ -3,10 +3,12 @@ import '@nomiclabs/hardhat-waffle';
 import '@typechain/hardhat';
 import '@nomiclabs/hardhat-ethers';
 import 'solidity-coverage';
+import 'dotenv/config';
 
 /**
  * @type import('hardhat/config').HardhatUserConfig
  */
+
 export default {
   gasReporter: {
     enabled: false,
@@ -63,7 +65,7 @@ export default {
     hardhat: {
       forking: {
         enabled: true,
-        url: 'https://mainnet.infura.io/v3/40569e7ec95f471092ea6435931221ba',
+        url: process.env.INFURA_MAINNET,
         chainId: 31337,
       },
       mining: {
