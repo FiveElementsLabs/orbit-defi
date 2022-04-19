@@ -51,6 +51,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
     event WithdrawERC20(address tokenAddress, address to, uint256 amount);
 
     uint256[] private uniswapNFTs;
+    uint256[] private aavePositions;
 
     function init(
         address _owner,
@@ -133,6 +134,17 @@ contract PositionManager is IPositionManager, ERC721Holder {
     function getAllUniPositions() external view override returns (uint256[] memory) {
         uint256[] memory uniswapNFTsMemory = uniswapNFTs;
         return uniswapNFTsMemory;
+    }
+
+    function pushAavePosition(address token, uint256 amount) public {
+        //calc the share in token
+        uint256 share = someFunction(token, amount);
+        aavePositions.push(share);
+    }
+
+    function removeAavePositionAtIndex(uint256 index) public {
+        aavePositions[index] = aavePositions[aavePositions.length - 1];
+        aavePositions.pop();
     }
 
     ///@notice toggle module state, activated (true) or not (false)
