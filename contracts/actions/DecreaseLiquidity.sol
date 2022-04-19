@@ -51,14 +51,16 @@ contract DecreaseLiquidity {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
         (, , , , , int24 tickLower, int24 tickUpper, uint128 liquidity, , , , ) = INonfungiblePositionManager(
-            Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()
+            IUniswapAddressHolder(Storage.uniswapAddressHolder).nonfungiblePositionManagerAddress()
         ).positions(tokenId);
 
         IUniswapV3Pool pool = IUniswapV3Pool(
             NFTHelper._getPoolFromTokenId(
                 tokenId,
-                INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()),
-                Storage.uniswapAddressHolder.uniswapV3FactoryAddress()
+                INonfungiblePositionManager(
+                    IUniswapAddressHolder(Storage.uniswapAddressHolder).nonfungiblePositionManagerAddress()
+                ),
+                IUniswapAddressHolder(Storage.uniswapAddressHolder).uniswapV3FactoryAddress()
             )
         );
 
@@ -87,7 +89,7 @@ contract DecreaseLiquidity {
             });
 
         (amount0, amount1) = INonfungiblePositionManager(
-            Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()
+            IUniswapAddressHolder(Storage.uniswapAddressHolder).nonfungiblePositionManagerAddress()
         ).decreaseLiquidity(decreaseliquidityparams);
     }
 }

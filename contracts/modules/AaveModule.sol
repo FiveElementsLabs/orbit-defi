@@ -1,7 +1,10 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity ^0.6.11;
 
-import '@aave/protocol-v2/contracts/protocol/lendingpool/LendingPool.sol';
 import '@aave/protocol-v2/contracts/interfaces/ILendingPool.sol';
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+
 import 'hardhat/console.sol';
 
 contract AaveModule {

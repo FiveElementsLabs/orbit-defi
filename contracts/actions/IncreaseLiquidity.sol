@@ -35,17 +35,19 @@ contract IncreaseLiquidity {
 
         (address token0Address, address token1Address) = NFTHelper._getTokenAddress(
             tokenId,
-            INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress())
+            INonfungiblePositionManager(
+                IUniswapAddressHolder(Storage.uniswapAddressHolder).nonfungiblePositionManagerAddress()
+            )
         );
 
         ERC20Helper._approveToken(
             token0Address,
-            Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress(),
+            IUniswapAddressHolder(Storage.uniswapAddressHolder).nonfungiblePositionManagerAddress(),
             2**256 - 1
         );
         ERC20Helper._approveToken(
             token1Address,
-            Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress(),
+            IUniswapAddressHolder(Storage.uniswapAddressHolder).nonfungiblePositionManagerAddress(),
             2**256 - 1
         );
 
@@ -66,7 +68,7 @@ contract IncreaseLiquidity {
                 deadline: block.timestamp + 120
             });
         (, uint256 amount0, uint256 amount1) = INonfungiblePositionManager(
-            Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()
+            IUniswapAddressHolder(Storage.uniswapAddressHolder).nonfungiblePositionManagerAddress()
         ).increaseLiquidity(params);
         if (amount0 < amount0Desired) token0.transfer(Storage.owner, amount0Desired - amount0);
         if (amount1 < amount1Desired) token1.transfer(Storage.owner, amount1Desired - amount1);

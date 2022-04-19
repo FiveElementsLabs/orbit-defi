@@ -6,6 +6,7 @@ pragma abicoder v2;
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '../../interfaces/IPositionManager.sol';
+import '../../interfaces/IUniswapAddressHolder.sol';
 import '../utils/Storage.sol';
 import '../helpers/NFTHelper.sol';
 import '../helpers/ERC20Helper.sol';
@@ -21,7 +22,7 @@ contract ZapOut is IZapOut {
     function zapOut(uint256 tokenId, address tokenOut) public override {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         INonfungiblePositionManager nonfungiblePositionManager = INonfungiblePositionManager(
-            Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()
+            IUniswapAddressHolder(Storage.uniswapAddressHolder).nonfungiblePositionManagerAddress()
         );
 
         (address token0, address token1) = NFTHelper._getTokenAddress(tokenId, nonfungiblePositionManager);
@@ -74,9 +75,13 @@ contract ZapOut is IZapOut {
     ) internal returns (uint256 amountOut) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
-        ERC20Helper._approveToken(tokenIn, Storage.uniswapAddressHolder.swapRouterAddress(), amountIn);
+        ERC20Helper._approveToken(
+            tokenIn,
+            IUniswapAddressHolder(Storage.uniswapAddressHolder).swapRouterAddress(),
+            amountIn
+        );
 
-        ISwapRouter swapRouter = ISwapRouter(Storage.uniswapAddressHolder.swapRouterAddress());
+        ISwapRouter swapRouter = ISwapRouter(IUniswapAddressHolder(Storage.uniswapAddressHolder).swapRouterAddress());
         amountOut = swapRouter.exactInputSingle(
             ISwapRouter.ExactInputSingleParams({
                 tokenIn: tokenIn,
@@ -128,7 +133,12 @@ contract ZapOut is IZapOut {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         return
             IUniswapV3Pool(
-                NFTHelper._getPoolAddress(Storage.uniswapAddressHolder.uniswapV3FactoryAddress(), token0, token1, fee)
+                NFTHelper._getPoolAddress(
+                    IUniswapAddressHolder(Storage.uniswapAddressHolder).uniswapV3FactoryAddress(),
+                    token0,
+                    token1,
+                    fee
+                )
             ).liquidity();
     }
 }

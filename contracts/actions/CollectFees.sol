@@ -28,7 +28,7 @@ contract CollectFees {
         updateUncollectedFees(tokenId);
 
         INonfungiblePositionManager nonfungiblePositionManager = INonfungiblePositionManager(
-            Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()
+            IUniswapAddressHolder(Storage.uniswapAddressHolder).nonfungiblePositionManagerAddress()
         );
         (, , , , , , , , , , uint128 feesToken0, uint128 feesToken1) = nonfungiblePositionManager.positions(tokenId);
 
@@ -55,8 +55,8 @@ contract CollectFees {
                 amount1Min: 0,
                 deadline: block.timestamp + 120
             });
-        INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).decreaseLiquidity(
-                params
-            );
+        INonfungiblePositionManager(
+            IUniswapAddressHolder(Storage.uniswapAddressHolder).nonfungiblePositionManagerAddress()
+        ).decreaseLiquidity(params);
     }
 }

@@ -60,7 +60,7 @@ contract SwapToPositionRatio {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
         address poolAddress = NFTHelper._getPoolAddress(
-            Storage.uniswapAddressHolder.uniswapV3FactoryAddress(),
+            IUniswapAddressHolder(Storage.uniswapAddressHolder).uniswapV3FactoryAddress(),
             inputs.token0Address,
             inputs.token1Address,
             inputs.fee
@@ -107,7 +107,7 @@ contract SwapToPositionRatio {
         uint256 amount0In
     ) internal returns (uint256 amount1Out) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
-        ISwapRouter swapRouter = ISwapRouter(Storage.uniswapAddressHolder.swapRouterAddress());
+        ISwapRouter swapRouter = ISwapRouter(IUniswapAddressHolder(Storage.uniswapAddressHolder).swapRouterAddress());
 
         ERC20Helper._approveToken(token0Address, address(swapRouter), 2**256 - 1);
         ERC20Helper._approveToken(token1Address, address(swapRouter), 2**256 - 1);
