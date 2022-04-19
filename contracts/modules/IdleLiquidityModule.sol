@@ -88,7 +88,7 @@ contract IdleLiquidityModule {
         ) = INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).positions(tokenId);
 
         IUniswapV3Pool pool = IUniswapV3Pool(
-            NFTHelper._getPoolAddress(uniswapAddressHolder.uniswapV3FactoryAddress(), token0, token1, fee)
+            NFTHelper._getPool(uniswapAddressHolder.uniswapV3FactoryAddress(), token0, token1, fee)
         );
         (, int24 tick, , , , , ) = pool.slot0();
 

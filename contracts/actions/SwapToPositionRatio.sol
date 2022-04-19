@@ -59,7 +59,7 @@ contract SwapToPositionRatio {
     {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
-        address poolAddress = NFTHelper._getPoolAddress(
+        address poolAddress = NFTHelper._getPool(
             Storage.uniswapAddressHolder.uniswapV3FactoryAddress(),
             inputs.token0Address,
             inputs.token1Address,

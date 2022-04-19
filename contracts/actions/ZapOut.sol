@@ -24,7 +24,7 @@ contract ZapOut is IZapOut {
             Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()
         );
 
-        (address token0, address token1) = NFTHelper._getTokenAddress(tokenId, nonfungiblePositionManager);
+        (address token0, address token1) = NFTHelper._getTokens(tokenId, nonfungiblePositionManager);
 
         (, , , , , , , uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(tokenId);
 
@@ -128,7 +128,7 @@ contract ZapOut is IZapOut {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         return
             IUniswapV3Pool(
-                NFTHelper._getPoolAddress(Storage.uniswapAddressHolder.uniswapV3FactoryAddress(), token0, token1, fee)
+                NFTHelper._getPool(Storage.uniswapAddressHolder.uniswapV3FactoryAddress(), token0, token1, fee)
             ).liquidity();
     }
 }

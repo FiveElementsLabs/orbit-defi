@@ -33,7 +33,7 @@ contract IncreaseLiquidity {
 
         require(amount0Desired > 0 || amount1Desired > 0, 'send some tokens to increase liquidity');
 
-        (address token0Address, address token1Address) = NFTHelper._getTokenAddress(
+        (address token0Address, address token1Address) = NFTHelper._getTokens(
             tokenId,
             INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress())
         );
