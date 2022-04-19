@@ -273,13 +273,10 @@ describe('AaveModule.sol', function () {
     const before = await LendingPool.getUserAccountData(user.address);
 
     const balanceBefore = await ethMock.balanceOf(user.address);
+
     ethMock.connect(user).transfer(AaveModule.address, '100000');
     await ethMock.approve(AaveModule.address, ethers.utils.parseEther('1000000000000000'));
-    const resp = await AaveModule.depositToAave(ethMock.address);
-
-    const after = await LendingPool.getUserAccountData(user.address);
-
-    const balanceAfter = await ethMock.balanceOf(user.address);
+    await AaveModule.depositToAave(ethMock.address);
 
     await AaveModule.withdrawToAave(ethMock.address);
   });
