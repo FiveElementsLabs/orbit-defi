@@ -4,7 +4,6 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
-import '../../interfaces/IUniswapAddressHolder.sol';
 import '../utils/Storage.sol';
 
 interface ICollectFees {
@@ -25,7 +24,7 @@ contract CollectFees {
     function collectFees(uint256 tokenId) public returns (uint256 amount0, uint256 amount1) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
-        updateUncollectedFees(tokenId);
+        _updateUncollectedFees(tokenId);
 
         INonfungiblePositionManager nonfungiblePositionManager = INonfungiblePositionManager(
             Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()
@@ -45,7 +44,7 @@ contract CollectFees {
 
     ///@notice update the uncollected fees of a uniswapV3 position
     ///@param tokenId ID of the token to check fees from
-    function updateUncollectedFees(uint256 tokenId) internal {
+    function _updateUncollectedFees(uint256 tokenId) internal {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         INonfungiblePositionManager.DecreaseLiquidityParams memory params = INonfungiblePositionManager
             .DecreaseLiquidityParams({
