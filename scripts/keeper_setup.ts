@@ -143,25 +143,25 @@ export const keeperSetup = async () => {
   const swapToPositionRatioActionFactory = await ethers.getContractFactory('SwapToPositionRatio');
   SwapToPositionRatioAction = (await swapToPositionRatioActionFactory.deploy()) as SwapToPositionRatio;
   await SwapToPositionRatioAction.deployed();
-
+  
   //Deploy IdleLiquidityModule
   const idleLiquidityModuleFactory = await ethers.getContractFactory('IdleLiquidityModule');
   IdleLiquidityModule = (await idleLiquidityModuleFactory.deploy(UniswapAddressHolder.address)) as Contract;
   await IdleLiquidityModule.deployed();
-
+  
   //deploy actions needed for Autocompound
   const collectFeesActionFactory = await ethers.getContractFactory('CollectFees');
   collectFeesAction = await collectFeesActionFactory.deploy();
   await collectFeesAction.deployed();
-
+  
   const increaseLiquidityActionFactory = await ethers.getContractFactory('IncreaseLiquidity');
   increaseLiquidityAction = await increaseLiquidityActionFactory.deploy();
   await increaseLiquidityAction.deployed();
-
+  
   const decreaseLiquidityActionFactory = await ethers.getContractFactory('DecreaseLiquidity');
   decreaseLiquidityAction = await decreaseLiquidityActionFactory.deploy();
   await decreaseLiquidityAction.deployed();
-
+  
   const updateFeesActionFactory = await ethers.getContractFactory('UpdateUncollectedFees');
   updateFeesAction = await updateFeesActionFactory.deploy();
   await updateFeesAction.deployed();
@@ -170,7 +170,6 @@ export const keeperSetup = async () => {
   const AutocompoundFactory = await ethers.getContractFactory('AutoCompoundModule');
   AutoCompound = await AutocompoundFactory.deploy(
     UniswapAddressHolder.address,
-    100,
   );
   await AutoCompound.deployed();
 
