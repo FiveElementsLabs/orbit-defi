@@ -102,22 +102,24 @@ export async function getSelectors(contract: any) {
 export async function findbalanceSlot(MockToken: any, user: any) {
   const encode = (types: any, values: any) => ethers.utils.defaultAbiCoder.encode(types, values);
   const account = user.address;
-  const probeA = encode(['uint'], [10]);
-  const probeB = encode(['uint'], [2]);
   for (let i = 0; i < 100; i++) {
-    let probedSlot = ethers.utils.keccak256(encode(['address', 'uint'], [account, i]));
+    let balanceSlot = ethers.utils.keccak256(encode(['address', 'uint'], [account, i]));
     // remove padding for JSON RPC
-    while (probedSlot.startsWith('0x0')) probedSlot = '0x' + probedSlot.slice(3);
-    const prev = await hre.network.provider.send('eth_getStorageAt', [MockToken.address, probedSlot, 'latest']);
+    while (balanceSlot.startsWith('0x0')) balanceSlot = '0x' + balanceSlot.slice(3);
+    const previusValue = await hre.network.provider.send('eth_getStorageAt', [
+      MockToken.address,
+      balanceSlot,
+      'latest',
+    ]);
     // make sure the probe will change the slot value
-    const probe = prev === probeA ? probeB : probeA;
+    const balanceToTest = previusValue === encode(['uint'], [10]) ? encode(['uint'], [2]) : encode(['uint'], [10]);
 
-    await hre.network.provider.send('hardhat_setStorageAt', [MockToken.address, probedSlot, probe]);
+    await hre.network.provider.send('hardhat_setStorageAt', [MockToken.address, balanceSlot, balanceToTest]);
 
     const balance = await MockToken.balanceOf(account);
     // reset to previous value
-    if (!balance.eq(ethers.BigNumber.from(probe)))
-      await hre.network.provider.send('hardhat_setStorageAt', [MockToken.address, probedSlot, prev]);
-    if (balance.eq(ethers.BigNumber.from(probe))) return i;
+    if (!balance.eq(ethers.BigNumber.from(balanceToTest)))
+      await hre.network.provider.send('hardhat_setStorageAt', [MockToken.address, balanceSlot, previusValue]);
+    if (balance.eq(ethers.BigNumber.from(balanceToTest))) return i;
   }
 }
