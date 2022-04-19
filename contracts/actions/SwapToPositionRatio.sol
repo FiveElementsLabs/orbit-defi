@@ -6,7 +6,7 @@ pragma abicoder v2;
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import '../helpers/SwapHelper.sol';
-import '../helpers/NFTHelper.sol';
+import '../helpers/UniswapNFTHelper.sol';
 import '../helpers/ERC20Helper.sol';
 import '../utils/Storage.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
@@ -59,7 +59,7 @@ contract SwapToPositionRatio {
     {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
-        address poolAddress = NFTHelper._getPoolAddress(
+        address poolAddress = UniswapNFTHelper._getPool(
             Storage.uniswapAddressHolder.uniswapV3FactoryAddress(),
             inputs.token0Address,
             inputs.token1Address,

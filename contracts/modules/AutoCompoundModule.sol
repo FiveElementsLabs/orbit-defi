@@ -5,7 +5,7 @@ pragma abicoder v2;
 
 import '../../interfaces/IPositionManager.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
-import '../helpers/NFTHelper.sol';
+import '../helpers/UniswapNFTHelper.sol';
 import '../utils/Storage.sol';
 import '../actions/CollectFees.sol';
 import '../actions/IncreaseLiquidity.sol';
@@ -55,7 +55,7 @@ contract AutoCompoundModule {
         (uint256 uncollectedFees0, uint256 uncollectedFees1) = IUpdateUncollectedFees(positionManagerAddress)
             .updateUncollectedFees(tokenId);
 
-        (uint256 amount0, uint256 amount1) = NFTHelper._getAmountsfromTokenId(
+        (uint256 amount0, uint256 amount1) = UniswapNFTHelper._getAmountsfromTokenId(
             tokenId,
             INonfungiblePositionManager(addressHolder.nonfungiblePositionManagerAddress()),
             addressHolder.uniswapV3FactoryAddress()

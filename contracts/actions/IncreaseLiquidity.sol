@@ -5,7 +5,7 @@ pragma abicoder v2;
 
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '../helpers/ERC20Helper.sol';
-import '../helpers/NFTHelper.sol';
+import '../helpers/UniswapNFTHelper.sol';
 import '../utils/Storage.sol';
 
 interface IIncreaseLiquidity {
@@ -34,7 +34,7 @@ contract IncreaseLiquidity {
             'IncreaseLiquidity::increaseLiquidity: Amounts cannot be both zero'
         );
 
-        (address token0Address, address token1Address) = NFTHelper._getTokenAddress(
+        (address token0Address, address token1Address) = UniswapNFTHelper._getTokens(
             tokenId,
             INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress())
         );

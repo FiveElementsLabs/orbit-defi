@@ -10,14 +10,14 @@ import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 
 ///@title library to interact with NFT token and do some useful function with it
-library NFTHelper {
+library UniswapNFTHelper {
     ///@notice get the pool address
     ///@param factory address of the UniswapV3Factory
     ///@param token0 address of the token0
     ///@param token1 address of the token1
     ///@param fee fee tier of the pool
     ///@return address address of the pool
-    function _getPoolAddress(
+    function _getPool(
         address factory,
         address token0,
         address token1,
@@ -38,7 +38,7 @@ library NFTHelper {
     ) internal view returns (address) {
         (, , address token0, address token1, uint24 fee, , , , , , , ) = nonfungiblePositionManager.positions(tokenId);
 
-        return _getPoolAddress(factory, token0, token1, fee);
+        return _getPool(factory, token0, token1, fee);
     }
 
     ///@notice get the address of the tpkens from the tokenId
@@ -46,7 +46,7 @@ library NFTHelper {
     ///@param nonfungiblePositionManager instance of the nonfungiblePositionManager given by the caller (address)
     ///@return token0address address of the token0
     ///@return token1address address of the token1
-    function _getTokenAddress(uint256 tokenId, INonfungiblePositionManager nonfungiblePositionManager)
+    function _getTokens(uint256 tokenId, INonfungiblePositionManager nonfungiblePositionManager)
         internal
         view
         returns (address token0address, address token1address)
@@ -69,7 +69,7 @@ library NFTHelper {
             tokenId
         );
         return
-            _getAmountFromLiquidity(
+            _getAmountsFromLiquidity(
                 liquidity,
                 tickLower,
                 tickUpper,
@@ -84,7 +84,7 @@ library NFTHelper {
     ///@param poolAddress address of the pool
     ///@return uint256 amount of token0
     ///@return uint256 amount of token1
-    function _getAmountFromLiquidity(
+    function _getAmountsFromLiquidity(
         uint128 liquidity,
         int24 tickLower,
         int24 tickUpper,
@@ -109,7 +109,7 @@ library NFTHelper {
     ///@param tickUpper upper tick range
     ///@param poolAddress The address of the pool
     ///@return uint128 The amount of liquidity received
-    function _getLiquidityFromAmount(
+    function _getLiquidityFromAmounts(
         uint256 token0,
         uint256 token1,
         int24 tickLower,

@@ -10,7 +10,7 @@ import '../../interfaces/IUniswapAddressHolder.sol';
 import '../actions/ClosePosition.sol';
 import '../actions/SwapToPositionRatio.sol';
 import '../actions/Mint.sol';
-import '../helpers/NFTHelper.sol';
+import '../helpers/UniswapNFTHelper.sol';
 
 ///@title Idle Liquidity Module to manage liquidity for a user position
 contract IdleLiquidityModule {
@@ -88,7 +88,7 @@ contract IdleLiquidityModule {
         ) = INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).positions(tokenId);
 
         IUniswapV3Pool pool = IUniswapV3Pool(
-            NFTHelper._getPoolAddress(uniswapAddressHolder.uniswapV3FactoryAddress(), token0, token1, fee)
+            UniswapNFTHelper._getPool(uniswapAddressHolder.uniswapV3FactoryAddress(), token0, token1, fee)
         );
         (, int24 tick, , , , , ) = pool.slot0();
 
@@ -111,7 +111,7 @@ contract IdleLiquidityModule {
         int24 tickDelta = tickUpper - tickLower;
 
         IUniswapV3Pool pool = IUniswapV3Pool(
-            NFTHelper._getPoolFromTokenId(
+            UniswapNFTHelper._getPoolFromTokenId(
                 tokenId,
                 INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()),
                 uniswapAddressHolder.uniswapV3FactoryAddress()

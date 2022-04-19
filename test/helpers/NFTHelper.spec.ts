@@ -13,7 +13,7 @@ const FixturesConst = require('../shared/fixtures');
 import { MockToken, IUniswapV3Pool, INonfungiblePositionManager } from '../../typechain';
 import { tokensFixture, mintSTDAmount, poolFixture } from '../shared/fixtures';
 
-describe('TestNFTHelper', () => {
+describe('TestUniswapNFTHelper', () => {
   //GLOBAL VARIABLE - USE THIS
   let signer0: any = ethers.getSigners().then(async (signers) => {
     return signers[0];
@@ -32,8 +32,8 @@ describe('TestNFTHelper', () => {
   //NFT ID
   let tokenId: any;
 
-  //Mock contract NFTHelper
-  let TestNFTHelper: Contract;
+  //Mock contract UniswapNFTHelper
+  let TestUniswapNFTHelper: Contract;
 
   //all the pools used globally
   let Pool0: IUniswapV3Pool;
@@ -123,16 +123,16 @@ describe('TestNFTHelper', () => {
     tokenId = receipt.events[receipt.events.length - 1].args.tokenId;
 
     //deploy the contract
-    const TestNFTHelperFactory = await ethers.getContractFactory('MockNFTHelper');
-    TestNFTHelper = await TestNFTHelperFactory.deploy();
-    await TestNFTHelper.deployed();
+    const TestUniswapNFTHelperFactory = await ethers.getContractFactory('MockUniswapNFTHelper');
+    TestUniswapNFTHelper = await TestUniswapNFTHelperFactory.deploy();
+    await TestUniswapNFTHelper.deployed();
   });
 
   beforeEach(async function () {});
 
-  describe('TestNFTHelper - getPoolAddress', function () {
+  describe('TestUniswapNFTHelper - getPool', function () {
     it('Get pool address', async function () {
-      const pooladdress = await TestNFTHelper.getPoolAddress(
+      const pooladdress = await TestUniswapNFTHelper.getPool(
         Factory.address,
         tokenEth.address,
         tokenUsdc.address,
@@ -141,7 +141,7 @@ describe('TestNFTHelper', () => {
       expect(pooladdress).to.equal(Pool0.address);
     });
     it('Get wrong pool address', async function () {
-      const pooladdress = await TestNFTHelper.getPoolAddress(
+      const pooladdress = await TestUniswapNFTHelper.getPool(
         Factory.address,
         '0x0000000000000000000000000000000000000001',
         tokenUsdc.address,
@@ -151,9 +151,9 @@ describe('TestNFTHelper', () => {
     });
   });
 
-  describe('TestNFTHelper - getPoolFromTokenId', function () {
+  describe('TestUniswapNFTHelper - getPoolFromTokenId', function () {
     it('Get pool from token id', async function () {
-      const pooladdress = await TestNFTHelper.getPoolFromTokenId(
+      const pooladdress = await TestUniswapNFTHelper.getPoolFromTokenId(
         tokenId, //tokenId
         NonFungiblePositionManager.address, //nonFungiblepositionamanager
         Factory.address //factory
@@ -162,7 +162,7 @@ describe('TestNFTHelper', () => {
     });
     it('Failed to get pool from fake token id', async function () {
       expect(
-        TestNFTHelper.getPoolFromTokenId(
+        TestUniswapNFTHelper.getPoolFromTokenId(
           '2', //tokenId
           NonFungiblePositionManager.address, //nonFungiblepositionamanager
           Factory.address //factory
@@ -171,9 +171,9 @@ describe('TestNFTHelper', () => {
     });
   });
 
-  describe('TestNFTHelper - getTokenAddress', function () {
+  describe('TestUniswapNFTHelper - getTokens', function () {
     it('Get token address from tokenId', async function () {
-      const tokenaddress = await TestNFTHelper.getTokenAddress(
+      const tokenaddress = await TestUniswapNFTHelper.getTokens(
         tokenId, //tokenId
         NonFungiblePositionManager.address //nonFungiblepositionamanager
       );
@@ -182,7 +182,7 @@ describe('TestNFTHelper', () => {
     });
     it('Failed to get token address', async function () {
       expect(
-        TestNFTHelper.getTokenAddress(
+        TestUniswapNFTHelper.getTokens(
           '2', //tokenId
           NonFungiblePositionManager.address //nonFungiblepositionamanager
         )
@@ -190,20 +190,26 @@ describe('TestNFTHelper', () => {
     });
   });
 
-  describe('TestNFTHelper - getAmountFromLiquidity', function () {
+  describe('TestUniswapNFTHelper - getAmountsFromLiquidity', function () {
     it('Get liquidity for amounts', async function () {
       const liquidityBefore = '167175499835819766';
-      const liquidity = await TestNFTHelper.getAmountFromLiquidity(liquidityBefore, -120, 120, Pool0.address);
+      const liquidity = await TestUniswapNFTHelper.getAmountsFromLiquidity(liquidityBefore, -120, 120, Pool0.address);
       expect(liquidity[0].toString()).to.equal('999999999999999');
       expect(liquidity[1].toString()).to.equal('999999999999999');
     });
   });
 
-  describe('TestNFTHelper - getLiquidityFromAmount', function () {
+  describe('TestUniswapNFTHelper - getLiquidityFromAmounts', function () {
     it('Get amounts for liquidity', async function () {
       const token0Dep = '1000000000000000';
       const token1Dep = '1000000000000000';
-      const liquidity = await TestNFTHelper.getLiquidityFromAmount(token0Dep, token1Dep, -120, 120, Pool0.address);
+      const liquidity = await TestUniswapNFTHelper.getLiquidityFromAmounts(
+        token0Dep,
+        token1Dep,
+        -120,
+        120,
+        Pool0.address
+      );
       expect(liquidity.toString()).to.equal('167175499835819766');
     });
   });
