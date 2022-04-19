@@ -26,7 +26,7 @@ contract UpdateUncollectedFees {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
         INonfungiblePositionManager nonfungiblePositionManager = INonfungiblePositionManager(
-            IUniswapAddressHolder(Storage.uniswapAddressHolder).nonfungiblePositionManagerAddress()
+            Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()
         );
 
         nonfungiblePositionManager.decreaseLiquidity(

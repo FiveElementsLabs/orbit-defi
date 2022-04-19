@@ -59,8 +59,8 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ) public {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         Storage.owner = _owner;
-        Storage.uniswapAddressHolder = _uniswapAddressHolder;
-        Storage.registry = _registry;
+        Storage.uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
+        Storage.registry = IRegistry(_registry);
     }
 
     ///@notice withdraw uniswap position NFT from the position manager
@@ -76,9 +76,12 @@ contract PositionManager is IPositionManager, ERC721Holder {
             }
         }
         require(index < uniswapNFTs.length, 'PositionManager::withdrawUniNFT: token ID not found!');
-        INonfungiblePositionManager(
-            IUniswapAddressHolder(Storage.uniswapAddressHolder).nonfungiblePositionManagerAddress()
-        ).safeTransferFrom(address(this), msg.sender, tokenId, '0x0');
+        INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).safeTransferFrom(
+            address(this),
+            msg.sender,
+            tokenId,
+            '0x0'
+        );
         emit WithdrawUni(msg.sender, tokenId);
     }
 
@@ -88,9 +91,9 @@ contract PositionManager is IPositionManager, ERC721Holder {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         ///@dev if ownerOf reverts, tokenId is non existent or it has been burned
         try
-            INonfungiblePositionManager(
-                IUniswapAddressHolder(Storage.uniswapAddressHolder).nonfungiblePositionManagerAddress()
-            ).ownerOf(tokenId)
+            INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(
+                tokenId
+            )
         returns (address owner) {
             require(
                 owner != address(this),
@@ -117,9 +120,9 @@ contract PositionManager is IPositionManager, ERC721Holder {
     function pushPositionId(uint256 tokenId) public override {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         require(
-            INonfungiblePositionManager(
-                IUniswapAddressHolder(Storage.uniswapAddressHolder).nonfungiblePositionManagerAddress()
-            ).ownerOf(tokenId) == address(this),
+            INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(
+                tokenId
+            ) == address(this),
             'PositionManager::pushPositionId: tokenId is not owned by this contract'
         );
         uniswapNFTs.push(tokenId);
@@ -179,12 +182,9 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@return isCalledFromActiveModule boolean
     function _calledFromActiveModule(address _address) internal view returns (bool isCalledFromActiveModule) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
-        bytes32[] memory keys = IRegistry(Storage.registry).getModuleKeys();
+        bytes32[] memory keys = Storage.registry.getModuleKeys();
         for (uint256 i = 0; i < keys.length; i++) {
-            if (
-                IRegistry(Storage.registry).moduleAddress(keys[i]) == _address &&
-                IRegistry(Storage.registry).isActive(keys[i]) == true
-            ) {
+            if (Storage.registry.moduleAddress(keys[i]) == _address && Storage.registry.isActive(keys[i]) == true) {
                 isCalledFromActiveModule = true;
                 i = keys.length;
             }

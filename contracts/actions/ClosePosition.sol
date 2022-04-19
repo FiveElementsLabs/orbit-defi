@@ -41,7 +41,7 @@ contract ClosePosition {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
         INonfungiblePositionManager nonfungiblePositionManager = INonfungiblePositionManager(
-            IUniswapAddressHolder(Storage.uniswapAddressHolder).nonfungiblePositionManagerAddress()
+            Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()
         );
         (, , , , , , , uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(tokenId);
 

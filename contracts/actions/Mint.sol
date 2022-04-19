@@ -62,12 +62,12 @@ contract Mint {
 
         ERC20Helper._approveToken(
             inputs.token0Address,
-            IUniswapAddressHolder(Storage.uniswapAddressHolder).nonfungiblePositionManagerAddress(),
+            Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress(),
             inputs.amount0Desired
         );
         ERC20Helper._approveToken(
             inputs.token1Address,
-            IUniswapAddressHolder(Storage.uniswapAddressHolder).nonfungiblePositionManagerAddress(),
+            Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress(),
             inputs.amount1Desired
         );
 
@@ -86,7 +86,7 @@ contract Mint {
         });
 
         (tokenId, , amount0Deposited, amount1Deposited) = INonfungiblePositionManager(
-            IUniswapAddressHolder(Storage.uniswapAddressHolder).nonfungiblePositionManagerAddress()
+            Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()
         ).mint(params);
 
         IPositionManager(address(this)).pushPositionId(tokenId);
