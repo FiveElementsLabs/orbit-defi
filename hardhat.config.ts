@@ -3,10 +3,12 @@ import '@nomiclabs/hardhat-waffle';
 import '@typechain/hardhat';
 import '@nomiclabs/hardhat-ethers';
 import 'solidity-coverage';
+import 'dotenv/config';
 
 /**
  * @type import('hardhat/config').HardhatUserConfig
  */
+
 export default {
   gasReporter: {
     enabled: false,
@@ -15,6 +17,18 @@ export default {
   },
   solidity: {
     compilers: [
+      {
+        version: '0.6.12',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+            details: {
+              yul: true,
+            },
+          },
+        },
+      },
       {
         version: '0.7.6',
         settings: {
@@ -48,6 +62,16 @@ export default {
     },
   },
   networks: {
+    hardhat: {
+      forking: {
+        enabled: true,
+        url: process.env.INFURA_MAINNET,
+        chainId: 31337,
+      },
+      mining: {
+        auto: true,
+      },
+    },
     localhost: {
       port: 8545,
       chainId: 31337,
@@ -56,5 +80,8 @@ export default {
       allowUnlimitedContractSize: true,
       timeout: 1800000,
     },
+  },
+  mocha: {
+    timeout: 100000,
   },
 };
