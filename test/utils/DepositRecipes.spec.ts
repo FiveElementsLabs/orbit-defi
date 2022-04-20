@@ -263,7 +263,8 @@ describe('DepositRecipes.sol', function () {
       user.address,
       DiamondCutFacet.address,
       UniswapAddressHolder.address,
-      registry.address
+      registry.address,
+      '0x0000000000000000000000000000000000000000'
     );
 
     let contractsDeployed = await PositionManagerFactory.positionManagers(0);

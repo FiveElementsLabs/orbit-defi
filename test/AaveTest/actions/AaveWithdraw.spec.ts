@@ -71,6 +71,11 @@ describe('AaveWithdraw.sol', function () {
     );
     await uniswapAddressHolder.deployed();
 
+    //deploy aaveAddressHolder
+    const aaveAddressHolderFactory = await ethers.getContractFactory('AaveAddressHolder');
+    const aaveAddressHolder = await aaveAddressHolderFactory.deploy(LendingPool.address);
+    await aaveAddressHolder.deployed();
+
     // deploy DiamondCutFacet ----------------------------------------------------------------------
     const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet');
     const diamondCutFacet = await DiamondCutFacet.deploy();
@@ -90,7 +95,8 @@ describe('AaveWithdraw.sol', function () {
       user.address,
       diamondCutFacet.address,
       uniswapAddressHolder.address,
-      registry.address
+      registry.address,
+      aaveAddressHolder.address
     );
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
