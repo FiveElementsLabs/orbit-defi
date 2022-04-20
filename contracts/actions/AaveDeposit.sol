@@ -5,8 +5,6 @@ pragma solidity 0.7.6;
 import '../../interfaces/ILendingPool.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
-import 'hardhat/console.sol';
-
 interface IAaveDeposit {
     ///@notice deposit to aave some token amount
     ///@param token token address

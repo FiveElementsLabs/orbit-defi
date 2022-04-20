@@ -5,12 +5,12 @@ import { AbiCoder } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 const hre = require('hardhat');
 const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json');
-const PositionManagerjson = require('../../artifacts/contracts/PositionManager.sol/PositionManager.json');
+const PositionManagerjson = require('../../../artifacts/contracts/PositionManager.sol/PositionManager.json');
 const LendingPooljson = require('@aave/protocol-v2/artifacts/contracts/protocol/lendingpool/LendingPool.sol/LendingPool.json');
 
-const FixturesConst = require('../shared/fixtures');
-import { tokensFixture, poolFixture, mintSTDAmount, getSelectors, findbalanceSlot } from '../shared/fixtures';
-import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager } from '../../typechain';
+const FixturesConst = require('../../shared/fixtures');
+import { tokensFixture, poolFixture, mintSTDAmount, getSelectors, findbalanceSlot } from '../../shared/fixtures';
+import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager } from '../../../typechain';
 
 describe('AaveDeposit.sol', function () {
   //GLOBAL VARIABLE - USE THIS
@@ -144,7 +144,6 @@ describe('AaveDeposit.sol', function () {
       const balanceBefore = await usdcMock.balanceOf(PositionManager.address);
 
       await AaveDepositFallback.depositToAave(usdcMock.address, '10000', LendingPool.address);
-      console.log(await LendingPool.getReserveData(tokenEth.address));
       const balanceAfter = await usdcMock.balanceOf(PositionManager.address);
       const pmData = await LendingPool.getUserAccountData(PositionManager.address);
       expect(pmData.totalCollateralETH).to.gt(0);

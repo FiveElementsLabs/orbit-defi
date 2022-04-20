@@ -17,7 +17,6 @@ import '../helpers/UniswapNFTHelper.sol';
 import '../actions/AaveDeposit.sol';
 import '../actions/DecreaseLiquidity.sol';
 import '../actions/CollectFees.sol';
-import 'hardhat/console.sol';
 
 contract AaveModule {
     IAaveAddressHolder public aaveAddressHolder;
