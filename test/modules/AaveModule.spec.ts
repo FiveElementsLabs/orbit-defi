@@ -69,16 +69,24 @@ describe('AaveDeposit.sol', function () {
       '0xC36442b4a4522E871399CD717aBDD847Ab11FE88'
     )) as INonfungiblePositionManager;
 
+    //LendingPool contract
+    LendingPool = await ethers.getContractAtFromArtifact(LendingPooljson, '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9');
+
     //deploy uniswapAddressHolder
     const uniswapAddressHolderFactory = await ethers.getContractFactory('UniswapAddressHolder');
     const uniswapAddressHolder = await uniswapAddressHolderFactory.deploy(
-      NonFungiblePositionManager.address, //random address because we don't need it
-      Factory.address, //random address because we don't need it
+      NonFungiblePositionManager.address,
+      '0x1F98431c8aD98523631AE4a59f267346ea31F984',
       Factory.address //random address because we don't need it
     );
     await uniswapAddressHolder.deployed();
 
-    // deploy DiamondCutFacet ----------------------------------------------------------------------
+    //deploy aaveAddressHolder
+    const aaveAddressHolderFactory = await ethers.getContractFactory('AaveAddressHolder');
+    const aaveAddressHolder = await aaveAddressHolderFactory.deploy(LendingPool.address);
+    await aaveAddressHolder.deployed();
+
+    // deploy DiamondCutFacet
     const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet');
     const diamondCutFacet = await DiamondCutFacet.deploy();
     await diamondCutFacet.deployed();
@@ -108,61 +116,68 @@ describe('AaveDeposit.sol', function () {
     const AaveDepositAction = (await AaveDepositActionFactory.deploy()) as Contract;
     await AaveDepositAction.deployed();
 
-    //LendingPool contract
-    LendingPool = await ethers.getContractAtFromArtifact(LendingPooljson, '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9');
+    //Deploy Actions
+    const decreaseLiquidityActionFactory = await ethers.getContractFactory('DecreaseLiquidity');
+    const decreaseLiquidityAction = (await decreaseLiquidityActionFactory.deploy()) as Contract;
+    await decreaseLiquidityAction.deployed();
+
+    const collectFeesActionFactory = await ethers.getContractFactory('CollectFees');
+    const collectFeesAction = (await collectFeesActionFactory.deploy()) as Contract;
+    await collectFeesAction.deployed();
 
     const AaveModuleFactory = await ethers.getContractFactory('AaveModule');
-    AaveModule = await AaveModuleFactory.deploy(LendingPool.address, uniswapAddressHolder.address);
+    AaveModule = await AaveModuleFactory.deploy(aaveAddressHolder.address, uniswapAddressHolder.address);
     await AaveModule.deployed();
-
-    console.log('Aave module', AaveModule);
 
     //Get mock token
     usdcMock = await ethers.getContractAt('MockToken', '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48');
     wbtcMock = await ethers.getContractAt('MockToken', '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599');
 
     //mint some wbtc
-
     let slot = await findbalanceSlot(wbtcMock, user);
-
     let encode = (types: any, values: any) => ethers.utils.defaultAbiCoder.encode(types, values);
-
     let probedSlot = ethers.utils.keccak256(encode(['address', 'uint'], [user.address, slot]));
     let value = encode(['uint'], [ethers.utils.parseEther('100000000')]);
-
     await hre.network.provider.send('hardhat_setStorageAt', [wbtcMock.address, probedSlot, value]);
 
     //mint some usdc
     slot = await findbalanceSlot(usdcMock, user);
-
     encode = (types: any, values: any) => ethers.utils.defaultAbiCoder.encode(types, values);
-
     probedSlot = ethers.utils.keccak256(encode(['address', 'uint'], [user.address, slot]));
     value = encode(['uint'], [ethers.utils.parseEther('100000000')]);
-
     await hre.network.provider.send('hardhat_setStorageAt', [usdcMock.address, probedSlot, value]);
 
-    console.log('balance usdc', await usdcMock.balanceOf(user.address));
-    console.log('balance wbtc', await wbtcMock.balanceOf(user.address));
-    //approve nfpm
+    //approve NFPM
     await usdcMock.connect(user).approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000'));
     await wbtcMock.connect(user).approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000'));
-    console.log('pre registry');
-    //approval user to registry for test
+
+    //approve user to registry (for testing)
+    await registry.addNewContract(
+      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('AaveModule')),
+      AaveModule.address
+    );
     await registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
 
-    // add actions to position manager using diamond pattern
+    //add actions to the position manager using the diamond pattern
     const cut = [];
     const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 };
-
     cut.push({
       facetAddress: AaveDepositAction.address,
       action: FacetCutAction.Add,
       functionSelectors: await getSelectors(AaveDepositAction),
     });
-
+    cut.push({
+      facetAddress: decreaseLiquidityAction.address,
+      action: FacetCutAction.Add,
+      functionSelectors: await getSelectors(decreaseLiquidityAction),
+    });
+    cut.push({
+      facetAddress: collectFeesAction.address,
+      action: FacetCutAction.Add,
+      functionSelectors: await getSelectors(collectFeesAction),
+    });
     const diamondCut = await ethers.getContractAt('IDiamondCut', PositionManager.address);
-    const tx = await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
+    await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
     AaveDepositFallback = (await ethers.getContractAt('IAaveDeposit', PositionManager.address)) as Contract;
 
     //mint a position
@@ -185,14 +200,25 @@ describe('AaveDeposit.sol', function () {
 
     const receipt: any = await mintTx.wait();
     tokenId = receipt.events[receipt.events.length - 1].args.tokenId;
-    console.log('Minted: tokenId: ', tokenId?.toNumber());
+
+    // user approve AaveModule
+    await PositionManager.toggleModule(tokenId, AaveModule.address, true);
 
     await PositionManager.pushPositionId(tokenId);
   });
 
   describe('AaveModule - depositToAave', function () {
     it('should deposit token in position out of range', async function () {
-      AaveModule.depositToAave(PositionManager.address, tokenId, 1);
+      const beforePosition = await NonFungiblePositionManager.positions(tokenId);
+
+      await AaveModule.depositToAave(PositionManager.address, tokenId, 1);
+
+      const pmData = await LendingPool.getUserAccountData(PositionManager.address);
+      expect(pmData.totalCollateralETH).to.gt(0);
+
+      const afterPosition = await NonFungiblePositionManager.positions(tokenId);
+
+      expect(beforePosition.liquidity).to.gt(afterPosition.liquidity);
     });
   });
 });

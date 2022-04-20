@@ -3,7 +3,6 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
@@ -13,59 +12,77 @@ import '../../interfaces/ILendingPool.sol';
 import '../../interfaces/IAaveAddressHolder.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
 import '../../interfaces/DataTypes.sol';
+import '../../interfaces/IPositionManager.sol';
 import '../helpers/UniswapNFTHelper.sol';
 import '../actions/AaveDeposit.sol';
-
+import '../actions/DecreaseLiquidity.sol';
+import '../actions/CollectFees.sol';
 import 'hardhat/console.sol';
 
 contract AaveModule {
-    ILendingPool public LendingPool;
+    IAaveAddressHolder public aaveAddressHolder;
     IUniswapAddressHolder uniswapAddressHolder;
 
-    constructor(address _lendingPool, address _uniswapAddressHolder) public {
-        LendingPool = ILendingPool(_lendingPool);
+    constructor(address _aaveAddressHolder, address _uniswapAddressHolder) public {
+        aaveAddressHolder = IAaveAddressHolder(_aaveAddressHolder);
         uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
     }
 
+    ///@notice deposit a position in an Aave lending pool
+    ///@param positionManager address of the position manager
+    ///@param tokenId id of the Uniswap position to deposit
+    ///@param tickDelta minimum distance (in ticks) from pool tick to position tick to allow deposit on Aave
     function depositToAave(
         address positionManager,
         uint256 tokenId,
         uint24 tickDelta
     ) public {
-        int24 tickDistance = _checkDistanceFromRange(tokenId);
-        ///@dev move token to aave only if the position's range is outside of the tick of the pool (tickDistance < 0) and the position is far enough from tick of the pool
-        revert('TODO');
-        require(false, 'false');
-        // find if token0 or token1 balance
-        // search if aave have the token
-        // deposit that token
-        // if position is inside range of the tick of the pool, then withdraw from aave (if possible)
-        // lower i have token0, upper i have token1
-        //if (tickDistance < 0 && tickDelta <= uint24(tickDistance)) {
-        (uint256 amount0, uint256 amount1) = UniswapNFTHelper._getAmountsfromTokenId(
-            tokenId,
-            INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()),
-            address(uniswapAddressHolder.uniswapV3FactoryAddress())
+        require(
+            IPositionManager(positionManager).getModuleState(tokenId, address(this)),
+            'AaveModule::depositToAave: Module is inactive.'
         );
-        //require(amount0 > 0 || amount1 > 0, 'AaveModule::depositToAave: One amount should be 0.');
+        int24 tickDistance = _checkDistanceFromRange(tokenId);
+        ///@dev move token to aave only if the position's range is outside of the tick of the pool
+        ///@dev (tickDistance < 0) and the position is far enough from tick of the pool
 
-        (, , address token0, address token1, , , , , , , , ) = INonfungiblePositionManager(
-            uniswapAddressHolder.nonfungiblePositionManagerAddress()
-        ).positions(tokenId);
+        if (tickDistance < 0 && tickDelta <= uint24(tickDistance)) {
+            (uint256 amount0, uint256 amount1) = UniswapNFTHelper._getAmountsfromTokenId(
+                tokenId,
+                INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()),
+                address(uniswapAddressHolder.uniswapV3FactoryAddress())
+            );
+            require(amount0 > 0 || amount1 > 0, 'AaveModule::depositToAave: One amount should be 0.');
 
-        DataTypes.ReserveData memory reserveData = LendingPool.getReserveData(token0);
-        console.log(reserveData.aTokenAddress);
-        require(reserveData.aTokenAddress == address(0), 'AaveModule::depositToAave: Token is not supported.');
+            (, , address token0, address token1, , , , , , , , ) = INonfungiblePositionManager(
+                uniswapAddressHolder.nonfungiblePositionManagerAddress()
+            ).positions(tokenId);
 
-        if (amount0 > 0) {
-            IAaveDeposit(positionManager).depositToAave(token0, amount0, address(LendingPool));
+            DataTypes.ReserveData memory reserveData;
+
+            IDecreaseLiquidity(positionManager).decreaseLiquidity(tokenId, amount0, amount1);
+            (uint256 amount0Collected, uint256 amount1Collected) = ICollectFees(positionManager).collectFees(tokenId);
+
+            if (amount0Collected > 0) {
+                reserveData = ILendingPool(aaveAddressHolder.lendingPoolAddress()).getReserveData(token0);
+                if (reserveData.aTokenAddress != address(0)) {
+                    IAaveDeposit(positionManager).depositToAave(
+                        token0,
+                        amount0Collected,
+                        aaveAddressHolder.lendingPoolAddress()
+                    );
+                }
+            }
+            if (amount1Collected > 0) {
+                reserveData = ILendingPool(aaveAddressHolder.lendingPoolAddress()).getReserveData(token1);
+                if (reserveData.aTokenAddress != address(0)) {
+                    IAaveDeposit(positionManager).depositToAave(
+                        token1,
+                        amount1Collected,
+                        aaveAddressHolder.lendingPoolAddress()
+                    );
+                }
+            }
         }
-        if (amount1 > 0) {
-            IAaveDeposit(positionManager).depositToAave(token1, amount1, address(LendingPool));
-        }
-
-        //IAaveDeposit(address(positionManager)).depositToAave(token0, amount, LendingPool.address);
-        //}
     }
 
     ///@notice checkDistance from ticklower tickupper from tick of the pools
