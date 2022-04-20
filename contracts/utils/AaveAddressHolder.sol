@@ -4,7 +4,7 @@ pragma solidity 0.7.6;
 
 import '../../interfaces/IAaveAddressHolder.sol';
 
-contract AaveAddressHolder {
+contract AaveAddressHolder is IAaveAddressHolder {
     address public lendingPoolAddress;
 
     constructor(address _lendingPoolAddress) public {
