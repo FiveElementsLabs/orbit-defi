@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.6.12;
+pragma solidity 0.7.6;
 
-import '@aave/protocol-v2/contracts/interfaces/ILendingPool.sol';
+import '../../interfaces/ILendingPool.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 interface IAaveDeposit {
