@@ -3,7 +3,6 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import '@aave/protocol-v2/contracts/interfaces/ILendingPool.sol';
 import '@openzeppelin/contracts/token/ERC721/ERC721Holder.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '../interfaces/IPositionManager.sol';
@@ -11,6 +10,7 @@ import '../interfaces/IUniswapAddressHolder.sol';
 import '../interfaces/IAaveAddressHolder.sol';
 import '../interfaces/IDiamondCut.sol';
 import '../interfaces/IRegistry.sol';
+import '../interfaces/ILendingPool.sol';
 import './helpers/ERC20Helper.sol';
 import './utils/Storage.sol';
 
@@ -157,17 +157,21 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@param amount of aTokens recieved from deposit
     function pushAavePosition(address token, uint256 amount) public {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
-
+        uint256 shares;
         //when i deposit into aave i get one share for each aToken recieved * shares_emitted/total_amount_already_recieved
-        if (aaveTokens[token].sharesEmitted == 0) {
-            uint256 shares = amount;
+        if (aaveUserReserves[token].sharesEmitted == 0) {
+            shares = amount;
         } else {
-            uint256 shares = (amount * aaveTokens[token].sharesEmitted) /
-                ILendingPool(Storage.aaveAddressHolder.lendingPoolAddress()).currentATokenBalance();
+            DataTypes.ReserveData memory reserveData = ILendingPool(Storage.aaveAddressHolder.lendingPoolAddress())
+                .getReserveData(token);
+
+            shares =
+                (amount * aaveUserReserves[token].sharesEmitted) /
+                IERC20(reserveData.aTokenAddress).balanceOf(address(this));
         }
 
-        aaveTokens[token].positions.push(TokenPosition({id: aaveIdCounter, shares: shares}));
-        aaveTokens[token].sharesEmitted += shares;
+        aaveUserReserves[token].positions.push(AavePosition({id: aaveIdCounter, shares: shares}));
+        aaveUserReserves[token].sharesEmitted += shares;
         aaveIdCounter++;
     }
 
@@ -175,18 +179,18 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@param token address of token withdrawn
     ///@param id of the withdrawn position
     function removeAavePosition(address token, uint256 id) public {
-        for (uint256 i = 0; i < aaveTokens[token].positions.length; i++) {
-            if (aaveTokens[token].positions[i].id == id) {
-                if (aaveTokens[token].positions.length > 1) {
-                    aaveTokens[token].sharesEmitted -= aaveTokens[token].positions[i].shares;
-                    aaveTokens[token].positions[i] = aaveTokens[token].positions[
-                        aaveTokens[token].positions.length - 1
+        for (uint256 i = 0; i < aaveUserReserves[token].positions.length; i++) {
+            if (aaveUserReserves[token].positions[i].id == id) {
+                if (aaveUserReserves[token].positions.length > 1) {
+                    aaveUserReserves[token].sharesEmitted -= aaveUserReserves[token].positions[i].shares;
+                    aaveUserReserves[token].positions[i] = aaveUserReserves[token].positions[
+                        aaveUserReserves[token].positions.length - 1
                     ];
-                    aaveTokens[token].positions.pop();
+                    aaveUserReserves[token].positions.pop();
                 } else {
-                    delete aaveTokens[token].positions;
+                    delete aaveUserReserves[token].positions;
                 }
-                i = aaveTokens[token].sharesEmitted.length;
+                i = aaveUserReserves[token].positions.length;
             }
         }
     }
