@@ -18,7 +18,7 @@ interface IAaveWithdraw {
 }
 
 ///@notice action to withdraw tokens from aave protocol
-contract AaveWithdraw {
+contract AaveWithdraw is IAaveWithdraw {
     ///@notice withdraw from aave some token amount
     ///@param token token address
     ///@param amount amount to withdraw
@@ -28,7 +28,7 @@ contract AaveWithdraw {
         address token,
         uint256 amount,
         address lendingPool
-    ) public returns (uint256) {
+    ) public override returns (uint256) {
         return ILendingPool(lendingPool).withdraw(token, amount, address(this));
     }
 }

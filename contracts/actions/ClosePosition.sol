@@ -18,7 +18,7 @@ interface IClosePosition {
         );
 }
 
-contract ClosePosition {
+contract ClosePosition is IClosePosition {
     ///@notice emitted when a UniswapNFT position is closed
     ///@param from address of PositionManager
     ///@param tokenId Id of the closed token
@@ -32,6 +32,7 @@ contract ClosePosition {
     ///@return uint256 amount of token1 returned
     function closePosition(uint256 tokenId, bool returnTokenToUser)
         public
+        override
         returns (
             uint256,
             uint256,

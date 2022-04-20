@@ -59,12 +59,12 @@ contract PositionManager is IPositionManager, ERC721Holder {
         uint256 shares;
     }
 
-    struct AaveToken {
+    struct AaveReserve {
         AavePosition[] positions;
         uint256 sharesEmitted;
     }
 
-    mapping(address => AaveToken) private aaveTokens;
+    mapping(address => AaveReserve) private aaveUserReserves;
     uint256 private aaveIdCounter = 0;
 
     function init(
@@ -154,11 +154,11 @@ contract PositionManager is IPositionManager, ERC721Holder {
 
     ///@notice add awareness of aave position to positionManager
     ///@param token address of token deposited
-    ///@param amount of token deposited
+    ///@param amount of aTokens recieved from deposit
     function pushAavePosition(address token, uint256 amount) public {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
-        //when i deposit into aave i get one share for each token deposited * shares_emitted/total_amount_already_deposited
+        //when i deposit into aave i get one share for each aToken recieved * shares_emitted/total_amount_already_recieved
         if (aaveTokens[token].sharesEmitted == 0) {
             uint256 shares = amount;
         } else {
@@ -172,9 +172,23 @@ contract PositionManager is IPositionManager, ERC721Holder {
     }
 
     ///@notice remove awareness of aave position from positionManager
+    ///@param token address of token withdrawn
+    ///@param id of the withdrawn position
     function removeAavePosition(address token, uint256 id) public {
-        aaveTokens[token].positions[i] = aaveTokens[token].positions[aaveTokens[token].positions.length - 1];
-        aaveTokens[token].positions.pop();
+        for (uint256 i = 0; i < aaveTokens[token].positions.length; i++) {
+            if (aaveTokens[token].positions[i].id == id) {
+                if (aaveTokens[token].positions.length > 1) {
+                    aaveTokens[token].sharesEmitted -= aaveTokens[token].positions[i].shares;
+                    aaveTokens[token].positions[i] = aaveTokens[token].positions[
+                        aaveTokens[token].positions.length - 1
+                    ];
+                    aaveTokens[token].positions.pop();
+                } else {
+                    delete aaveTokens[token].positions;
+                }
+                i = aaveTokens[token].sharesEmitted.length;
+            }
+        }
     }
 
     ///@notice toggle module state, activated (true) or not (false)

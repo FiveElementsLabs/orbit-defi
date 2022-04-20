@@ -17,7 +17,7 @@ interface IIncreaseLiquidity {
 }
 
 ///@notice action to increase the liquidity of a V3 position
-contract IncreaseLiquidity {
+contract IncreaseLiquidity is IIncreaseLiquidity {
     ///@notice increase the liquidity of a UniswapV3 position
     ///@param tokenId the id of the position token
     ///@param amount0Desired the desired amount of token0
@@ -26,7 +26,7 @@ contract IncreaseLiquidity {
         uint256 tokenId,
         uint256 amount0Desired,
         uint256 amount1Desired
-    ) public {
+    ) public override {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
         require(
