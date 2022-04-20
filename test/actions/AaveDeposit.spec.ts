@@ -144,6 +144,7 @@ describe('AaveDeposit.sol', function () {
       const balanceBefore = await usdcMock.balanceOf(PositionManager.address);
 
       await AaveDepositFallback.depositToAave(usdcMock.address, '10000', LendingPool.address);
+      console.log(await LendingPool.getReserveData(tokenEth.address));
       const balanceAfter = await usdcMock.balanceOf(PositionManager.address);
       const pmData = await LendingPool.getUserAccountData(PositionManager.address);
       expect(pmData.totalCollateralETH).to.gt(0);
