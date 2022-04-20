@@ -9,6 +9,7 @@ const NonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/
 const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json');
 const PositionManagerjson = require('../artifacts/contracts/PositionManager.sol/PositionManager.json');
 const SwapRouterjson = require('@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json');
+const LendingPooljson = require('@aave/protocol-v2/artifacts/contracts/protocol/lendingpool/LendingPool.sol/LendingPool.json');
 const FixturesConst = require('./shared/fixtures');
 import { tokensFixture, poolFixture, mintSTDAmount, routerFixture, getSelectors } from './shared/fixtures';
 import {
@@ -51,6 +52,9 @@ describe('PositionManager.sol', function () {
   let DecreaseLiquidityFallback: Contract;
   let abiCoder: AbiCoder;
   let DepositRecipes: Contract;
+  let LendingPool: Contract;
+  let usdcMock: Contract;
+  let wbtcMock: Contract;
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
@@ -111,6 +115,9 @@ describe('PositionManager.sol', function () {
     SwapRouter = await SwapRouterFactory.deploy(Factory.address, tokenEth.address);
     await SwapRouter.deployed();
 
+    //LendingPool contract
+    LendingPool = await ethers.getContractAtFromArtifact(LendingPooljson, '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9');
+
     //deploy uniswapAddressHolder
     const uniswapAddressHolderFactory = await ethers.getContractFactory('UniswapAddressHolder');
     const uniswapAddressHolder = await uniswapAddressHolderFactory.deploy(
@@ -119,6 +126,11 @@ describe('PositionManager.sol', function () {
       SwapRouter.address
     );
     await uniswapAddressHolder.deployed();
+
+    //deploy aaveAddressHolder
+    const aaveAddressHolderFactory = await ethers.getContractFactory('AaveAddressHolder');
+    const aaveAddressHolder = await aaveAddressHolderFactory.deploy(LendingPool.address);
+    await aaveAddressHolder.deployed();
 
     // deploy DiamondCutFacet ----------------------------------------------------------------------
     const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet');
@@ -140,7 +152,7 @@ describe('PositionManager.sol', function () {
       diamondCutFacet.address,
       uniswapAddressHolder.address,
       registry.address,
-      '0x0000000000000000000000000000000000000000'
+      LendingPool.address
     );
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
@@ -160,6 +172,10 @@ describe('PositionManager.sol', function () {
     const DepositRecipesFactory = await ethers.getContractFactory('DepositRecipes');
     DepositRecipes = await DepositRecipesFactory.deploy(uniswapAddressHolder.address, Factory.address);
     await DepositRecipes.deployed();
+
+    //Get mock token
+    usdcMock = await ethers.getContractAt('MockToken', '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48');
+    wbtcMock = await ethers.getContractAt('MockToken', '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599');
 
     //select standard abicoder
     abiCoder = ethers.utils.defaultAbiCoder;
@@ -337,6 +353,26 @@ describe('PositionManager.sol', function () {
 
       await expect(DecreaseLiquidityFallback.connect(user).decreaseLiquidity(tokenId, amount0Desired, amount1Desired))
         .to.be.reverted;
+    });
+  });
+
+  describe('PositionManager - pushAavePosition', function () {
+    it('should give user shares if a new position is deposited', async function () {
+      await PositionManager.pushAavePosition(tokenUsdc.address, 200);
+      const positions = (await PositionManager.getAavePositions(tokenUsdc.address)) as any;
+      expect(positions[0].shares).to.eq(200);
+    });
+  });
+
+  describe('PositionManager - removeAavePosition', function () {
+    it('should correctly remove a position', async function () {
+      await PositionManager.pushAavePosition(usdcMock.address, 200);
+      let positions = (await PositionManager.getAavePositions(usdcMock.address)) as any;
+      expect(positions[0].shares).to.eq(200);
+
+      await PositionManager.removeAavePosition(usdcMock.address, positions[0].id);
+      const positionsAfter = (await PositionManager.getAavePositions(usdcMock.address)) as any;
+      expect(positionsAfter.length).to.eq(positions.length - 1);
     });
   });
 });

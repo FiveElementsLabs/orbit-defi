@@ -130,7 +130,7 @@ describe('AaveDeposit.sol', function () {
     AaveModule = await AaveModuleFactory.deploy(aaveAddressHolder.address, uniswapAddressHolder.address);
     await AaveModule.deployed();
 
-    //Get mock token
+    //Get mock tokens. These need to be real Mainnet addresses
     usdcMock = await ethers.getContractAt('MockToken', '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48');
     wbtcMock = await ethers.getContractAt('MockToken', '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599');
 

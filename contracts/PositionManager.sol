@@ -64,7 +64,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
         uint256 sharesEmitted;
     }
 
-    mapping(address => AaveReserve) private aaveUserReserves;
+    mapping(address => AaveReserve) public aaveUserReserves;
     uint256 private aaveIdCounter = 0;
 
     function init(
@@ -193,6 +193,12 @@ contract PositionManager is IPositionManager, ERC721Holder {
                 i = aaveUserReserves[token].positions.length;
             }
         }
+    }
+
+    ///@notice return all aave positions in a certain token
+    ///@param token address of token
+    function getAavePositions(address token) public view returns (AavePosition[] memory) {
+        return aaveUserReserves[token].positions;
     }
 
     ///@notice toggle module state, activated (true) or not (false)
