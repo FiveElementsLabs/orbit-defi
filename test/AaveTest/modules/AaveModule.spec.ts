@@ -13,7 +13,7 @@ const FixturesConst = require('../../shared/fixtures');
 import { tokensFixture, poolFixture, mintSTDAmount, getSelectors, findbalanceSlot } from '../../shared/fixtures';
 import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager } from '../../../typechain';
 
-describe('AaveDeposit.sol', function () {
+describe('AaveModule.sol', function () {
   //GLOBAL VARIABLE - USE THIS
   let user: any = ethers.getSigners().then(async (signers) => {
     return signers[0];

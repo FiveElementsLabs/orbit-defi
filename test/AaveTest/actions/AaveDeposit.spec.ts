@@ -61,6 +61,9 @@ describe('AaveDeposit.sol', function () {
     await mintSTDAmount(tokenEth);
     await mintSTDAmount(tokenUsdc);
 
+    //LendingPool contract
+    LendingPool = await ethers.getContractAtFromArtifact(LendingPooljson, '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9');
+
     //deploy uniswapAddressHolder
     const uniswapAddressHolderFactory = await ethers.getContractFactory('UniswapAddressHolder');
     const uniswapAddressHolder = await uniswapAddressHolderFactory.deploy(
@@ -105,8 +108,6 @@ describe('AaveDeposit.sol', function () {
     const AaveDepositActionFactory = await ethers.getContractFactory('AaveDeposit');
     const AaveDepositAction = (await AaveDepositActionFactory.deploy()) as Contract;
     await AaveDepositAction.deployed();
-    //LendingPool contract
-    LendingPool = await ethers.getContractAtFromArtifact(LendingPooljson, '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9');
 
     //Get mock token
     usdcMock = await ethers.getContractAt('MockToken', '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48');
