@@ -1,17 +1,20 @@
 import '@nomiclabs/hardhat-ethers';
 import { expect } from 'chai';
 import { Contract, ContractFactory } from 'ethers';
-const hre = require('hardhat');
+import hre from 'hardhat';
 import { ethers } from 'hardhat';
 import { Test } from 'mocha';
 
-const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json');
-const NonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json');
-const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json');
-const FixturesConst = require('../../shared/fixtures');
-
+import UniswapV3Factoryjson from '@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json';
+import NonFungiblePositionManagerjson from '@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json';
+import NonFungiblePositionManagerDescriptorjson from '@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json';
 import { MockToken, IUniswapV3Pool, INonfungiblePositionManager } from '../../../typechain';
-import { tokensFixture, mintSTDAmount, poolFixture } from '../../shared/fixtures';
+import {
+  tokensFixture,
+  mintSTDAmount,
+  poolFixture,
+  NonFungiblePositionManagerDescriptorBytecode,
+} from '../../shared/fixtures';
 
 describe('TestUniswapNFTHelper', () => {
   //GLOBAL VARIABLE - USE THIS
@@ -71,7 +74,7 @@ describe('TestUniswapNFTHelper', () => {
     //deploy NonFungiblePositionManagerDescriptor and NonFungiblePositionManager
     const NonFungiblePositionManagerDescriptorFactory = new ContractFactory(
       NonFungiblePositionManagerDescriptorjson['abi'],
-      FixturesConst.NonFungiblePositionManagerDescriptorBytecode,
+      NonFungiblePositionManagerDescriptorBytecode,
       owner
     );
     const NonFungiblePositionManagerDescriptor = await NonFungiblePositionManagerDescriptorFactory.deploy(

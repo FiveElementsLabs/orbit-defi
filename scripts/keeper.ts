@@ -1,8 +1,8 @@
-const hre = require('hardhat');
+import hre from 'hardhat';
 
 import { ethers } from 'hardhat';
 import { PositionManager } from '../typechain';
-const PositionManagerjson = require('../artifacts/contracts/PositionManager.sol/PositionManager.json');
+import PositionManagerjson from '../artifacts/contracts/PositionManager.sol/PositionManager.json';
 
 import { keeperSetup } from './keeper_setup';
 
