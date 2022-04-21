@@ -160,7 +160,8 @@ contract PositionManager is IPositionManager, ERC721Holder {
     function pushAavePosition(address token, uint256 amount) public {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         uint256 shares;
-        //when i deposit into aave i get one share for each aToken recieved * shares_emitted/total_amount_already_recieved
+        ///@notice when positionManager deposits into aave, we give the position one share
+        ///        for each aToken recieved * shares_emitted / total_amount_of_aTokens owned
         if (aaveUserReserves[token].sharesEmitted == 0) {
             shares = amount;
         } else {
@@ -180,6 +181,10 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@param token address of token withdrawn
     ///@param id of the withdrawn position
     function removeAavePosition(address token, uint256 id) public {
+        require(
+            aaveUserReserves[token].sharesEmitted > 0,
+            'PositionManager::removeAavePosition: no position to remove!'
+        );
         for (uint256 i = 0; i < aaveUserReserves[token].positions.length; i++) {
             if (aaveUserReserves[token].positions[i].id == id) {
                 if (aaveUserReserves[token].positions.length > 1) {
