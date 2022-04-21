@@ -7,22 +7,18 @@ const hre = require('hardhat');
 const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json');
 const NonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json');
 const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json');
-const PositionManagerjson = require('../../artifacts/contracts/PositionManager.sol/PositionManager.json');
-const SwapRouterjson = require('@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json');
-const FixturesConst = require('../shared/fixtures');
-import { tokensFixture, poolFixture, mintSTDAmount, getSelectors } from '../shared/fixtures';
-import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager } from '../../typechain';
+const PositionManagerjson = require('../../../artifacts/contracts/PositionManager.sol/PositionManager.json');
+const FixturesConst = require('../../shared/fixtures');
+import { tokensFixture, poolFixture, mintSTDAmount, getSelectors } from '../../shared/fixtures';
+import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager, Mint } from '../../../typechain';
 
-describe('CollectFees.sol', function () {
+describe('Mint.sol', function () {
   //GLOBAL VARIABLE - USE THIS
   let user: any = ethers.getSigners().then(async (signers) => {
     return signers[0];
   });
   let liquidityProvider: any = ethers.getSigners().then(async (signers) => {
     return signers[1];
-  });
-  let trader: any = ethers.getSigners().then(async (signers) => {
-    return signers[2];
   });
 
   //all the token used globally
@@ -33,20 +29,18 @@ describe('CollectFees.sol', function () {
 
   let Factory: Contract; // the factory that will deploy all pools
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
-  let collectFees: Contract; // collectFees contract
+  let MintAction: Mint;
+  let MintFallback: Mint;
   let abiCoder: AbiCoder;
   let PositionManager: PositionManager;
-  let swapRouter: Contract;
-  let MintFallback: Contract; //Mint contract
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
 
     user = await user; //owner of the smart vault, a normal user
-    liquidityProvider = await liquidityProvider; //liquidity provider for the pool
-    trader = await trader; //who executes trades
+    liquidityProvider = await liquidityProvider;
 
-    //deploy first 3 token - ETH, USDC, DAI
+    //deploy the tokens - ETH, USDC
     tokenEth = (await tokensFixture('ETH', 18)).tokenFixture;
     tokenUsdc = (await tokensFixture('USDC', 6)).tokenFixture;
 
@@ -90,34 +84,24 @@ describe('CollectFees.sol', function () {
     )) as INonfungiblePositionManager;
     await NonFungiblePositionManager.deployed();
 
-    //deploy SwapRouter
-    const SwapRouterFactory = new ContractFactory(SwapRouterjson['abi'], SwapRouterjson['bytecode'], user);
-    swapRouter = await SwapRouterFactory.deploy(Factory.address, tokenEth.address);
-    await swapRouter.deployed();
-
     //deploy uniswapAddressHolder
     const uniswapAddressHolderFactory = await ethers.getContractFactory('UniswapAddressHolder');
     const uniswapAddressHolder = await uniswapAddressHolderFactory.deploy(
       NonFungiblePositionManager.address,
       Factory.address,
-      swapRouter.address
+      NonFungiblePositionManagerDescriptor.address //random address because we don't need it
     );
     await uniswapAddressHolder.deployed();
-
-    //deploy Mint action
-    const MintFactory = await ethers.getContractFactory('Mint');
-    const mintAction = await MintFactory.deploy();
-    await mintAction.deployed();
-
-    //deploy CollectFees action
-    const CollectFeesFactory = await ethers.getContractFactory('CollectFees');
-    const collectFeesAction = await CollectFeesFactory.deploy();
-    await collectFeesAction.deployed();
 
     // deploy DiamondCutFacet ----------------------------------------------------------------------
     const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet');
     const diamondCutFacet = await DiamondCutFacet.deploy();
     await diamondCutFacet.deployed();
+
+    //Deploy Mint Action
+    const mintActionFactory = await ethers.getContractFactory('Mint');
+    MintAction = (await mintActionFactory.deploy()) as Mint;
+    await MintAction.deployed();
 
     // deploy Registry
     const Registry = await ethers.getContractFactory('Registry');
@@ -133,7 +117,8 @@ describe('CollectFees.sol', function () {
       user.address,
       diamondCutFacet.address,
       uniswapAddressHolder.address,
-      registry.address
+      registry.address,
+      '0x0000000000000000000000000000000000000000'
     );
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
@@ -143,9 +128,9 @@ describe('CollectFees.sol', function () {
     abiCoder = ethers.utils.defaultAbiCoder;
 
     //APPROVE
-    //recipient: PositionManager - spender: user
-    await tokenEth.connect(user).approve(PositionManager.address, ethers.utils.parseEther('100000000000000'));
-    await tokenUsdc.connect(user).approve(PositionManager.address, ethers.utils.parseEther('100000000000000'));
+    //recipient: Mint action - spender: user
+    await tokenEth.connect(user).approve(MintAction.address, ethers.utils.parseEther('100000000000000'));
+    await tokenUsdc.connect(user).approve(MintAction.address, ethers.utils.parseEther('100000000000000'));
     //recipient: NonFungiblePositionManager - spender: liquidityProvider
     await tokenEth
       .connect(liquidityProvider)
@@ -153,11 +138,12 @@ describe('CollectFees.sol', function () {
     await tokenUsdc
       .connect(liquidityProvider)
       .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
-    //recipient: Router - spender: trader
-    await tokenEth.connect(trader).approve(swapRouter.address, ethers.utils.parseEther('1000000000000'));
-    await tokenUsdc.connect(trader).approve(swapRouter.address, ethers.utils.parseEther('1000000000000'));
     //approval user to registry for test
     await registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
+
+    //give mint action some tokens
+    await tokenEth.connect(user).transfer(PositionManager.address, ethers.utils.parseEther('1000000000000'));
+    await tokenUsdc.connect(user).transfer(PositionManager.address, ethers.utils.parseEther('1000000000000'));
 
     // give pool some liquidity
     await NonFungiblePositionManager.connect(liquidityProvider).mint(
@@ -167,8 +153,8 @@ describe('CollectFees.sol', function () {
         fee: 3000,
         tickLower: 0 - 60 * 1000,
         tickUpper: 0 + 60 * 1000,
-        amount0Desired: '0x' + (1e5).toString(16),
-        amount1Desired: '0x' + (1e5).toString(16),
+        amount0Desired: '0x' + (1e26).toString(16),
+        amount1Desired: '0x' + (1e26).toString(16),
         amount0Min: 0,
         amount1Min: 0,
         recipient: liquidityProvider.address,
@@ -177,89 +163,80 @@ describe('CollectFees.sol', function () {
       { gasLimit: 670000 }
     );
 
-    // add actions to position manager using diamond cut
+    // add actions to position manager using diamond pattern
     const cut = [];
     const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 };
 
     cut.push({
-      facetAddress: mintAction.address,
+      facetAddress: MintAction.address,
       action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(mintAction),
-    });
-
-    cut.push({
-      facetAddress: collectFeesAction.address,
-      action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(collectFeesAction),
+      functionSelectors: await getSelectors(MintAction),
     });
 
     const diamondCut = await ethers.getContractAt('IDiamondCut', PositionManager.address);
 
-    await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
+    const tx = await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
 
-    MintFallback = await ethers.getContractAt('IMint', PositionManager.address);
-    collectFees = await ethers.getContractAt('ICollectFees', PositionManager.address);
+    MintFallback = (await ethers.getContractAt('IMint', PositionManager.address)) as Mint;
   });
 
-  describe('CollectFees.collectFees()', function () {
-    it('should collect fees', async function () {
-      const fee = 3000;
-      const tickLower = -720;
-      const tickUpper = 720;
+  describe('MintAction.sol - mint', function () {
+    it('should correctly mint a UNIV3 position', async function () {
+      const balancePre = await NonFungiblePositionManager.balanceOf(PositionManager.address);
       const amount0In = 5e5;
       const amount1In = 5e5;
+      const tickLower = -720;
+      const tickUpper = 3600;
 
-      //give positionManager some funds
-      await tokenEth.connect(user).transfer(PositionManager.address, 6e5);
-      await tokenUsdc.connect(user).transfer(PositionManager.address, 6e5);
-
-      //mint a position
-      let tx = await MintFallback.connect(user).mint({
+      await MintFallback.mint({
         token0Address: tokenEth.address,
         token1Address: tokenUsdc.address,
-        fee: fee,
+        fee: 3000,
         tickLower: tickLower,
         tickUpper: tickUpper,
         amount0Desired: amount0In,
         amount1Desired: amount1In,
       });
-      let events = (await tx.wait()).events as any;
 
-      const mintEvent = events[events.length - 1];
-      const tokenId = mintEvent.data;
-
-      // Do some trades to accrue fees
-      for (let i = 0; i < 10; i++) {
-        await swapRouter
-          .connect(trader)
-          .exactInputSingle([
-            i % 2 === 0 ? tokenEth.address : tokenUsdc.address,
-            i % 2 === 0 ? tokenUsdc.address : tokenEth.address,
-            3000,
-            trader.address,
-            Date.now() + 1000,
-            1e4,
-            0,
-            0,
-          ]);
-      }
-
-      // collect fees
-      tx = await collectFees.connect(user).collectFees(tokenId);
-      events = (await tx.wait()).events as any;
-      const collectEvent = events[events.length - 1];
-      const feesCollected = abiCoder.decode(['uint256', 'uint256'], collectEvent.data);
-
-      expect(feesCollected[0]).to.gt(0);
-      expect(feesCollected[1]).to.gt(0);
+      expect(await NonFungiblePositionManager.balanceOf(PositionManager.address)).to.gt(balancePre);
     });
 
-    it('should revert if position does not exist', async function () {
-      await expect(collectFees.connect(user).collectFees(200)).to.be.reverted;
+    it('should revert if pool does not exist', async function () {
+      const amount0In = 7e5;
+      const amount1In = 5e5;
+      const tickLower = -720;
+      const tickUpper = 720;
+
+      await expect(
+        MintFallback.mint({
+          token0Address: tokenEth.address,
+          token1Address: tokenUsdc.address,
+          fee: 1235132,
+          tickLower: tickLower,
+          tickUpper: tickUpper,
+          amount0Desired: amount0In,
+          amount1Desired: amount1In,
+        })
+      ).to.be.reverted;
     });
 
-    it('should revert if position is not owned by user', async function () {
-      await expect(collectFees.connect(user).collectFees(1)).to.be.reverted;
+    it('should revert if a too high/low tick is passed', async function () {
+      const amount0In = 7e5;
+      const amount1In = 5e5;
+      const tickLower = -60;
+      const tickUpper = 900000;
+
+      await expect(
+        MintFallback.mint({
+          token0Address: tokenEth.address,
+          token1Address: tokenUsdc.address,
+          fee: 3000,
+          tickLower: tickLower,
+          tickUpper: tickUpper,
+          amount0Desired: amount0In,
+          amount1Desired: amount1In,
+        })
+      ).to.be.reverted;
     });
   });
 });

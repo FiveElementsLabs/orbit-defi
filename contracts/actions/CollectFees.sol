@@ -11,7 +11,7 @@ interface ICollectFees {
 }
 
 ///@notice collect fees from a uniswapV3 position
-contract CollectFees {
+contract CollectFees is ICollectFees {
     ///@notice emitted upon collect fees of a UniswapV3 position
     ///@param amount0 amount of token0 collected
     ///@param amount1 amount of token1 collected
@@ -21,7 +21,7 @@ contract CollectFees {
     ///@param tokenId of token to collect fees from
     ///@return amount0 of token0 collected
     ///@return amount1 of token1 collected
-    function collectFees(uint256 tokenId) public returns (uint256 amount0, uint256 amount1) {
+    function collectFees(uint256 tokenId) public override returns (uint256 amount0, uint256 amount1) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
         _updateUncollectedFees(tokenId);

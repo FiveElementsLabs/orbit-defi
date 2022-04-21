@@ -12,7 +12,7 @@ const FixturesConst = require('../../shared/fixtures');
 import { tokensFixture, poolFixture, mintSTDAmount, getSelectors, findbalanceSlot } from '../../shared/fixtures';
 import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager } from '../../../typechain';
 
-describe('AaveWithdraw.sol', function () {
+describe('AaveDeposit.sol', function () {
   //GLOBAL VARIABLE - USE THIS
   let user: any = ethers.getSigners().then(async (signers) => {
     return signers[0];
@@ -34,7 +34,6 @@ describe('AaveWithdraw.sol', function () {
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
   let PositionManager: PositionManager; // Position manager contract
   let AaveDepositFallback: Contract;
-  let AaveWithdrawFallback: Contract;
   let LendingPool: Contract;
   let usdcMock: Contract;
 
@@ -62,6 +61,9 @@ describe('AaveWithdraw.sol', function () {
     await mintSTDAmount(tokenEth);
     await mintSTDAmount(tokenUsdc);
 
+    //LendingPool contract
+    LendingPool = await ethers.getContractAtFromArtifact(LendingPooljson, '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9');
+
     //deploy uniswapAddressHolder
     const uniswapAddressHolderFactory = await ethers.getContractFactory('UniswapAddressHolder');
     const uniswapAddressHolder = await uniswapAddressHolderFactory.deploy(
@@ -70,6 +72,11 @@ describe('AaveWithdraw.sol', function () {
       Factory.address //random address because we don't need it
     );
     await uniswapAddressHolder.deployed();
+
+    //deploy aaveAddressHolder
+    const aaveAddressHolderFactory = await ethers.getContractFactory('AaveAddressHolder');
+    const aaveAddressHolder = await aaveAddressHolderFactory.deploy(LendingPool.address);
+    await aaveAddressHolder.deployed();
 
     // deploy DiamondCutFacet ----------------------------------------------------------------------
     const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet');
@@ -90,7 +97,8 @@ describe('AaveWithdraw.sol', function () {
       user.address,
       diamondCutFacet.address,
       uniswapAddressHolder.address,
-      registry.address
+      registry.address,
+      aaveAddressHolder.address
     );
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
@@ -100,14 +108,6 @@ describe('AaveWithdraw.sol', function () {
     const AaveDepositActionFactory = await ethers.getContractFactory('AaveDeposit');
     const AaveDepositAction = (await AaveDepositActionFactory.deploy()) as Contract;
     await AaveDepositAction.deployed();
-
-    //Deploy Aave Withdraw Action
-    const AaveWithdrawActionFactory = await ethers.getContractFactory('AaveWithdraw');
-    const AaveWithdrawAction = (await AaveWithdrawActionFactory.deploy()) as Contract;
-    await AaveWithdrawAction.deployed();
-
-    //LendingPool contract
-    LendingPool = await ethers.getContractAtFromArtifact(LendingPooljson, '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9');
 
     //Get mock token
     usdcMock = await ethers.getContractAt('MockToken', '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48');
@@ -139,32 +139,23 @@ describe('AaveWithdraw.sol', function () {
       action: FacetCutAction.Add,
       functionSelectors: await getSelectors(AaveDepositAction),
     });
-    cut.push({
-      facetAddress: AaveWithdrawAction.address,
-      action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(AaveWithdrawAction),
-    });
 
     const diamondCut = await ethers.getContractAt('IDiamondCut', PositionManager.address);
 
     const tx = await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
     AaveDepositFallback = (await ethers.getContractAt('IAaveDeposit', PositionManager.address)) as Contract;
-    AaveWithdrawFallback = (await ethers.getContractAt('IAaveWithdraw', PositionManager.address)) as Contract;
   });
 
-  describe('AaveWithdraw - withdrawFromAave', function () {
-    it('should withdraw 5000 token to aave LendingPool', async function () {
-      await AaveDepositFallback.depositToAave(usdcMock.address, '10000', LendingPool.address);
+  describe('AaveDepositAction - depositToAave', function () {
+    it('should deposit 10000 token to aave LendingPool', async function () {
       const balanceBefore = await usdcMock.balanceOf(PositionManager.address);
-      const pmDataBefore = await LendingPool.getUserAccountData(PositionManager.address);
 
-      await AaveWithdrawFallback.withdrawFromAave(usdcMock.address, '5000', LendingPool.address);
+      await AaveDepositFallback.depositToAave(usdcMock.address, '10000', LendingPool.address);
       const balanceAfter = await usdcMock.balanceOf(PositionManager.address);
-      const pmDataAfter = await LendingPool.getUserAccountData(PositionManager.address);
-
-      expect(balanceBefore).to.be.lt(balanceAfter);
-      expect(balanceAfter.sub(balanceBefore)).to.be.eq('5000');
-      expect(pmDataBefore.totalCollateralETH).to.be.gt(pmDataAfter.totalCollateralETH);
+      const pmData = await LendingPool.getUserAccountData(PositionManager.address);
+      expect(pmData.totalCollateralETH).to.gt(0);
+      expect(balanceAfter).to.be.lt(balanceBefore);
+      expect(pmData.ltv).to.be.gt(0);
     });
   });
 });

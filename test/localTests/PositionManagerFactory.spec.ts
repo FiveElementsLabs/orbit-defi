@@ -2,14 +2,14 @@ import { expect } from 'chai';
 import '@nomiclabs/hardhat-ethers';
 import { Contract, ContractFactory } from 'ethers';
 import { ethers } from 'hardhat';
-import { tokensFixture, poolFixture, routerFixture } from './shared/fixtures';
-import { MockToken, INonfungiblePositionManager, ISwapRouter, UniswapAddressHolder, Registry } from '../typechain';
+import { tokensFixture, poolFixture, routerFixture } from '../shared/fixtures';
+import { MockToken, INonfungiblePositionManager, ISwapRouter, UniswapAddressHolder, Registry } from '../../typechain';
 
 const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json');
-const PositionManagerContract = require('../artifacts/contracts/PositionManager.sol/PositionManager.json');
+const PositionManagerContract = require('../../artifacts/contracts/PositionManager.sol/PositionManager.json');
 const NonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json');
 const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json');
-const FixturesConst = require('./shared/fixtures');
+const FixturesConst = require('../shared/fixtures');
 const hre = require('hardhat');
 
 describe('PositionManagerFactory.sol', function () {
@@ -111,7 +111,8 @@ describe('PositionManagerFactory.sol', function () {
         owner.address,
         diamondCutFacet.address,
         uniswapAddressHolder.address,
-        registry.address
+        registry.address,
+        '0x0000000000000000000000000000000000000000'
       );
 
       const deployedContract = await PositionManagerFactoryInstance.positionManagers(0);

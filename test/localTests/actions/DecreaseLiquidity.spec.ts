@@ -7,17 +7,17 @@ const hre = require('hardhat');
 const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json');
 const NonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json');
 const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json');
-const PositionManagerjson = require('../../artifacts/contracts/PositionManager.sol/PositionManager.json');
+const PositionManagerjson = require('../../../artifacts/contracts/PositionManager.sol/PositionManager.json');
 const SwapRouterjson = require('@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json');
-const FixturesConst = require('../shared/fixtures');
-import { tokensFixture, poolFixture, mintSTDAmount, getSelectors } from '../shared/fixtures';
+const FixturesConst = require('../../shared/fixtures');
+import { tokensFixture, poolFixture, mintSTDAmount, getSelectors } from '../../shared/fixtures';
 import {
   MockToken,
   IUniswapV3Pool,
   INonfungiblePositionManager,
   DecreaseLiquidity,
   PositionManager,
-} from '../../typechain';
+} from '../../../typechain';
 
 describe('DecreaseLiquidity.sol', function () {
   //GLOBAL VARIABLE - USE THIS
@@ -131,7 +131,8 @@ describe('DecreaseLiquidity.sol', function () {
       user.address,
       diamondCutFacet.address,
       UniswapAddressHolder.address,
-      registry.address
+      registry.address,
+      '0x0000000000000000000000000000000000000000'
     );
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);

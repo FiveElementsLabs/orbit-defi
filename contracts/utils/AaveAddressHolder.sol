@@ -7,7 +7,7 @@ import '../../interfaces/IAaveAddressHolder.sol';
 contract AaveAddressHolder is IAaveAddressHolder {
     address public override lendingPoolAddress;
 
-    constructor(address _lendingPoolAddress) public {
+    constructor(address _lendingPoolAddress) {
         lendingPoolAddress = _lendingPoolAddress;
     }
 

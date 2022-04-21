@@ -7,13 +7,13 @@ const hre = require('hardhat');
 const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json');
 const NonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json');
 const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json');
-const PositionManagerjson = require('../../artifacts/contracts/PositionManager.sol/PositionManager.json');
+const PositionManagerjson = require('../../../artifacts/contracts/PositionManager.sol/PositionManager.json');
 const SwapRouterjson = require('@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json');
-const FixturesConst = require('../shared/fixtures');
-import { tokensFixture, poolFixture, mintSTDAmount, getSelectors } from '../shared/fixtures';
-import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager } from '../../typechain';
+const FixturesConst = require('../../shared/fixtures');
+import { tokensFixture, poolFixture, mintSTDAmount, getSelectors } from '../../shared/fixtures';
+import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager } from '../../../typechain';
 
-describe('UpdateUncollectedFees.sol', function () {
+describe('CollectFees.sol', function () {
   //GLOBAL VARIABLE - USE THIS
   let user: any = ethers.getSigners().then(async (signers) => {
     return signers[0];
@@ -33,13 +33,11 @@ describe('UpdateUncollectedFees.sol', function () {
 
   let Factory: Contract; // the factory that will deploy all pools
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
-  let UpdateUncollectedFees: Contract; // collectFees contract
+  let collectFees: Contract; // collectFees contract
   let abiCoder: AbiCoder;
   let PositionManager: PositionManager;
-  let SwapRouter: Contract;
-  let MintAction: Contract; //Mint contract
-  let MintFallback: Contract;
-  let UpdateFeeFallback: Contract;
+  let swapRouter: Contract;
+  let MintFallback: Contract; //Mint contract
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
@@ -94,32 +92,32 @@ describe('UpdateUncollectedFees.sol', function () {
 
     //deploy SwapRouter
     const SwapRouterFactory = new ContractFactory(SwapRouterjson['abi'], SwapRouterjson['bytecode'], user);
-    SwapRouter = await SwapRouterFactory.deploy(Factory.address, tokenEth.address);
-    await SwapRouter.deployed();
+    swapRouter = await SwapRouterFactory.deploy(Factory.address, tokenEth.address);
+    await swapRouter.deployed();
 
     //deploy uniswapAddressHolder
     const uniswapAddressHolderFactory = await ethers.getContractFactory('UniswapAddressHolder');
     const uniswapAddressHolder = await uniswapAddressHolderFactory.deploy(
       NonFungiblePositionManager.address,
       Factory.address,
-      SwapRouter.address
+      swapRouter.address
     );
     await uniswapAddressHolder.deployed();
+
+    //deploy Mint action
+    const MintFactory = await ethers.getContractFactory('Mint');
+    const mintAction = await MintFactory.deploy();
+    await mintAction.deployed();
+
+    //deploy CollectFees action
+    const CollectFeesFactory = await ethers.getContractFactory('CollectFees');
+    const collectFeesAction = await CollectFeesFactory.deploy();
+    await collectFeesAction.deployed();
 
     // deploy DiamondCutFacet ----------------------------------------------------------------------
     const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet');
     const diamondCutFacet = await DiamondCutFacet.deploy();
     await diamondCutFacet.deployed();
-
-    //deploy Mint action
-    const MintFactory = await ethers.getContractFactory('Mint');
-    MintAction = await MintFactory.deploy();
-    await MintAction.deployed();
-
-    //deploy CollectFees action
-    const UpdateFeesFactory = await ethers.getContractFactory('UpdateUncollectedFees');
-    UpdateUncollectedFees = await UpdateFeesFactory.deploy();
-    await UpdateUncollectedFees.deployed();
 
     // deploy Registry
     const Registry = await ethers.getContractFactory('Registry');
@@ -135,7 +133,8 @@ describe('UpdateUncollectedFees.sol', function () {
       user.address,
       diamondCutFacet.address,
       uniswapAddressHolder.address,
-      registry.address
+      registry.address,
+      '0x0000000000000000000000000000000000000000'
     );
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
@@ -156,8 +155,8 @@ describe('UpdateUncollectedFees.sol', function () {
       .connect(liquidityProvider)
       .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
     //recipient: Router - spender: trader
-    await tokenEth.connect(trader).approve(SwapRouter.address, ethers.utils.parseEther('1000000000000'));
-    await tokenUsdc.connect(trader).approve(SwapRouter.address, ethers.utils.parseEther('1000000000000'));
+    await tokenEth.connect(trader).approve(swapRouter.address, ethers.utils.parseEther('1000000000000'));
+    await tokenUsdc.connect(trader).approve(swapRouter.address, ethers.utils.parseEther('1000000000000'));
     //approval user to registry for test
     await registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
 
@@ -179,30 +178,31 @@ describe('UpdateUncollectedFees.sol', function () {
       { gasLimit: 670000 }
     );
 
-    // add actions to position manager using diamond pattern
+    // add actions to position manager using diamond cut
     const cut = [];
     const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 };
 
     cut.push({
-      facetAddress: MintAction.address,
+      facetAddress: mintAction.address,
       action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(MintAction),
+      functionSelectors: await getSelectors(mintAction),
     });
+
     cut.push({
-      facetAddress: UpdateUncollectedFees.address,
+      facetAddress: collectFeesAction.address,
       action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(UpdateUncollectedFees),
+      functionSelectors: await getSelectors(collectFeesAction),
     });
 
     const diamondCut = await ethers.getContractAt('IDiamondCut', PositionManager.address);
 
-    const tx = await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
+    await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
 
-    MintFallback = (await ethers.getContractAt('IMint', PositionManager.address)) as Contract;
-    UpdateFeeFallback = (await ethers.getContractAt('IUpdateUncollectedFees', PositionManager.address)) as Contract;
+    MintFallback = await ethers.getContractAt('IMint', PositionManager.address);
+    collectFees = await ethers.getContractAt('ICollectFees', PositionManager.address);
   });
 
-  describe('UpdateUncollectedFees.sol - updateUncollectedFees', function () {
+  describe('CollectFees.collectFees()', function () {
     it('should collect fees', async function () {
       const fee = 3000;
       const tickLower = -720;
@@ -215,7 +215,7 @@ describe('UpdateUncollectedFees.sol', function () {
       await tokenUsdc.connect(user).transfer(PositionManager.address, 6e5);
 
       //mint a position
-      const txMint = await MintFallback.mint({
+      let tx = await MintFallback.connect(user).mint({
         token0Address: tokenEth.address,
         token1Address: tokenUsdc.address,
         fee: fee,
@@ -224,40 +224,43 @@ describe('UpdateUncollectedFees.sol', function () {
         amount0Desired: amount0In,
         amount1Desired: amount1In,
       });
+      let events = (await tx.wait()).events as any;
 
-      let eventsMint = (await txMint.wait()).events as any;
-
-      const mintEvent = eventsMint[eventsMint.length - 1];
+      const mintEvent = events[events.length - 1];
+      const tokenId = mintEvent.data;
 
       // Do some trades to accrue fees
       for (let i = 0; i < 10; i++) {
-        await SwapRouter.connect(trader).exactInputSingle([
-          i % 2 === 0 ? tokenEth.address : tokenUsdc.address,
-          i % 2 === 0 ? tokenUsdc.address : tokenEth.address,
-          3000,
-          trader.address,
-          Date.now() + 1000,
-          1e4,
-          0,
-          0,
-        ]);
+        await swapRouter
+          .connect(trader)
+          .exactInputSingle([
+            i % 2 === 0 ? tokenEth.address : tokenUsdc.address,
+            i % 2 === 0 ? tokenUsdc.address : tokenEth.address,
+            3000,
+            trader.address,
+            Date.now() + 1000,
+            1e4,
+            0,
+            0,
+          ]);
       }
 
-      const tx = await UpdateFeeFallback.updateUncollectedFees(mintEvent.data);
-      const events = (await tx.wait()).events as any;
-      const updateEvent = events[events.length - 1];
-      const total = abiCoder.decode(['uint256', 'uint256'], updateEvent.data);
+      // collect fees
+      tx = await collectFees.connect(user).collectFees(tokenId);
+      events = (await tx.wait()).events as any;
+      const collectEvent = events[events.length - 1];
+      const feesCollected = abiCoder.decode(['uint256', 'uint256'], collectEvent.data);
 
-      expect(total[0]).to.gt(0);
-      expect(total[1]).to.gt(0);
+      expect(feesCollected[0]).to.gt(0);
+      expect(feesCollected[1]).to.gt(0);
     });
 
     it('should revert if position does not exist', async function () {
-      await expect(UpdateFeeFallback.updateUncollectedFees(200)).to.be.reverted;
+      await expect(collectFees.connect(user).collectFees(200)).to.be.reverted;
     });
 
     it('should revert if position is not owned by user', async function () {
-      await expect(UpdateFeeFallback.updateUncollectedFees(1)).to.be.reverted;
+      await expect(collectFees.connect(user).collectFees(1)).to.be.reverted;
     });
   });
 });

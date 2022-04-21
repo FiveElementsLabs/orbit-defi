@@ -9,6 +9,14 @@ import '../../interfaces/IPositionManager.sol';
 import '../utils/Storage.sol';
 
 interface IMint {
+    ///@notice struct for input of the mint action
+    ///@param token0Address address of the first token
+    ///@param token1Address address of the second token
+    ///@param fee pool fee level
+    ///@param tickLower lower tick of the position
+    ///@param tickUpper upper tick of the position
+    ///@param amount0Desired amount of first token in position
+    ///@param amount1Desired amount of second token in position
     struct MintInput {
         address token0Address;
         address token1Address;
@@ -29,21 +37,11 @@ interface IMint {
 }
 
 ///@notice action to mint a UniswapV3 position NFT
-contract Mint {
+contract Mint is IMint {
     ///@notice emitted when a UniswapNFT is deposited in PositionManager
     ///@param from address of PositionManager
     ///@param tokenId Id of deposited token
     event DepositUni(address indexed from, uint256 tokenId);
-
-    struct MintInput {
-        address token0Address;
-        address token1Address;
-        uint24 fee;
-        int24 tickLower;
-        int24 tickUpper;
-        uint256 amount0Desired;
-        uint256 amount1Desired;
-    }
 
     ///@notice mints a UniswapV3 position NFT
     ///@param inputs struct of MintInput parameters
@@ -52,6 +50,7 @@ contract Mint {
     ///@return amount1Deposited token1 amount deposited
     function mint(MintInput calldata inputs)
         public
+        override
         returns (
             uint256 tokenId,
             uint256 amount0Deposited,

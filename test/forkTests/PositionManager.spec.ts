@@ -7,10 +7,18 @@ const hre = require('hardhat');
 const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json');
 const NonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json');
 const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json');
-const PositionManagerjson = require('../artifacts/contracts/PositionManager.sol/PositionManager.json');
+const PositionManagerjson = require('../../artifacts/contracts/PositionManager.sol/PositionManager.json');
 const SwapRouterjson = require('@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json');
-const FixturesConst = require('./shared/fixtures');
-import { tokensFixture, poolFixture, mintSTDAmount, routerFixture, getSelectors } from './shared/fixtures';
+const LendingPooljson = require('@aave/protocol-v2/artifacts/contracts/protocol/lendingpool/LendingPool.sol/LendingPool.json');
+const FixturesConst = require('../shared/fixtures');
+import {
+  tokensFixture,
+  poolFixture,
+  mintSTDAmount,
+  routerFixture,
+  getSelectors,
+  findbalanceSlot,
+} from '../shared/fixtures';
 import {
   MockToken,
   IUniswapV3Pool,
@@ -18,7 +26,7 @@ import {
   PositionManager,
   TestRouter,
   DepositRecipes,
-} from '../typechain';
+} from '../../typechain';
 
 describe('PositionManager.sol', function () {
   //GLOBAL VARIABLE - USE THIS
@@ -49,12 +57,13 @@ describe('PositionManager.sol', function () {
   let MintAction: Contract;
   let DecreaseLiquidityAction: Contract;
   let DecreaseLiquidityFallback: Contract;
-  let abiCoder: AbiCoder;
+  let AaveDepositFallback: Contract;
   let DepositRecipes: Contract;
+  let LendingPool: Contract;
+  let usdcMock: Contract;
+  let wbtcMock: Contract;
 
   before(async function () {
-    await hre.network.provider.send('hardhat_reset');
-
     user = await user; //owner of the smart vault, a normal user
     liquidityProvider = await liquidityProvider; //generic address as other users, mint pool liquidity, try to do onlyUser call etc
     trader = await trader; //used for swap
@@ -111,6 +120,9 @@ describe('PositionManager.sol', function () {
     SwapRouter = await SwapRouterFactory.deploy(Factory.address, tokenEth.address);
     await SwapRouter.deployed();
 
+    //LendingPool contract
+    LendingPool = await ethers.getContractAtFromArtifact(LendingPooljson, '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9');
+
     //deploy uniswapAddressHolder
     const uniswapAddressHolderFactory = await ethers.getContractFactory('UniswapAddressHolder');
     const uniswapAddressHolder = await uniswapAddressHolderFactory.deploy(
@@ -119,6 +131,11 @@ describe('PositionManager.sol', function () {
       SwapRouter.address
     );
     await uniswapAddressHolder.deployed();
+
+    //deploy aaveAddressHolder
+    const aaveAddressHolderFactory = await ethers.getContractFactory('AaveAddressHolder');
+    const aaveAddressHolder = await aaveAddressHolderFactory.deploy(LendingPool.address);
+    await aaveAddressHolder.deployed();
 
     // deploy DiamondCutFacet ----------------------------------------------------------------------
     const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet');
@@ -139,7 +156,8 @@ describe('PositionManager.sol', function () {
       user.address,
       diamondCutFacet.address,
       uniswapAddressHolder.address,
-      registry.address
+      registry.address,
+      aaveAddressHolder.address
     );
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
@@ -160,8 +178,14 @@ describe('PositionManager.sol', function () {
     DepositRecipes = await DepositRecipesFactory.deploy(uniswapAddressHolder.address, Factory.address);
     await DepositRecipes.deployed();
 
-    //select standard abicoder
-    abiCoder = ethers.utils.defaultAbiCoder;
+    //Deploy Aave Deposit Action
+    const AaveDepositActionFactory = await ethers.getContractFactory('AaveDeposit');
+    const AaveDepositAction = (await AaveDepositActionFactory.deploy()) as Contract;
+    await AaveDepositAction.deployed();
+
+    //Get mock token
+    usdcMock = await ethers.getContractAt('MockToken', '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48');
+    wbtcMock = await ethers.getContractAt('MockToken', '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599');
 
     //APPROVE
     //recipient: NonFungiblePositionManager - spender: user
@@ -188,6 +212,8 @@ describe('PositionManager.sol', function () {
     await tokenEth.connect(user).approve(PositionManager.address, ethers.utils.parseEther('1000000000000'));
     await tokenUsdc.connect(user).approve(PositionManager.address, ethers.utils.parseEther('1000000000000'));
     await tokenDai.connect(user).approve(PositionManager.address, ethers.utils.parseEther('1000000000000'));
+    await usdcMock.connect(user).approve(PositionManager.address, ethers.utils.parseEther('1000000000000'));
+    await wbtcMock.connect(user).approve(PositionManager.address, ethers.utils.parseEther('1000000000000'));
     //recipient: Router - spender: trader
     await tokenEth.connect(trader).approve(SwapRouter.address, ethers.utils.parseEther('1000000000000'));
     await tokenUsdc.connect(trader).approve(SwapRouter.address, ethers.utils.parseEther('1000000000000'));
@@ -200,49 +226,31 @@ describe('PositionManager.sol', function () {
     await registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
 
     await NonFungiblePositionManager.setApprovalForAll(PositionManager.address, true);
+    //mint some tokens
+    const slot = await findbalanceSlot(usdcMock, user);
+    const encode = (types: any, values: any) => ethers.utils.defaultAbiCoder.encode(types, values);
 
-    // give pool some liquidity
-    await NonFungiblePositionManager.connect(liquidityProvider).mint(
-      {
-        token0: tokenEth.address,
-        token1: tokenUsdc.address,
-        fee: 3000,
-        tickLower: 0 - 60 * 1000,
-        tickUpper: 0 + 60 * 1000,
-        amount0Desired: '0x' + (1e26).toString(16),
-        amount1Desired: '0x' + (1e26).toString(16),
-        amount0Min: 0,
-        amount1Min: 0,
-        recipient: liquidityProvider.address,
-        deadline: Date.now() + 1000,
-      },
-      { gasLimit: 670000 }
-    );
-  });
+    let probedSlot = ethers.utils.keccak256(encode(['address', 'uint'], [user.address, slot]));
+    let value = encode(['uint'], [ethers.utils.parseEther('100000000')]);
 
-  beforeEach(async function () {
-    const txMint = await NonFungiblePositionManager.connect(user).mint(
-      {
-        token0: tokenEth.address,
-        token1: tokenUsdc.address,
-        fee: 3000,
-        tickLower: 0 - 60 * 1000,
-        tickUpper: 0 + 60 * 1000,
-        amount0Desired: '0x' + (1e18).toString(16),
-        amount1Desired: '0x' + (1e18).toString(16),
-        amount0Min: 0,
-        amount1Min: 0,
-        recipient: user.address,
-        deadline: Date.now() + 1000,
-      },
-      { gasLimit: 670000 }
-    );
+    await hre.network.provider.send('hardhat_setStorageAt', [usdcMock.address, probedSlot, value]);
+    //pass to PM some token
+    await usdcMock.connect(user).approve(PositionManager.address, ethers.utils.parseEther('100000000'));
+    await usdcMock.connect(user).transfer(PositionManager.address, ethers.utils.parseEther('10000000'));
 
-    const mintReceipt = (await txMint.wait()) as any;
-    tokenId = mintReceipt.events[mintReceipt.events.length - 1].args.tokenId;
+    const cut = [];
+    const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 };
 
-    NonFungiblePositionManager.connect(user).setApprovalForAll(DepositRecipes.address, true);
-    DepositRecipes.connect(user).depositUniNft([tokenId]);
+    cut.push({
+      facetAddress: AaveDepositAction.address,
+      action: FacetCutAction.Add,
+      functionSelectors: await getSelectors(AaveDepositAction),
+    });
+
+    const diamondCut = await ethers.getContractAt('IDiamondCut', PositionManager.address);
+
+    await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
+    AaveDepositFallback = await ethers.getContractAt('IAaveDeposit', PositionManager.address);
   });
 
   describe('PositionManager - DiamondCut', function () {
@@ -262,13 +270,8 @@ describe('PositionManager.sol', function () {
       await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
 
       DecreaseLiquidityFallback = await ethers.getContractAt('IDecreaseLiquidity', PositionManager.address);
-
-      const amount0Desired = 1e4;
-      const amount1Desired = 1e6;
-
-      await expect(DecreaseLiquidityFallback.connect(user).decreaseLiquidity(tokenId, amount0Desired, amount1Desired))
-        .to.not.reverted;
     });
+
     it('should revert if replace a wrong one function address', async function () {
       // add actions to position manager using diamond cut
       const cut = [];
@@ -292,6 +295,7 @@ describe('PositionManager.sol', function () {
       await expect(DecreaseLiquidityFallback.connect(user).decreaseLiquidity(tokenId, amount0Desired, amount1Desired))
         .to.be.reverted;
     });
+
     it('should replace onefunction address', async function () {
       // add actions to position manager using diamond cut
       const cut = [];
@@ -308,13 +312,8 @@ describe('PositionManager.sol', function () {
       await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
 
       DecreaseLiquidityFallback = await ethers.getContractAt('IDecreaseLiquidity', PositionManager.address);
-
-      const amount0Desired = 1e4;
-      const amount1Desired = 1e6;
-
-      await expect(DecreaseLiquidityFallback.connect(user).decreaseLiquidity(tokenId, amount0Desired, amount1Desired))
-        .to.not.reverted;
     });
+
     it('should remove onefunction address', async function () {
       // add actions to position manager using diamond cut
       const cut = [];
@@ -336,6 +335,32 @@ describe('PositionManager.sol', function () {
 
       await expect(DecreaseLiquidityFallback.connect(user).decreaseLiquidity(tokenId, amount0Desired, amount1Desired))
         .to.be.reverted;
+    });
+  });
+
+  describe('PositionManager - pushAavePosition', function () {
+    it('should give user shares if the first position is deposited', async function () {
+      await PositionManager.pushAavePosition(usdcMock.address, 200);
+      const positions = (await PositionManager.getAavePositions(usdcMock.address)) as any;
+      expect(positions[0].shares).to.eq(200);
+    });
+
+    it('should give user shares if a new position is deposited', async function () {
+      await AaveDepositFallback.connect(user).depositToAave(usdcMock.address, 200, LendingPool.address);
+      await PositionManager.pushAavePosition(usdcMock.address, 200);
+      expect(await PositionManager.aaveUserReserves(usdcMock.address)).to.equal(400);
+    });
+  });
+
+  describe('PositionManager - removeAavePosition', function () {
+    it('should correctly remove a position', async function () {
+      await PositionManager.pushAavePosition(usdcMock.address, 200);
+      let positions = (await PositionManager.getAavePositions(usdcMock.address)) as any;
+      expect(positions[0].shares).to.eq(200);
+
+      await PositionManager.removeAavePosition(usdcMock.address, positions[0].id);
+      const positionsAfter = (await PositionManager.getAavePositions(usdcMock.address)) as any;
+      expect(positionsAfter.length).to.eq(positions.length - 1);
     });
   });
 });

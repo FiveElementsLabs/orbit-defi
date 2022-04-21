@@ -18,7 +18,7 @@ interface IAaveDeposit {
 }
 
 ///@notice action to deposit tokens into aave protocol
-contract AaveDeposit {
+contract AaveDeposit is IAaveDeposit {
     ///@notice deposit to aave some token amount
     ///@param token token address
     ///@param amount amount to deposit
@@ -27,7 +27,7 @@ contract AaveDeposit {
         address token,
         uint256 amount,
         address lendingPool
-    ) public {
+    ) public override {
         if (IERC20(token).allowance(address(this), lendingPool) < amount) {
             IERC20(token).approve(lendingPool, 2**256 - 1);
         }

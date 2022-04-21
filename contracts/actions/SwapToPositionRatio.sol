@@ -12,25 +12,6 @@ import '../utils/Storage.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
 
 interface ISwapToPositionRatio {
-    struct SwapToPositionInput {
-        address token0Address;
-        address token1Address;
-        uint24 fee;
-        uint256 amount0In;
-        uint256 amount1In;
-        int24 tickLower;
-        int24 tickUpper;
-    }
-
-    function swapToPositionRatio(SwapToPositionInput memory inputs)
-        external
-        returns (uint256 amount0Out, uint256 amount1Out);
-}
-
-///@notice action to swap to an exact position ratio
-contract SwapToPositionRatio {
-    event SwapToPositionRatioEvent(uint256 amount0Out, uint256 amount1Out);
-
     ///@notice input the decoder expects
     ///@param token0Address address of first token of the pool
     ///@param token1Address address of second token of the pool
@@ -49,12 +30,22 @@ contract SwapToPositionRatio {
         int24 tickUpper;
     }
 
+    function swapToPositionRatio(SwapToPositionInput memory inputs)
+        external
+        returns (uint256 amount0Out, uint256 amount1Out);
+}
+
+///@notice action to swap to an exact position ratio
+contract SwapToPositionRatio is ISwapToPositionRatio {
+    event SwapToPositionRatioEvent(uint256 amount0Out, uint256 amount1Out);
+
     ///@notice performs swap to optimal ratio for the position at tickLower and tickUpper
     ///@param inputs input bytes to be decoded according to SwapToPositionInput
     ///@param amount0Out the new value of amount0
     ///@param amount1Out the new value of amount1
     function swapToPositionRatio(SwapToPositionInput memory inputs)
         public
+        override
         returns (uint256 amount0Out, uint256 amount1Out)
     {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();

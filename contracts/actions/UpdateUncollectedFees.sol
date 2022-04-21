@@ -11,7 +11,7 @@ interface IUpdateUncollectedFees {
     function updateUncollectedFees(uint256 tokenId) external returns (uint256, uint256);
 }
 
-contract UpdateUncollectedFees {
+contract UpdateUncollectedFees is IUpdateUncollectedFees {
     ///@notice emitted when a UniswapNFT position is updated
     ///@param from address of PositionManager
     ///@param token0 fee collected
@@ -22,7 +22,7 @@ contract UpdateUncollectedFees {
     ///@param tokenId ID of the NFT
     ///@return uint256 token0 fee collected
     ///@return uint256 token1 fee collected
-    function updateUncollectedFees(uint256 tokenId) public returns (uint256, uint256) {
+    function updateUncollectedFees(uint256 tokenId) public override returns (uint256, uint256) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
         INonfungiblePositionManager nonfungiblePositionManager = INonfungiblePositionManager(

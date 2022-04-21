@@ -28,7 +28,7 @@ interface IDecreaseLiquidity {
 }
 
 ///@notice action to decrease liquidity of an NFT position
-contract DecreaseLiquidity {
+contract DecreaseLiquidity is IDecreaseLiquidity {
     ///@notice decrease the liquidity of a V3 position
     ///@param tokenId the tokenId of the position
     ///@param amount0Desired the amount of token0 liquidity desired
@@ -42,6 +42,7 @@ contract DecreaseLiquidity {
         uint256 amount1Desired
     )
         public
+        override
         returns (
             uint128 liquidityToDecrease,
             uint256 amount0,

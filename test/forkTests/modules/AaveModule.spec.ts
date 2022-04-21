@@ -6,14 +6,14 @@ import { ethers } from 'hardhat';
 const hre = require('hardhat');
 const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json');
 const PositionManagerjson = require('../../../artifacts/contracts/PositionManager.sol/PositionManager.json');
-const NonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/contracts/NonFungiblePositionManager.sol/NonFungiblePositionManager.json');
+const NonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json');
 const LendingPooljson = require('@aave/protocol-v2/artifacts/contracts/protocol/lendingpool/LendingPool.sol/LendingPool.json');
 
 const FixturesConst = require('../../shared/fixtures');
 import { tokensFixture, poolFixture, mintSTDAmount, getSelectors, findbalanceSlot } from '../../shared/fixtures';
 import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager } from '../../../typechain';
 
-describe('AaveDeposit.sol', function () {
+describe('AaveModule.sol', function () {
   //GLOBAL VARIABLE - USE THIS
   let user: any = ethers.getSigners().then(async (signers) => {
     return signers[0];
@@ -105,7 +105,8 @@ describe('AaveDeposit.sol', function () {
       user.address,
       diamondCutFacet.address,
       uniswapAddressHolder.address,
-      registry.address
+      registry.address,
+      aaveAddressHolder.address
     );
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
@@ -129,7 +130,7 @@ describe('AaveDeposit.sol', function () {
     AaveModule = await AaveModuleFactory.deploy(aaveAddressHolder.address, uniswapAddressHolder.address);
     await AaveModule.deployed();
 
-    //Get mock token
+    //Get mock tokens. These need to be real Mainnet addresses
     usdcMock = await ethers.getContractAt('MockToken', '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48');
     wbtcMock = await ethers.getContractAt('MockToken', '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599');
 

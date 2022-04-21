@@ -1,18 +1,25 @@
 import '@nomiclabs/hardhat-ethers';
 import { expect } from 'chai';
-import { ContractFactory, Contract } from 'ethers';
+import { ContractFactory, Contract, BigNumber } from 'ethers';
 import { AbiCoder } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 const hre = require('hardhat');
 const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json');
 const NonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json');
 const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json');
-const PositionManagerjson = require('../../artifacts/contracts/PositionManager.sol/PositionManager.json');
-const FixturesConst = require('../shared/fixtures');
-import { tokensFixture, poolFixture, mintSTDAmount, getSelectors } from '../shared/fixtures';
-import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager, Mint } from '../../typechain';
+const PositionManagerjson = require('../../../artifacts/contracts/PositionManager.sol/PositionManager.json');
+const SwapRouterjson = require('@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json');
+const FixturesConst = require('../../shared/fixtures');
+import { tokensFixture, poolFixture, mintSTDAmount, getSelectors } from '../../shared/fixtures';
+import {
+  MockToken,
+  IUniswapV3Pool,
+  INonfungiblePositionManager,
+  SwapToPositionRatio,
+  PositionManager,
+} from '../../../typechain';
 
-describe('Mint.sol', function () {
+describe('SwapToPositionRatio.sol', function () {
   //GLOBAL VARIABLE - USE THIS
   let user: any = ethers.getSigners().then(async (signers) => {
     return signers[0];
@@ -29,10 +36,11 @@ describe('Mint.sol', function () {
 
   let Factory: Contract; // the factory that will deploy all pools
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
-  let MintAction: Mint;
-  let MintFallback: Mint;
+  let PositionManager: PositionManager; // PositionManager contract by UniswapV3
+  let SwapRouter: Contract; // SwapRouter contract by UniswapV3
+  let SwapToPositionRatioFallback: Contract; // SwapToPositionRatio contract
   let abiCoder: AbiCoder;
-  let PositionManager: PositionManager;
+  let UniswapAddressHolder: Contract; // address holder for UniswapV3 contracts
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
@@ -40,9 +48,10 @@ describe('Mint.sol', function () {
     user = await user; //owner of the smart vault, a normal user
     liquidityProvider = await liquidityProvider;
 
-    //deploy the tokens - ETH, USDC
+    //deploy first 3 tokens - ETH, USDC, DAI
     tokenEth = (await tokensFixture('ETH', 18)).tokenFixture;
     tokenUsdc = (await tokensFixture('USDC', 6)).tokenFixture;
+    tokenDai = (await tokensFixture('DAI', 18)).tokenFixture;
 
     //deploy factory, used for pools
     const uniswapFactoryFactory = new ContractFactory(
@@ -59,6 +68,7 @@ describe('Mint.sol', function () {
     //mint 1e30 token, you can call with arbitrary amount
     await mintSTDAmount(tokenEth);
     await mintSTDAmount(tokenUsdc);
+    await mintSTDAmount(tokenDai);
 
     //deploy NonFungiblePositionManagerDescriptor and NonFungiblePositionManager
     const NonFungiblePositionManagerDescriptorFactory = new ContractFactory(
@@ -84,24 +94,24 @@ describe('Mint.sol', function () {
     )) as INonfungiblePositionManager;
     await NonFungiblePositionManager.deployed();
 
+    //deploy swap router
+    const SwapRouterFactory = new ContractFactory(SwapRouterjson['abi'], SwapRouterjson['bytecode'], user);
+    SwapRouter = (await SwapRouterFactory.deploy(Factory.address, tokenEth.address)) as Contract;
+    await SwapRouter.deployed();
+
     //deploy uniswapAddressHolder
-    const uniswapAddressHolderFactory = await ethers.getContractFactory('UniswapAddressHolder');
-    const uniswapAddressHolder = await uniswapAddressHolderFactory.deploy(
+    const UniswapAddressHolderFactory = await ethers.getContractFactory('UniswapAddressHolder');
+    UniswapAddressHolder = (await UniswapAddressHolderFactory.deploy(
       NonFungiblePositionManager.address,
       Factory.address,
-      NonFungiblePositionManagerDescriptor.address //random address because we don't need it
-    );
-    await uniswapAddressHolder.deployed();
+      SwapRouter.address
+    )) as Contract;
+    await UniswapAddressHolder.deployed();
 
     // deploy DiamondCutFacet ----------------------------------------------------------------------
     const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet');
     const diamondCutFacet = await DiamondCutFacet.deploy();
     await diamondCutFacet.deployed();
-
-    //Deploy Mint Action
-    const mintActionFactory = await ethers.getContractFactory('Mint');
-    MintAction = (await mintActionFactory.deploy()) as Mint;
-    await MintAction.deployed();
 
     // deploy Registry
     const Registry = await ethers.getContractFactory('Registry');
@@ -116,20 +126,26 @@ describe('Mint.sol', function () {
     await PositionManagerFactory.create(
       user.address,
       diamondCutFacet.address,
-      uniswapAddressHolder.address,
-      registry.address
+      UniswapAddressHolder.address,
+      registry.address,
+      '0x0000000000000000000000000000000000000000'
     );
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
 
+    //Deploy SwapToPositionRatio Action
+    const swapToPositionRatioActionFactory = await ethers.getContractFactory('SwapToPositionRatio');
+    const SwapToPositionRatioAction = (await swapToPositionRatioActionFactory.deploy()) as SwapToPositionRatio;
+    await SwapToPositionRatioAction.deployed();
+
     //get AbiCoder
     abiCoder = ethers.utils.defaultAbiCoder;
 
     //APPROVE
-    //recipient: Mint action - spender: user
-    await tokenEth.connect(user).approve(MintAction.address, ethers.utils.parseEther('100000000000000'));
-    await tokenUsdc.connect(user).approve(MintAction.address, ethers.utils.parseEther('100000000000000'));
+    //recipient: PositionManager action - spender: user
+    await tokenEth.connect(user).approve(PositionManager.address, ethers.utils.parseEther('100000000000000'));
+    await tokenUsdc.connect(user).approve(PositionManager.address, ethers.utils.parseEther('100000000000000'));
     //recipient: NonFungiblePositionManager - spender: liquidityProvider
     await tokenEth
       .connect(liquidityProvider)
@@ -140,7 +156,7 @@ describe('Mint.sol', function () {
     //approval user to registry for test
     await registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
 
-    //give mint action some tokens
+    //give PositionManager some tokens
     await tokenEth.connect(user).transfer(PositionManager.address, ethers.utils.parseEther('1000000000000'));
     await tokenUsdc.connect(user).transfer(PositionManager.address, ethers.utils.parseEther('1000000000000'));
 
@@ -167,73 +183,96 @@ describe('Mint.sol', function () {
     const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 };
 
     cut.push({
-      facetAddress: MintAction.address,
+      facetAddress: SwapToPositionRatioAction.address,
       action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(MintAction),
+      functionSelectors: await getSelectors(SwapToPositionRatioAction),
     });
 
     const diamondCut = await ethers.getContractAt('IDiamondCut', PositionManager.address);
 
     const tx = await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
 
-    MintFallback = (await ethers.getContractAt('IMint', PositionManager.address)) as Mint;
+    SwapToPositionRatioFallback = (await ethers.getContractAt(
+      'ISwapToPositionRatio',
+      PositionManager.address
+    )) as Contract;
   });
 
-  describe('MintAction.sol - mint', function () {
-    it('should correctly mint a UNIV3 position', async function () {
-      const balancePre = await NonFungiblePositionManager.balanceOf(PositionManager.address);
-      const amount0In = 5e5;
-      const amount1In = 5e5;
-      const tickLower = -720;
-      const tickUpper = 3600;
+  describe('doAction', function () {
+    it('should correctly swap to exact position ratio', async function () {
+      const tickLower = -300;
+      const tickUpper = 600;
+      const amount0In = 1e5;
+      const amount1In = 2e5;
 
-      await MintFallback.mint({
+      await SwapToPositionRatioFallback.connect(user).swapToPositionRatio({
         token0Address: tokenEth.address,
         token1Address: tokenUsdc.address,
         fee: 3000,
+        amount0In: amount0In,
+        amount1In: amount1In,
         tickLower: tickLower,
         tickUpper: tickUpper,
-        amount0Desired: amount0In,
-        amount1Desired: amount1In,
       });
-
-      expect(await NonFungiblePositionManager.balanceOf(PositionManager.address)).to.gt(balancePre);
     });
 
-    it('should revert if pool does not exist', async function () {
+    it('should correctly return output', async function () {
+      const tickLower = -300;
+      const tickUpper = 600;
+      const amount0In = 1e5;
+      const amount1In = 2e5;
+
+      const tx = await SwapToPositionRatioFallback.connect(user).swapToPositionRatio({
+        token0Address: tokenEth.address,
+        token1Address: tokenUsdc.address,
+        fee: 3000,
+        amount0In: amount0In,
+        amount1In: amount1In,
+        tickLower: tickLower,
+        tickUpper: tickUpper,
+      });
+
+      const events = (await tx.wait()).events as any;
+      const outputEvent = events[events.length - 1];
+      const amountsOut = abiCoder.decode(['uint256', 'uint256'], outputEvent.data);
+      expect(amountsOut[0].toNumber()).to.equal(199202);
+      expect(amountsOut[1].toNumber()).to.equal(100498);
+    });
+
+    it('should revert if a too high/low tick is passed', async function () {
+      const tickLower = -60;
+      const tickUpper = 900000;
       const amount0In = 7e5;
       const amount1In = 5e5;
-      const tickLower = -720;
-      const tickUpper = 720;
 
       await expect(
-        MintFallback.mint({
+        SwapToPositionRatioFallback.connect(user).swapToPositionRatio({
           token0Address: tokenEth.address,
           token1Address: tokenUsdc.address,
-          fee: 1235132,
+          fee: 3000,
+          amount0In: amount0In,
+          amount1In: amount1In,
           tickLower: tickLower,
           tickUpper: tickUpper,
-          amount0Desired: amount0In,
-          amount1Desired: amount1In,
         })
       ).to.be.reverted;
     });
 
-    it('should revert if a too high/low tick is passed', async function () {
+    it('should revert if pool does not exist', async function () {
+      const tickLower = -720;
+      const tickUpper = 720;
       const amount0In = 7e5;
       const amount1In = 5e5;
-      const tickLower = -60;
-      const tickUpper = 900000;
 
       await expect(
-        MintFallback.mint({
+        SwapToPositionRatioFallback.connect(user).swapToPositionRatio({
           token0Address: tokenEth.address,
-          token1Address: tokenUsdc.address,
-          fee: 3000,
+          token1Address: tokenDai.address,
+          fee: 2348,
+          amount0In: amount0In,
+          amount1In: amount1In,
           tickLower: tickLower,
           tickUpper: tickUpper,
-          amount0Desired: amount0In,
-          amount1Desired: amount1In,
         })
       ).to.be.reverted;
     });

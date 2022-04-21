@@ -3,7 +3,7 @@ import { expect } from 'chai';
 import { Contract } from 'ethers';
 const hre = require('hardhat');
 import { ethers } from 'hardhat';
-import { RegistryFixture } from './shared/fixtures';
+import { RegistryFixture } from '../shared/fixtures';
 
 describe('Registry.sol', function () {
   let deployer: any;
