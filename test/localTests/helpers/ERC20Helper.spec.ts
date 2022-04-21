@@ -3,10 +3,9 @@ import { expect } from 'chai';
 import { Contract, ContractFactory } from 'ethers';
 const hre = require('hardhat');
 import { ethers } from 'hardhat';
-import { Test } from 'mocha';
 
-import { MockToken } from '../../typechain';
-import { tokensFixture, mintSTDAmount } from '../shared/fixtures';
+import { MockToken } from '../../../typechain';
+import { tokensFixture, mintSTDAmount } from '../../shared/fixtures';
 
 describe('TestERC20Helper', () => {
   //GLOBAL VARIABLE - USE THIS

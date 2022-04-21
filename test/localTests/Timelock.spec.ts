@@ -3,8 +3,8 @@ const hre = require('hardhat');
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { AbiCoder } from 'ethers/lib/utils';
-import { RegistryFixture, TimelockFixture } from './shared/fixtures';
-import { Registry, Timelock } from '../typechain';
+import { RegistryFixture, TimelockFixture } from '../shared/fixtures';
+import { Registry, Timelock } from '../../typechain';
 
 describe('Timelock.sol', function () {
   let deployer: any;

@@ -7,14 +7,14 @@ const hre = require('hardhat');
 const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json');
 const NonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json');
 const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json');
-const PositionManagerjson = require('../../artifacts/contracts/PositionManager.sol/PositionManager.json');
+const PositionManagerjson = require('../../../artifacts/contracts/PositionManager.sol/PositionManager.json');
 const SwapRouterjson = require('@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json');
 
-const FixturesConst = require('../shared/fixtures');
-import { tokensFixture, poolFixture, mintSTDAmount, routerFixture, getSelectors } from '../shared/fixtures';
-import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager } from '../../typechain';
+const FixturesConst = require('../../shared/fixtures');
+import { tokensFixture, poolFixture, mintSTDAmount, getSelectors } from '../../shared/fixtures';
+import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager } from '../../../typechain';
 
-describe('IdleLiquidityModule.sol', function () {
+describe('ClosePosition.sol', function () {
   //GLOBAL VARIABLE - USE THIS
   let user: any = ethers.getSigners().then(async (signers) => {
     return signers[0];
@@ -32,16 +32,12 @@ describe('IdleLiquidityModule.sol', function () {
   //all the pools used globally
   let Pool0: IUniswapV3Pool;
 
-  let Router: Contract; //uniswapv3 router
   let Factory: Contract; // the factory that will deploy all pools
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
   let PositionManager: PositionManager; // Position manager contract
-  let ClosePositionAction: Contract; // ClosePositionAction contract
-  let MintAction: Contract; // MintAction contract
-  let SwapToPositionRatioAction: Contract; // SwapToPositionRatioAction contract
-  let IdleLiquidityModule: Contract; // IdleLiquidityModule contract
-  let SwapRouter: Contract; // SwapRouter contract
-  let abiCoder: AbiCoder; // abiCoder used to encode and decode data
+  let ClosePositionAction: Contract;
+  let SwapRouter: Contract;
+  let abiCoder: AbiCoder;
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
@@ -98,15 +94,12 @@ describe('IdleLiquidityModule.sol', function () {
     SwapRouter = (await SwapRouterFactory.deploy(Factory.address, tokenEth.address)) as Contract;
     await SwapRouter.deployed();
 
-    //deploy router
-    Router = (await routerFixture()).ruoterDeployFixture;
-
     //deploy uniswapAddressHolder
     const uniswapAddressHolderFactory = await ethers.getContractFactory('UniswapAddressHolder');
     const uniswapAddressHolder = await uniswapAddressHolderFactory.deploy(
       NonFungiblePositionManager.address,
       Factory.address,
-      SwapRouter.address
+      NonFungiblePositionManagerDescriptor.address //random address because we don't need it
     );
     await uniswapAddressHolder.deployed();
 
@@ -136,25 +129,10 @@ describe('IdleLiquidityModule.sol', function () {
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
 
-    //Deploy closePosition Action
+    //Deploy Mint Action
     const closePositionActionFactory = await ethers.getContractFactory('ClosePosition');
     ClosePositionAction = (await closePositionActionFactory.deploy()) as Contract;
     await ClosePositionAction.deployed();
-
-    //Deploy Mint Action
-    const mintActionFactory = await ethers.getContractFactory('Mint');
-    MintAction = (await mintActionFactory.deploy()) as Contract;
-    await MintAction.deployed();
-
-    //Deploy SwapToPositionRatio Action
-    const swapToPositionRatioActionFactory = await ethers.getContractFactory('SwapToPositionRatio');
-    SwapToPositionRatioAction = (await swapToPositionRatioActionFactory.deploy()) as Contract;
-    await SwapToPositionRatioAction.deployed();
-
-    //Deploy IdleLiquidityModule
-    const idleLiquidityModuleFactory = await ethers.getContractFactory('IdleLiquidityModule');
-    IdleLiquidityModule = (await idleLiquidityModuleFactory.deploy(uniswapAddressHolder.address)) as Contract;
-    await IdleLiquidityModule.deployed();
 
     //get AbiCoder
     abiCoder = ethers.utils.defaultAbiCoder;
@@ -163,12 +141,6 @@ describe('IdleLiquidityModule.sol', function () {
     //recipient: ClosePosition action - spender: user
     await tokenEth.connect(user).approve(ClosePositionAction.address, ethers.utils.parseEther('100000000000000'));
     await tokenUsdc.connect(user).approve(ClosePositionAction.address, ethers.utils.parseEther('100000000000000'));
-    //recipient: ClosePosition action - spender: user
-    await tokenEth.connect(user).approve(PositionManager.address, ethers.utils.parseEther('100000000000000'));
-    await tokenUsdc.connect(user).approve(PositionManager.address, ethers.utils.parseEther('100000000000000'));
-    //recipient: Mint action - spender: user
-    await tokenEth.connect(user).approve(MintAction.address, ethers.utils.parseEther('100000000000000'));
-    await tokenUsdc.connect(user).approve(MintAction.address, ethers.utils.parseEther('100000000000000'));
     //recipient: NonFungiblePositionManager - spender: user
     await tokenEth
       .connect(user)
@@ -183,17 +155,10 @@ describe('IdleLiquidityModule.sol', function () {
     await tokenUsdc
       .connect(liquidityProvider)
       .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
-    //recipient: Router - spender: liquidityProvider
-    await tokenEth.connect(liquidityProvider).approve(Router.address, ethers.utils.parseEther('1000000000000'));
-    await tokenUsdc.connect(liquidityProvider).approve(Router.address, ethers.utils.parseEther('1000000000000'));
     //approval nfts
     await NonFungiblePositionManager.setApprovalForAll(PositionManager.address, true);
     //approval user to registry for test
     await registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
-    await registry.addNewContract(
-      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('IdleLiquidityModule')),
-      IdleLiquidityModule.address
-    );
 
     // give pool some liquidity
     await NonFungiblePositionManager.connect(liquidityProvider).mint(
@@ -213,28 +178,19 @@ describe('IdleLiquidityModule.sol', function () {
       { gasLimit: 670000 }
     );
 
+    // add actions to position manager using diamond pattern
     const cut = [];
     const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 };
 
-    cut.push({
-      facetAddress: SwapToPositionRatioAction.address,
-      action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(SwapToPositionRatioAction),
-    });
     cut.push({
       facetAddress: ClosePositionAction.address,
       action: FacetCutAction.Add,
       functionSelectors: await getSelectors(ClosePositionAction),
     });
-    cut.push({
-      facetAddress: MintAction.address,
-      action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(MintAction),
-    });
 
     const diamondCut = await ethers.getContractAt('IDiamondCut', PositionManager.address);
 
-    await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
+    const tx = await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
   });
   beforeEach(async function () {
     //mint NFT
@@ -243,8 +199,8 @@ describe('IdleLiquidityModule.sol', function () {
         token0: tokenEth.address,
         token1: tokenUsdc.address,
         fee: 3000,
-        tickLower: 0 - 60 * 2,
-        tickUpper: 0 + 60 * 2,
+        tickLower: 0 - 60 * 1000,
+        tickUpper: 0 + 60 * 1000,
         amount0Desired: '0x' + (1e9).toString(16),
         amount1Desired: '0x' + (1e9).toString(16),
         amount0Min: 0,
@@ -257,42 +213,20 @@ describe('IdleLiquidityModule.sol', function () {
 
     const receipt: any = await txMint.wait();
     tokenId = receipt.events[receipt.events.length - 1].args.tokenId;
-    PositionManager.pushPositionId(tokenId);
-    // user approve autocompound module
-    await PositionManager.toggleModule(tokenId, IdleLiquidityModule.address, true);
+    await PositionManager.pushPositionId(tokenId);
   });
 
-  describe('IdleLiquidityModule - rebalance', function () {
-    it('should rebalance a uni position that is out of range', async function () {
-      for (let i = 0; i < 20; i++) {
-        // Do a trade to change tick
-        await Router.connect(liquidityProvider).swap(Pool0.address, false, '0x' + (4e23).toString(16));
-      }
-
-      const tick = (await Pool0.slot0()).tick;
-
-      // update fees
-      //await PositionManager.updateUncollectedFees(tokenId);
-
-      expect(await NonFungiblePositionManager.ownerOf(tokenId)).to.equal(PositionManager.address);
-      await expect(NonFungiblePositionManager.ownerOf(tokenId.add(1))).to.be.reverted;
-      expect(Math.abs((await NonFungiblePositionManager.positions(tokenId)).tickLower)).to.be.lt(Math.abs(tick));
-      expect(Math.abs((await NonFungiblePositionManager.positions(tokenId)).tickUpper)).to.be.lt(Math.abs(tick));
-
-      await IdleLiquidityModule.rebalance(tokenId, PositionManager.address, 10);
-
-      await expect(NonFungiblePositionManager.ownerOf(tokenId)).to.be.reverted;
-      expect(await NonFungiblePositionManager.ownerOf(tokenId.add(1))).to.equal(PositionManager.address);
-      expect(Math.abs((await NonFungiblePositionManager.positions(tokenId.add(1))).tickLower)).to.be.lt(Math.abs(tick));
-      expect(Math.abs((await NonFungiblePositionManager.positions(tokenId.add(1))).tickUpper)).to.be.gt(Math.abs(tick));
-    });
-
-    it('should faild cause inesistent tokenId', async function () {
+  describe('ClosePositionAction - closePosition', function () {
+    it('should close a uni position', async function () {
+      const close = (await ethers.getContractAt('IClosePosition', PositionManager.address)) as Contract;
+      await close.closePosition(tokenId, true);
+      let e;
       try {
-        await IdleLiquidityModule.rebalance(tokenId.add(1), PositionManager.address, 100);
-      } catch (error: any) {
-        expect(error.message).to.include('Invalid token ID');
+        await NonFungiblePositionManager.ownerOf(tokenId);
+      } catch (err: any) {
+        e = err.message;
       }
+      expect(e.includes('ERC721: owner query for nonexistent token')).to.equal(true);
     });
   });
 });

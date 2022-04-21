@@ -8,10 +8,10 @@ import { Test } from 'mocha';
 const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json');
 const NonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json');
 const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json');
-const FixturesConst = require('../shared/fixtures');
+const FixturesConst = require('../../shared/fixtures');
 
-import { MockToken, IUniswapV3Pool, INonfungiblePositionManager } from '../../typechain';
-import { tokensFixture, mintSTDAmount, poolFixture } from '../shared/fixtures';
+import { MockToken, IUniswapV3Pool, INonfungiblePositionManager } from '../../../typechain';
+import { tokensFixture, mintSTDAmount, poolFixture } from '../../shared/fixtures';
 
 describe('TestUniswapNFTHelper', () => {
   //GLOBAL VARIABLE - USE THIS
