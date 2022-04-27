@@ -9,7 +9,8 @@ interface IPositionManagerFactory {
         address _diamondCutFacet,
         address _uniswapAddressHolderAddress,
         address _registryAddress,
-        address _aaveAddressHolder
+        address _aaveAddressHolder,
+        address _governance
     ) external returns (address[] memory);
 
     function getAllPositionManagers() external view returns (address[] memory);

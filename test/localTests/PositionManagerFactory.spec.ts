@@ -2,8 +2,8 @@ import { expect } from 'chai';
 import '@nomiclabs/hardhat-ethers';
 import { Contract, ContractFactory } from 'ethers';
 import { ethers } from 'hardhat';
-import { tokensFixture, poolFixture, routerFixture } from '../shared/fixtures';
-import { MockToken, INonfungiblePositionManager, ISwapRouter, UniswapAddressHolder, Registry } from '../../typechain';
+import { tokensFixture, poolFixture, routerFixture, RegistryFixture } from '../shared/fixtures';
+import { MockToken, INonfungiblePositionManager, ISwapRouter, UniswapAddressHolder } from '../../typechain';
 
 const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json');
 const PositionManagerContract = require('../../artifacts/contracts/PositionManager.sol/PositionManager.json');
@@ -80,11 +80,6 @@ describe('PositionManagerFactory.sol', function () {
     )) as UniswapAddressHolder;
     await uniswapAddressHolder.deployed();
 
-    //deploy registry
-    const registryFactory = await ethers.getContractFactory('Registry');
-    registry = await registryFactory.deploy(user.address);
-    await registry.deployed();
-
     // deploy DiamondCutFacet ----------------------------------------------------------------------
     const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet');
     diamondCutFacet = await DiamondCutFacet.deploy();
@@ -107,12 +102,17 @@ describe('PositionManagerFactory.sol', function () {
 
       [owner] = await ethers.getSigners();
 
+      // deploy Registry
+      const registry = (await RegistryFixture(owner.address, PositionManagerFactoryInstance.address)).registryFixture;
+      await registry.deployed();
+
       await PositionManagerFactoryInstance.create(
         owner.address,
         diamondCutFacet.address,
         uniswapAddressHolder.address,
         registry.address,
-        '0x0000000000000000000000000000000000000000'
+        '0x0000000000000000000000000000000000000000',
+        owner.address //governance
       );
 
       const deployedContract = await PositionManagerFactoryInstance.positionManagers(0);

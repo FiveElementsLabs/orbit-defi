@@ -7,18 +7,27 @@ import '../interfaces/IRegistry.sol';
 /// @title Stores all the modules addresses
 contract Registry is IRegistry {
     address public governance;
+    address public override keeper;
+    address public override positionManagerFactoryAddress;
 
     mapping(bytes32 => Entry) public modules;
     bytes32[] public moduleKeys;
 
-    constructor(address _governance) {
+    constructor(address _governance, address _positionManagerFactoryAddress) {
         governance = _governance;
+        positionManagerFactoryAddress = _positionManagerFactoryAddress;
     }
 
     ///@notice change the address of the governance
     ///@param _governance the address of the new governance
     function changeGovernance(address _governance) external onlyGovernance {
         governance = _governance;
+    }
+
+    ///@notice change the address of the keeper
+    ///@param _keeper the address of the new keeper
+    function changeKeeper(address _keeper) external onlyKeeper {
+        keeper = _keeper;
     }
 
     ///@notice Register a module
@@ -70,6 +79,11 @@ contract Registry is IRegistry {
     ///@notice modifier to check if the sender is the governance contract
     modifier onlyGovernance() {
         require(msg.sender == governance, 'Registry::onlyGovernance: Call must come from governance.');
+        _;
+    }
+
+    modifier onlyKeeper() {
+        require(msg.sender == keeper, 'Registry::onlyKeeper: Call must come from keeper.');
         _;
     }
 }

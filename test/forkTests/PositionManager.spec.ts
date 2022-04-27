@@ -18,6 +18,7 @@ import {
   routerFixture,
   getSelectors,
   findbalanceSlot,
+  RegistryFixture,
 } from '../shared/fixtures';
 import {
   MockToken,
@@ -26,6 +27,9 @@ import {
   PositionManager,
   TestRouter,
   DepositRecipes,
+  UniswapAddressHolder,
+  AaveAddressHolder,
+  DiamondCutFacet,
 } from '../../typechain';
 
 describe('PositionManager.sol', function () {
@@ -62,6 +66,10 @@ describe('PositionManager.sol', function () {
   let LendingPool: Contract;
   let usdcMock: Contract;
   let wbtcMock: Contract;
+  let Registry: Contract;
+  let UniswapAddressHolder: Contract;
+  let AaveAddressHolder: Contract;
+  let DiamondCutFacet: Contract;
 
   before(async function () {
     user = await user; //owner of the smart vault, a normal user
@@ -125,39 +133,39 @@ describe('PositionManager.sol', function () {
 
     //deploy uniswapAddressHolder
     const uniswapAddressHolderFactory = await ethers.getContractFactory('UniswapAddressHolder');
-    const uniswapAddressHolder = await uniswapAddressHolderFactory.deploy(
+    UniswapAddressHolder = await uniswapAddressHolderFactory.deploy(
       NonFungiblePositionManager.address,
       Factory.address,
       SwapRouter.address
     );
-    await uniswapAddressHolder.deployed();
+    await UniswapAddressHolder.deployed();
 
     //deploy aaveAddressHolder
     const aaveAddressHolderFactory = await ethers.getContractFactory('AaveAddressHolder');
-    const aaveAddressHolder = await aaveAddressHolderFactory.deploy(LendingPool.address);
-    await aaveAddressHolder.deployed();
+    AaveAddressHolder = await aaveAddressHolderFactory.deploy(LendingPool.address);
+    await AaveAddressHolder.deployed();
 
     // deploy DiamondCutFacet ----------------------------------------------------------------------
-    const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet');
-    const diamondCutFacet = await DiamondCutFacet.deploy();
-    await diamondCutFacet.deployed();
-
-    // deploy Registry
-    const Registry = await ethers.getContractFactory('Registry');
-    const registry = await Registry.deploy(user.address);
-    await registry.deployed();
+    const DiamondCutFacetFactory = await ethers.getContractFactory('DiamondCutFacet');
+    DiamondCutFacet = await DiamondCutFacetFactory.deploy();
+    await DiamondCutFacet.deployed();
 
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactoryFactory = await ethers.getContractFactory('PositionManagerFactory');
     const PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
     await PositionManagerFactory.deployed();
 
+    // deploy Registry
+    Registry = (await RegistryFixture(user.address, PositionManagerFactory.address)).registryFixture;
+    await Registry.deployed();
+
     await PositionManagerFactory.create(
       user.address,
-      diamondCutFacet.address,
-      uniswapAddressHolder.address,
-      registry.address,
-      aaveAddressHolder.address
+      DiamondCutFacet.address,
+      UniswapAddressHolder.address,
+      Registry.address,
+      AaveAddressHolder.address,
+      user.address //governance
     );
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
@@ -175,7 +183,7 @@ describe('PositionManager.sol', function () {
 
     //deploy depositRecipes
     const DepositRecipesFactory = await ethers.getContractFactory('DepositRecipes');
-    DepositRecipes = await DepositRecipesFactory.deploy(uniswapAddressHolder.address, Factory.address);
+    DepositRecipes = await DepositRecipesFactory.deploy(UniswapAddressHolder.address, Factory.address);
     await DepositRecipes.deployed();
 
     //Deploy Aave Deposit Action
@@ -223,7 +231,7 @@ describe('PositionManager.sol', function () {
     await tokenUsdc.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
     await tokenDai.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
     //approval user to registry for test
-    await registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
+    await Registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
 
     await NonFungiblePositionManager.setApprovalForAll(PositionManager.address, true);
     //mint some tokens
@@ -336,6 +344,30 @@ describe('PositionManager.sol', function () {
       await expect(DecreaseLiquidityFallback.connect(user).decreaseLiquidity(tokenId, amount0Desired, amount1Desired))
         .to.be.reverted;
     });
+    it('should fail if another user try to add one action', async function () {
+      // add actions to position manager using diamond cut
+      const cut = [];
+      const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 };
+
+      cut.push({
+        facetAddress: DecreaseLiquidityAction.address,
+        action: FacetCutAction.Add,
+        functionSelectors: await getSelectors(DecreaseLiquidityAction),
+      });
+
+      const diamondCut = await ethers.getContractAt('IDiamondCut', PositionManager.address);
+
+      await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
+
+      DecreaseLiquidityFallback = await ethers.getContractAt('IDecreaseLiquidity', PositionManager.address);
+
+      const amount0Desired = 1e4;
+      const amount1Desired = 1e6;
+
+      await expect(
+        DecreaseLiquidityFallback.connect(liquidityProvider).decreaseLiquidity(tokenId, amount0Desired, amount1Desired)
+      ).to.be.reverted;
+    });
   });
 
   describe('PositionManager - pushAavePosition', function () {
@@ -361,6 +393,24 @@ describe('PositionManager.sol', function () {
       await PositionManager.removeAavePosition(usdcMock.address, positions[0].id);
       const positionsAfter = (await PositionManager.getAavePositions(usdcMock.address)) as any;
       expect(positionsAfter.length).to.eq(positions.length - 1);
+    });
+  });
+  describe('PositionManager - onlyFactory', function () {
+    it('should revert if not called by factory', async function () {
+      await expect(
+        PositionManager.init(
+          user.address,
+          UniswapAddressHolder.address,
+          Registry.address,
+          AaveAddressHolder.address,
+          user.address //governance
+        )
+      ).to.be.reverted;
+    });
+    it('should revert if deployed not by the factory', async function () {
+      const PositionManagerFactory = await ethers.getContractFactory('PositionManager');
+      await expect(PositionManagerFactory.deploy(user.address, DiamondCutFacet.address, Registry.address)).to.be
+        .reverted;
     });
   });
 });

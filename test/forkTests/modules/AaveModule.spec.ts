@@ -10,7 +10,14 @@ const NonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/
 const LendingPooljson = require('@aave/protocol-v2/artifacts/contracts/protocol/lendingpool/LendingPool.sol/LendingPool.json');
 
 const FixturesConst = require('../../shared/fixtures');
-import { tokensFixture, poolFixture, mintSTDAmount, getSelectors, findbalanceSlot } from '../../shared/fixtures';
+import {
+  tokensFixture,
+  poolFixture,
+  mintSTDAmount,
+  getSelectors,
+  findbalanceSlot,
+  RegistryFixture,
+} from '../../shared/fixtures';
 import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager } from '../../../typechain';
 
 describe('AaveModule.sol', function () {
@@ -91,22 +98,22 @@ describe('AaveModule.sol', function () {
     const diamondCutFacet = await DiamondCutFacet.deploy();
     await diamondCutFacet.deployed();
 
-    // deploy Registry
-    const Registry = await ethers.getContractFactory('Registry');
-    const registry = await Registry.deploy(user.address);
-    await registry.deployed();
-
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactoryFactory = await ethers.getContractFactory('PositionManagerFactory');
     const PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
     await PositionManagerFactory.deployed();
+
+    // deploy Registry
+    const registry = (await RegistryFixture(user.address, PositionManagerFactory.address)).registryFixture;
+    await registry.deployed();
 
     await PositionManagerFactory.create(
       user.address,
       diamondCutFacet.address,
       uniswapAddressHolder.address,
       registry.address,
-      aaveAddressHolder.address
+      aaveAddressHolder.address,
+      user.address //governance
     );
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
@@ -203,9 +210,9 @@ describe('AaveModule.sol', function () {
     tokenId = receipt.events[receipt.events.length - 1].args.tokenId;
 
     // user approve AaveModule
-    await PositionManager.toggleModule(tokenId, AaveModule.address, true);
+    await PositionManager.connect(user).toggleModule(tokenId, AaveModule.address, true);
 
-    await PositionManager.pushPositionId(tokenId);
+    await PositionManager.connect(user).pushPositionId(tokenId);
   });
 
   describe('AaveModule - depositToAave', function () {

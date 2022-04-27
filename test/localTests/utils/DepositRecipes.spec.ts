@@ -9,7 +9,7 @@ const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/
 const SwapRouterjson = require('@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json');
 const PositionManagerjson = require('../../../artifacts/contracts/PositionManager.sol/PositionManager.json');
 const FixturesConst = require('../../shared/fixtures');
-import { tokensFixture, poolFixture, mintSTDAmount } from '../../shared/fixtures';
+import { tokensFixture, poolFixture, mintSTDAmount, RegistryFixture } from '../../shared/fixtures';
 import {
   MockToken,
   IUniswapV3Pool,
@@ -120,11 +120,6 @@ describe('DepositRecipes.sol', function () {
     const DiamondCutFacetFactory = await ethers.getContractFactory('DiamondCutFacet');
     DiamondCutFacet = await DiamondCutFacetFactory.deploy();
     await DiamondCutFacet.deployed();
-
-    // deploy Registry
-    const Registry = await ethers.getContractFactory('Registry');
-    registry = await Registry.deploy(user.address);
-    await registry.deployed();
 
     //APPROVE
 
@@ -259,12 +254,17 @@ describe('DepositRecipes.sol', function () {
     PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
     await PositionManagerFactory.deployed();
 
+    // deploy Registry
+    registry = (await RegistryFixture(user.address, PositionManagerFactory.address)).registryFixture;
+    await registry.deployed();
+
     await PositionManagerFactory.create(
       user.address,
       DiamondCutFacet.address,
       UniswapAddressHolder.address,
       registry.address,
-      '0x0000000000000000000000000000000000000000'
+      '0x0000000000000000000000000000000000000000',
+      user.address //governance
     );
 
     let contractsDeployed = await PositionManagerFactory.positionManagers(0);

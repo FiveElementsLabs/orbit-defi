@@ -26,7 +26,11 @@ import 'hardhat/console.sol';
  */
 
 contract PositionManager is IPositionManager, ERC721Holder {
-    constructor(address _owner, address _diamondCutFacet) payable {
+    constructor(
+        address _owner,
+        address _diamondCutFacet,
+        address _registry
+    ) payable onlyFactory(_registry) {
         PositionManagerStorage.setContractOwner(_owner);
 
         // Add the diamondCut external function from the diamondCutFacet
@@ -73,12 +77,14 @@ contract PositionManager is IPositionManager, ERC721Holder {
         address _owner,
         address _uniswapAddressHolder,
         address _registry,
-        address _aaveAddressHolder
-    ) public {
+        address _aaveAddressHolder,
+        address _governance
+    ) public onlyFactory(_registry) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         Storage.owner = _owner;
         Storage.uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
         Storage.registry = IRegistry(_registry);
+        Storage.governance = _governance;
         Storage.aaveAddressHolder = IAaveAddressHolder(_aaveAddressHolder);
     }
 
@@ -246,6 +252,15 @@ contract PositionManager is IPositionManager, ERC721Holder {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
         require(msg.sender == Storage.owner, 'PositionManager::onlyOwner: Only owner can call this function');
+        _;
+    }
+
+    ///@notice modifier to check if the msg.sender is the PositionManagerFactory
+    modifier onlyFactory(address _registry) {
+        require(
+            IRegistry(_registry).positionManagerFactoryAddress() == msg.sender,
+            'PositionManager::init: Only PositionManagerFactory can init this contract'
+        );
         _;
     }
 

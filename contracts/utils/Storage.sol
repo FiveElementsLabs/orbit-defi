@@ -28,6 +28,7 @@ struct StorageStruct {
     IUniswapAddressHolder uniswapAddressHolder;
     address owner;
     IRegistry registry;
+    address governance;
     IAaveAddressHolder aaveAddressHolder;
 }
 
@@ -48,6 +49,11 @@ library PositionManagerStorage {
         address previousOwner = ds.owner;
         ds.owner = _newOwner;
         emit OwnershipTransferred(previousOwner, _newOwner);
+    }
+
+    function enforceIsContractOwner() internal view {
+        StorageStruct storage ds = getStorage();
+        require(msg.sender == ds.governance, 'LibDiamond: Must be contract owner');
     }
 
     event DiamondCut(IDiamondCut.FacetCut[] _diamondCut, address _init, bytes _calldata);
