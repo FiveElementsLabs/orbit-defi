@@ -44,14 +44,15 @@ contract PositionManager is IPositionManager, ERC721Holder {
         bool isActive;
         bytes data;
     }
-    struct AavePosition {
-        uint256 id;
-        uint256 shares;
-    }
 
     struct AaveReserve {
         AavePosition[] positions;
         uint256 sharesEmitted;
+    }
+
+    struct AavePosition {
+        uint256 id;
+        uint256 shares;
     }
 
     uint256[] private uniswapNFTs;
