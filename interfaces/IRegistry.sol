@@ -23,8 +23,4 @@ interface IRegistry {
     ///@notice return the address of Governance
     ///@return address of Governance
     function moduleAddress(bytes32 _id) external view returns (address);
-
-    ///@notice return the address of Keeper
-    ///@return address of Keeper
-    function keeper() external view returns (address);
 }
