@@ -14,7 +14,6 @@ import '../interfaces/IRegistry.sol';
 import '../interfaces/ILendingPool.sol';
 import './helpers/ERC20Helper.sol';
 import './utils/Storage.sol';
-import 'hardhat/console.sol';
 
 /**
  * @title   Position Manager
@@ -41,7 +40,24 @@ contract PositionManager is IPositionManager, ERC721Holder {
         PositionManagerStorage.diamondCut(cut, address(0), '');
     }
 
-    mapping(uint256 => mapping(address => bool)) public activatedModules;
+    struct ModuleInfo {
+        bool isActive;
+        bytes[] data;
+    }
+    struct AavePosition {
+        uint256 id;
+        uint256 shares;
+    }
+
+    struct AaveReserve {
+        AavePosition[] positions;
+        uint256 sharesEmitted;
+    }
+
+    uint256[] private uniswapNFTs;
+    uint256 private aaveIdCounter = 0;
+    mapping(address => AaveReserve) public aaveUserReserves;
+    mapping(uint256 => mapping(address => ModuleInfo)) public activatedModules;
 
     ///@notice emitted when a position is withdrawn
     ///@param to address of the user
@@ -53,21 +69,6 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@param to address of the user
     ///@param amount of the ERC20
     event WithdrawERC20(address tokenAddress, address to, uint256 amount);
-
-    uint256[] private uniswapNFTs;
-
-    struct AavePosition {
-        uint256 id;
-        uint256 shares;
-    }
-
-    struct AaveReserve {
-        AavePosition[] positions;
-        uint256 sharesEmitted;
-    }
-
-    mapping(address => AaveReserve) public aaveUserReserves;
-    uint256 private aaveIdCounter = 0;
 
     function init(
         address _owner,
@@ -216,14 +217,30 @@ contract PositionManager is IPositionManager, ERC721Holder {
         address moduleAddress,
         bool activated
     ) external override onlyOwner {
-        activatedModules[tokenId][moduleAddress] = activated;
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+
+        require(
+            INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(
+                tokenId
+            ) == address(this),
+            'PositionManager::toggleModule: this position is not owned by this contract'
+        );
+        activatedModules[tokenId][moduleAddress].isActive = activated;
     }
 
     ///@notice return the state of the module for tokenId position
     ///@param tokenId ID of the position
     ///@param moduleAddress address of the module
     function getModuleState(uint256 tokenId, address moduleAddress) external view override returns (bool) {
-        return activatedModules[tokenId][moduleAddress];
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+
+        require(
+            INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(
+                tokenId
+            ) == address(this),
+            'PositionManager::toggleModule: this position is not owned by this contract'
+        );
+        return activatedModules[tokenId][moduleAddress].isActive;
     }
 
     ///@notice return the address of this position manager owner
