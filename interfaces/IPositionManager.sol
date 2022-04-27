@@ -12,6 +12,14 @@ interface IPositionManager {
         bool activated
     ) external;
 
+    function changeModuleData(
+        uint256 tokenId,
+        address moduleAddress,
+        bytes memory data
+    ) external;
+
+    function getModuleData(uint256 tokenId, address moduleAddress) external view returns (bytes memory);
+
     function withdrawERC20(address tokenAddress) external;
 
     function removePositionId(uint256 index) external;

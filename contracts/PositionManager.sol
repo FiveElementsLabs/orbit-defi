@@ -42,7 +42,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
 
     struct ModuleInfo {
         bool isActive;
-        bytes[] data;
+        bytes data;
     }
     struct AavePosition {
         uint256 id;
@@ -202,6 +202,25 @@ contract PositionManager is IPositionManager, ERC721Holder {
         returns (bool)
     {
         return activatedModules[tokenId][moduleAddress].isActive;
+    }
+
+    function changeModuleData(
+        uint256 tokenId,
+        address moduleAddress,
+        bytes memory data
+    ) external override onlyOwner onlyOwnedPosition(tokenId) {
+        activatedModules[tokenId][moduleAddress].data = data;
+    }
+
+    function getModuleData(uint256 tokenId, address moduleAddress)
+        external
+        view
+        override
+        onlyOwner
+        onlyOwnedPosition(tokenId)
+        returns (bytes memory)
+    {
+        return activatedModules[tokenId][moduleAddress].data;
     }
 
     ///@notice return the address of this position manager owner
