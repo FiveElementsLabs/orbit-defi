@@ -252,6 +252,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
         _;
     }
 
+    ///@notice modifier to check if the position is owned by the positionManager
     modifier onlyOwnedPosition(uint256 tokenId) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         try
