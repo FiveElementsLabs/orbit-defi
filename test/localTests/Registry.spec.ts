@@ -1,7 +1,7 @@
 import '@nomiclabs/hardhat-ethers';
 import { expect } from 'chai';
 import { Contract } from 'ethers';
-const hre = require('hardhat');
+import hre from 'hardhat';
 import { ethers } from 'hardhat';
 import { RegistryFixture } from '../shared/fixtures';
 
