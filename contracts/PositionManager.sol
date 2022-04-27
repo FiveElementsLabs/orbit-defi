@@ -256,18 +256,12 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@notice modifier to check if the position is owned by the positionManager
     modifier onlyOwnedPosition(uint256 tokenId) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
-        try
+        require(
             INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(
                 tokenId
-            )
-        returns (address owner) {
-            require(
-                owner == address(this),
-                'PositionManager::removePositionId: positionManager is not owner of the token'
-            );
-        } catch {
-            revert('PositionManager::pushPositionId: tokenId is not a valid UniswapV3 NFT');
-        }
+            ) == address(this),
+            'PositionManager::removePositionId: positionManager is not owner of the token'
+        );
         _;
     }
 
