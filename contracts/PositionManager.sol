@@ -260,7 +260,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
             INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(
                 tokenId
             ) == address(this),
-            'PositionManager::removePositionId: positionManager is not owner of the token'
+            'PositionManager::onlyOwnedPosition: positionManager is not owner of the token'
         );
         _;
     }
