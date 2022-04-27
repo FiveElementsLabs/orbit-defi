@@ -1,9 +1,8 @@
 import '@nomiclabs/hardhat-ethers';
 import { expect } from 'chai';
 import { Contract, ContractFactory } from 'ethers';
-const hre = require('hardhat');
+import hre from 'hardhat';
 import { ethers } from 'hardhat';
-
 import { MockToken } from '../../../typechain';
 import { tokensFixture, mintSTDAmount } from '../../shared/fixtures';
 

@@ -3,13 +3,18 @@ import { expect } from 'chai';
 import { ContractFactory, Contract } from 'ethers';
 import { AbiCoder } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
-const hre = require('hardhat');
-const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json');
-const PositionManagerjson = require('../../../artifacts/contracts/PositionManager.sol/PositionManager.json');
-const LendingPooljson = require('@aave/protocol-v2/artifacts/contracts/protocol/lendingpool/LendingPool.sol/LendingPool.json');
-
-const FixturesConst = require('../../shared/fixtures');
-import { tokensFixture, poolFixture, mintSTDAmount, getSelectors, findbalanceSlot } from '../../shared/fixtures';
+import hre from 'hardhat';
+import UniswapV3Factoryjson from '@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json';
+import PositionManagerjson from '../../../artifacts/contracts/PositionManager.sol/PositionManager.json';
+import LendingPooljson from '@aave/protocol-v2/artifacts/contracts/protocol/lendingpool/LendingPool.sol/LendingPool.json';
+import {
+  NonFungiblePositionManagerDescriptorBytecode,
+  tokensFixture,
+  poolFixture,
+  mintSTDAmount,
+  getSelectors,
+  findbalanceSlot,
+} from '../../shared/fixtures';
 import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager } from '../../../typechain';
 
 describe('AaveDeposit.sol', function () {

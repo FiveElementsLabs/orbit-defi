@@ -2,7 +2,7 @@ import '@nomiclabs/hardhat-ethers';
 import { expect } from 'chai';
 import { Contract } from 'ethers';
 import { ethers } from 'hardhat';
-const hre = require('hardhat');
+import hre from 'hardhat';
 
 describe('SwapHelper.sol', function () {
   //GLOBAL VARIABLE - USE THIS

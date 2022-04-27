@@ -1,5 +1,5 @@
 import '@nomiclabs/hardhat-ethers';
-const hre = require('hardhat');
+import hre from 'hardhat';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { AbiCoder } from 'ethers/lib/utils';

@@ -2,14 +2,19 @@ import '@nomiclabs/hardhat-ethers';
 import { expect } from 'chai';
 import { ContractFactory, Contract } from 'ethers';
 import { ethers } from 'hardhat';
-const hre = require('hardhat');
-const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json');
-const NonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json');
-const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json');
-const SwapRouterjson = require('@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json');
-const PositionManagerjson = require('../../../artifacts/contracts/PositionManager.sol/PositionManager.json');
-const FixturesConst = require('../../shared/fixtures');
-import { tokensFixture, poolFixture, mintSTDAmount, getSelectors } from '../../shared/fixtures';
+import hre from 'hardhat';
+import UniswapV3Factoryjson from '@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json';
+import NonFungiblePositionManagerjson from '@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json';
+import NonFungiblePositionManagerDescriptorjson from '@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json';
+import SwapRouterjson from '@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json';
+import PositionManagerjson from '../../../artifacts/contracts/PositionManager.sol/PositionManager.json';
+import {
+  NonFungiblePositionManagerDescriptorBytecode,
+  tokensFixture,
+  poolFixture,
+  mintSTDAmount,
+  getSelectors,
+} from '../../shared/fixtures';
 import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, ZapOut, PositionManager } from '../../../typechain';
 
 describe('ZapOut.sol', function () {
@@ -71,7 +76,7 @@ describe('ZapOut.sol', function () {
     //deploy NonFungiblePositionManagerDescriptor and NonFungiblePositionManager
     const NonFungiblePositionManagerDescriptorFactory = new ContractFactory(
       NonFungiblePositionManagerDescriptorjson['abi'],
-      FixturesConst.NonFungiblePositionManagerDescriptorBytecode,
+      NonFungiblePositionManagerDescriptorBytecode,
       user
     );
     const NonFungiblePositionManagerDescriptor = await NonFungiblePositionManagerDescriptorFactory.deploy(
