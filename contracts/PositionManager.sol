@@ -204,7 +204,11 @@ contract PositionManager is IPositionManager, ERC721Holder {
         return activatedModules[tokenId][moduleAddress].isActive;
     }
 
-    function changeModuleData(
+    ///@notice sets the data of a module strategy for tokenId position
+    ///@param tokenId ID of the position
+    ///@param moduleAddress address of the module
+    ///@param data data for the module
+    function setModuleData(
         uint256 tokenId,
         address moduleAddress,
         bytes memory data
@@ -212,6 +216,9 @@ contract PositionManager is IPositionManager, ERC721Holder {
         activatedModules[tokenId][moduleAddress].data = data;
     }
 
+    ///@notice returns the data of a module strategy for tokenId position
+    ///@param tokenId ID of the position
+    ///@param moduleAddress address of the module
     function getModuleData(uint256 tokenId, address moduleAddress)
         external
         view

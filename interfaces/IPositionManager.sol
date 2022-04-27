@@ -12,7 +12,7 @@ interface IPositionManager {
         bool activated
     ) external;
 
-    function changeModuleData(
+    function setModuleData(
         uint256 tokenId,
         address moduleAddress,
         bytes memory data
