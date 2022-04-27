@@ -115,14 +115,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
 
     ///@notice add tokenId in the uniswapNFTs array
     ///@param tokenId ID of the added NFT
-    function pushPositionId(uint256 tokenId) public override {
-        StorageStruct storage Storage = PositionManagerStorage.getStorage();
-        require(
-            INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(
-                tokenId
-            ) == address(this),
-            'PositionManager::pushPositionId: tokenId is not owned by this contract'
-        );
+    function pushPositionId(uint256 tokenId) public override onlyOwnedPosition(tokenId) {
         uniswapNFTs.push(tokenId);
     }
 
@@ -194,30 +187,20 @@ contract PositionManager is IPositionManager, ERC721Holder {
         uint256 tokenId,
         address moduleAddress,
         bool activated
-    ) external override onlyOwner {
-        StorageStruct storage Storage = PositionManagerStorage.getStorage();
-
-        require(
-            INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(
-                tokenId
-            ) == address(this),
-            'PositionManager::toggleModule: this position is not owned by this contract'
-        );
+    ) external override onlyOwner onlyOwnedPosition(tokenId) {
         activatedModules[tokenId][moduleAddress].isActive = activated;
     }
 
     ///@notice return the state of the module for tokenId position
     ///@param tokenId ID of the position
     ///@param moduleAddress address of the module
-    function getModuleState(uint256 tokenId, address moduleAddress) external view override returns (bool) {
-        StorageStruct storage Storage = PositionManagerStorage.getStorage();
-
-        require(
-            INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(
-                tokenId
-            ) == address(this),
-            'PositionManager::toggleModule: this position is not owned by this contract'
-        );
+    function getModuleState(uint256 tokenId, address moduleAddress)
+        external
+        view
+        override
+        onlyOwnedPosition(tokenId)
+        returns (bool)
+    {
         return activatedModules[tokenId][moduleAddress].isActive;
     }
 
@@ -241,6 +224,23 @@ contract PositionManager is IPositionManager, ERC721Holder {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
         require(msg.sender == Storage.owner, 'PositionManager::onlyOwner: Only owner can call this function');
+        _;
+    }
+
+    modifier onlyOwnedPosition(uint256 tokenId) {
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+        try
+            INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(
+                tokenId
+            )
+        returns (address owner) {
+            require(
+                owner == address(this),
+                'PositionManager::removePositionId: positionManager is not owner of the token'
+            );
+        } catch {
+            revert('PositionManager::pushPositionId: tokenId is not a valid UniswapV3 NFT');
+        }
         _;
     }
 
