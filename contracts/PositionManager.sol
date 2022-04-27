@@ -223,7 +223,6 @@ contract PositionManager is IPositionManager, ERC721Holder {
         external
         view
         override
-        onlyOwner
         onlyOwnedPosition(tokenId)
         returns (bytes memory)
     {
