@@ -5,11 +5,11 @@ import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 
 contract MockToken is ERC20 {
     constructor(
-        string memory name,
-        string memory symbol,
-        uint8 decimals
-    ) ERC20(name, symbol) {
-        _setupDecimals(decimals);
+        string memory nameMock,
+        string memory symbolMock,
+        uint8 decimalsMock
+    ) ERC20(nameMock, symbolMock) {
+        _setupDecimals(decimalsMock);
     }
 
     function mint(address account, uint256 amount) external {

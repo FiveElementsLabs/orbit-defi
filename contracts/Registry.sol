@@ -11,14 +11,19 @@ contract Registry is IRegistry {
     mapping(bytes32 => Entry) public modules;
     bytes32[] public moduleKeys;
 
+    event RegistryNewGovernance(address indexed _newGovernance);
+
     constructor(address _governance) {
+        require(_governance != address(0), 'Registry:changeGovernance:: new governance address is 0');
         governance = _governance;
     }
 
     ///@notice change the address of the governance
     ///@param _governance the address of the new governance
     function changeGovernance(address _governance) external onlyGovernance {
+        require(_governance != address(0), 'Registry:changeGovernance:: new governance address is 0');
         governance = _governance;
+        emit RegistryNewGovernance(_governance);
     }
 
     ///@notice Register a module
