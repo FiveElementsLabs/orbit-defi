@@ -123,7 +123,11 @@ describe('TestERC20Helper', () => {
 
       const ownerBalanceBefore = await tokenEth.balanceOf(owner.address);
 
-      await TestERC20Helper.connect(owner).approve(tokenEth.address, owner.address);
+      await TestERC20Helper.connect(owner).approveToken(
+        tokenEth.address,
+        TestERC20Helper.address,
+        ethers.utils.parseEther('100000000000000')
+      );
 
       await TestERC20Helper.connect(owner).withdrawTokens(tokenEth.address, owner.address, '1');
       const ownerBalanceAfter = await tokenEth.balanceOf(owner.address);

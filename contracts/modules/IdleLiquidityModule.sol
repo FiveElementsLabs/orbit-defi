@@ -26,7 +26,8 @@ contract IdleLiquidityModule {
     ///@notice check if the position is in the range of the pools and return rebalance the position swapping the tokens
     ///@param tokenId tokenId of the position
     ///@param positionManager address of the position manager
-    function rebalance(uint256 tokenId, IPositionManager positionManager) public {
+    ///@return mintedId minted token id
+    function rebalance(uint256 tokenId, IPositionManager positionManager) public returns (uint256 mintedId) {
         int24 tickDistance = _checkDistanceFromRange(tokenId);
         if (positionManager.getModuleState(tokenId, address(this))) {
             uint24 rebalanceDistance = abi.decode(positionManager.getModuleData(tokenId, address(this)), (uint24));
@@ -58,7 +59,7 @@ contract IdleLiquidityModule {
                     );
 
                 ///@dev call mintAction
-                IMint(address(positionManager)).mint(
+                (mintedId, , ) = IMint(address(positionManager)).mint(
                     IMint.MintInput(token0, token1, fee, tickLower, tickUpper, token0Swapped - 10, token1Swapped - 10)
                 );
             }

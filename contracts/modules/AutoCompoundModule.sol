@@ -23,7 +23,12 @@ contract AutoCompoundModule {
     ///@notice executes our recipe for autocompounding
     ///@param positionManager address of the position manager
     ///@param tokenId id of the token to autocompound
-    function autoCompoundFees(IPositionManager positionManager, uint256 tokenId) public {
+    ///@return amount0Increased amount of token0 compounded
+    ///@return amount1Increased amount of token1 compounded
+    function autoCompoundFees(IPositionManager positionManager, uint256 tokenId)
+        public
+        returns (uint256 amount0Increased, uint256 amount1Increased)
+    {
         ///@dev check if autocompound is active
         if (positionManager.getModuleState(tokenId, address(this))) {
             ///@dev check if compound need to be done
@@ -32,7 +37,11 @@ contract AutoCompoundModule {
                     tokenId
                 );
 
-                IIncreaseLiquidity(address(positionManager)).increaseLiquidity(tokenId, amount0Desired, amount1Desired);
+                (amount0Increased, amount1Increased) = IIncreaseLiquidity(address(positionManager)).increaseLiquidity(
+                    tokenId,
+                    amount0Desired,
+                    amount1Desired
+                );
             }
         }
     }
