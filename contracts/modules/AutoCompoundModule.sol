@@ -55,6 +55,16 @@ contract AutoCompoundModule {
             IPositionManager(positionManagerAddress).getModuleData(tokenId, address(this)),
             (uint256)
         );
-        return (uncollectedFees0 * 100 > amount0 * feesThreshold || uncollectedFees1 * 100 > amount1 * feesThreshold);
+
+        (uint160 sqrtPriceX96, , , , , , ) = IUniswapV3Pool(
+            UniswapNFTHelper._getPoolFromTokenId(
+                tokenId,
+                INonfungiblePositionManager(addressHolder.nonfungiblePositionManagerAddress()),
+                addressHolder.uniswapV3FactoryAddress()
+            )
+        ).slot0();
+        //returns true if the value of uncollected fees * 100 is greater than amount in the position * threshold
+        return (((uncollectedFees0 * sqrtPriceX96) / 2**96 + (uncollectedFees1 * 2**96) / sqrtPriceX96) * 100 >
+            ((amount0 * sqrtPriceX96) / 2**96 + (amount1 * 2**96) / sqrtPriceX96) * feesThreshold);
     }
 }
