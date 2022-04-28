@@ -3,7 +3,7 @@
 pragma solidity 0.7.6;
 
 import '../../interfaces/ILendingPool.sol';
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import '../helpers/ERC20Helper.sol';
 
 interface IAaveDeposit {
     ///@notice deposit to aave some token amount
@@ -28,9 +28,7 @@ contract AaveDeposit is IAaveDeposit {
         uint256 amount,
         address lendingPool
     ) public override {
-        if (IERC20(token).allowance(address(this), lendingPool) < amount) {
-            IERC20(token).approve(lendingPool, 2**256 - 1);
-        }
+        ERC20Helper._approveToken(token, lendingPool, amount);
 
         ILendingPool(lendingPool).deposit(token, amount, address(this), 0);
     }
