@@ -25,21 +25,6 @@ import './utils/Storage.sol';
  */
 
 contract PositionManager is IPositionManager, ERC721Holder {
-    constructor(address _owner, address _diamondCutFacet) payable {
-        PositionManagerStorage.setContractOwner(_owner);
-
-        // Add the diamondCut external function from the diamondCutFacet
-        IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](1);
-        bytes4[] memory functionSelectors = new bytes4[](1);
-        functionSelectors[0] = IDiamondCut.diamondCut.selector;
-        cut[0] = IDiamondCut.FacetCut({
-            facetAddress: _diamondCutFacet,
-            action: IDiamondCut.FacetCutAction.Add,
-            functionSelectors: functionSelectors
-        });
-        PositionManagerStorage.diamondCut(cut, address(0), '');
-    }
-
     struct ModuleInfo {
         bool isActive;
         bytes data;
@@ -70,6 +55,41 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@param to address of the user
     ///@param amount of the ERC20
     event WithdrawERC20(address tokenAddress, address to, uint256 amount);
+
+    ///@notice modifier to check if the msg.sender is the owner
+    modifier onlyOwner() {
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+
+        require(msg.sender == Storage.owner, 'PositionManager::onlyOwner: Only owner can call this function');
+        _;
+    }
+
+    ///@notice modifier to check if the position is owned by the positionManager
+    modifier onlyOwnedPosition(uint256 tokenId) {
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+        require(
+            INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(
+                tokenId
+            ) == address(this),
+            'PositionManager::onlyOwnedPosition: positionManager is not owner of the token'
+        );
+        _;
+    }
+
+    constructor(address _owner, address _diamondCutFacet) payable {
+        PositionManagerStorage.setContractOwner(_owner);
+
+        // Add the diamondCut external function from the diamondCutFacet
+        IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](1);
+        bytes4[] memory functionSelectors = new bytes4[](1);
+        functionSelectors[0] = IDiamondCut.diamondCut.selector;
+        cut[0] = IDiamondCut.FacetCut({
+            facetAddress: _diamondCutFacet,
+            action: IDiamondCut.FacetCutAction.Add,
+            functionSelectors: functionSelectors
+        });
+        PositionManagerStorage.diamondCut(cut, address(0), '');
+    }
 
     function init(
         address _owner,
@@ -243,32 +263,6 @@ contract PositionManager is IPositionManager, ERC721Holder {
         ERC20Helper._approveToken(tokenAddress, address(this), 2**256 - 1);
         uint256 amount = ERC20Helper._withdrawTokens(tokenAddress, msg.sender, 2**256 - 1);
         emit WithdrawERC20(tokenAddress, msg.sender, amount);
-    }
-
-    ///@notice modifier to check if the msg.sender is the owner
-    modifier onlyOwner() {
-        StorageStruct storage Storage = PositionManagerStorage.getStorage();
-
-        require(msg.sender == Storage.owner, 'PositionManager::onlyOwner: Only owner can call this function');
-        _;
-    }
-
-    ///@notice modifier to check if the position is owned by the positionManager
-    modifier onlyOwnedPosition(uint256 tokenId) {
-        StorageStruct storage Storage = PositionManagerStorage.getStorage();
-        try
-            INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(
-                tokenId
-            )
-        returns (address owner) {
-            require(
-                owner == address(this),
-                'PositionManager::removePositionId: positionManager is not owner of the token'
-            );
-        } catch {
-            revert('PositionManager::pushPositionId: tokenId is not a valid UniswapV3 NFT');
-        }
-        _;
     }
 
     ///@notice function to check if an address corresponds to an active module (or this contract)
