@@ -224,13 +224,7 @@ describe('ClosePosition.sol', function () {
     it('should close a uni position', async function () {
       const close = (await ethers.getContractAt('IClosePosition', PositionManager.address)) as Contract;
       await close.closePosition(tokenId, true);
-      let e;
-      try {
-        await NonFungiblePositionManager.ownerOf(tokenId);
-      } catch (err: any) {
-        e = err.message;
-      }
-      expect(e.includes('ERC721: owner query for nonexistent token')).to.equal(true);
+      await expect(NonFungiblePositionManager.ownerOf(tokenId)).to.be.reverted;
     });
   });
 });
