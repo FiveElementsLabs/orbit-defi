@@ -12,6 +12,7 @@ import '../actions/IncreaseLiquidity.sol';
 import '../actions/UpdateUncollectedFees.sol';
 
 contract AutoCompoundModule {
+    using FullMath for uint256;
     IUniswapAddressHolder addressHolder;
 
     ///@notice constructor of autoCompoundModule
@@ -73,7 +74,8 @@ contract AutoCompoundModule {
             )
         ).slot0();
         //returns true if the value of uncollected fees * 100 is greater than amount in the position * threshold
-        return (((uncollectedFees0 * sqrtPriceX96) / 2**96 + (uncollectedFees1 * 2**96) / sqrtPriceX96) * 100 >
-            ((amount0 * sqrtPriceX96) / 2**96 + (amount1 * 2**96) / sqrtPriceX96) * feesThreshold);
+        return
+            (uncollectedFees0.mulDiv(sqrtPriceX96, 2**96) + uncollectedFees1.mulDiv(2**96, sqrtPriceX96)) * 100 >
+            (amount0.mulDiv(sqrtPriceX96, 2**96) + amount1.mulDiv(2**96, sqrtPriceX96)) * feesThreshold;
     }
 }
