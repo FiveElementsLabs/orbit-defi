@@ -137,8 +137,7 @@ describe('DecreaseLiquidity.sol', function () {
       diamondCutFacet.address,
       UniswapAddressHolder.address,
       registry.address,
-      '0x0000000000000000000000000000000000000000',
-      user.address //governance
+      '0x0000000000000000000000000000000000000000'
     );
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);

@@ -116,8 +116,7 @@ describe('PositionManagerFactory.sol', function () {
         diamondCutFacet.address,
         uniswapAddressHolder.address,
         registry.address,
-        '0x0000000000000000000000000000000000000000',
-        owner.address //governance
+        '0x0000000000000000000000000000000000000000'
       );
 
       const deployedContract = await PositionManagerFactoryInstance.positionManagers(0);

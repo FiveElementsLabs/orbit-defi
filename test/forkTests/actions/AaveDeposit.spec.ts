@@ -104,7 +104,6 @@ describe('AaveDeposit.sol', function () {
       uniswapAddressHolder.address,
       registry.address,
       aaveAddressHolder.address,
-      user.address //governance
     );
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);

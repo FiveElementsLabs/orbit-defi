@@ -164,8 +164,7 @@ describe('PositionManager.sol', function () {
       DiamondCutFacet.address,
       UniswapAddressHolder.address,
       Registry.address,
-      AaveAddressHolder.address,
-      user.address //governance
+      AaveAddressHolder.address
     );
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);

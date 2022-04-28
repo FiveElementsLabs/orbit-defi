@@ -14,6 +14,10 @@ interface IRegistry {
 
     ///@notice return the address of Governance
     ///@return address of Governance
+    function governance() external view returns (address);
+
+    ///@notice return the address of Governance
+    ///@return address of Governance
     function getModuleKeys() external view returns (bytes32[] memory);
 
     ///@notice return the address of Governance

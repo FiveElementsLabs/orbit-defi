@@ -77,14 +77,12 @@ contract PositionManager is IPositionManager, ERC721Holder {
         address _owner,
         address _uniswapAddressHolder,
         address _registry,
-        address _aaveAddressHolder,
-        address _governance
+        address _aaveAddressHolder
     ) public onlyFactory(_registry) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         Storage.owner = _owner;
         Storage.uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
         Storage.registry = IRegistry(_registry);
-        Storage.governance = _governance;
         Storage.aaveAddressHolder = IAaveAddressHolder(_aaveAddressHolder);
     }
 

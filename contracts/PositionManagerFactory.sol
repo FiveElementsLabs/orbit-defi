@@ -22,19 +22,12 @@ contract PositionManagerFactory is IPositionManagerFactory {
         address _diamondCutFacet,
         address _uniswapAddressHolderAddress,
         address _registryAddress,
-        address _aaveAddressHolderAddress,
-        address _governance
+        address _aaveAddressHolderAddress
     ) public override returns (address[] memory) {
         PositionManager manager = new PositionManager(_userAddress, _diamondCutFacet, _registryAddress);
         positionManagers.push(address(manager));
         userToPositionManager[_userAddress] = address(manager);
-        manager.init(
-            _userAddress,
-            _uniswapAddressHolderAddress,
-            _registryAddress,
-            _aaveAddressHolderAddress,
-            _governance
-        );
+        manager.init(_userAddress, _uniswapAddressHolderAddress, _registryAddress, _aaveAddressHolderAddress);
         emit PositionManagerCreated(address(manager), _userAddress, _uniswapAddressHolderAddress);
 
         return positionManagers;

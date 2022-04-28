@@ -104,8 +104,7 @@ describe('AaveWithdraw.sol', function () {
       diamondCutFacet.address,
       uniswapAddressHolder.address,
       registry.address,
-      aaveAddressHolder.address,
-      user.address //governance
+      aaveAddressHolder.address
     );
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
