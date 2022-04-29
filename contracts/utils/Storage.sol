@@ -50,7 +50,7 @@ library PositionManagerStorage {
         emit OwnershipTransferred(previousOwner, _newOwner);
     }
 
-    function enforceIsContractOwner() internal view {
+    function enforceIsGovernance() internal view {
         StorageStruct storage ds = getStorage();
         require(
             msg.sender == ds.registry.governance(),

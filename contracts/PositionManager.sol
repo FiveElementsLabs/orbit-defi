@@ -26,6 +26,23 @@ import 'hardhat/console.sol';
  */
 
 contract PositionManager is IPositionManager, ERC721Holder {
+    ///@notice modifier to check if the msg.sender is the owner
+    modifier onlyOwner() {
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+
+        require(msg.sender == Storage.owner, 'PositionManager::onlyOwner: Only owner can call this function');
+        _;
+    }
+
+    ///@notice modifier to check if the msg.sender is the PositionManagerFactory
+    modifier onlyFactory(address _registry) {
+        require(
+            IRegistry(_registry).positionManagerFactoryAddress() == msg.sender,
+            'PositionManager::init: Only PositionManagerFactory can init this contract'
+        );
+        _;
+    }
+
     constructor(
         address _owner,
         address _diamondCutFacet,
@@ -243,23 +260,6 @@ contract PositionManager is IPositionManager, ERC721Holder {
         ERC20Helper._approveToken(tokenAddress, address(this), 2**256 - 1);
         uint256 amount = ERC20Helper._withdrawTokens(tokenAddress, msg.sender, 2**256 - 1);
         emit WithdrawERC20(tokenAddress, msg.sender, amount);
-    }
-
-    ///@notice modifier to check if the msg.sender is the owner
-    modifier onlyOwner() {
-        StorageStruct storage Storage = PositionManagerStorage.getStorage();
-
-        require(msg.sender == Storage.owner, 'PositionManager::onlyOwner: Only owner can call this function');
-        _;
-    }
-
-    ///@notice modifier to check if the msg.sender is the PositionManagerFactory
-    modifier onlyFactory(address _registry) {
-        require(
-            IRegistry(_registry).positionManagerFactoryAddress() == msg.sender,
-            'PositionManager::init: Only PositionManagerFactory can init this contract'
-        );
-        _;
     }
 
     ///@notice function to check if an address corresponds to an active module (or this contract)
