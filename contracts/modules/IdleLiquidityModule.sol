@@ -26,13 +26,10 @@ contract IdleLiquidityModule {
     ///@notice check if the position is in the range of the pools and return rebalance the position swapping the tokens
     ///@param tokenId tokenId of the position
     ///@param positionManager address of the position manager
-    function rebalance(
-        uint256 tokenId,
-        IPositionManager positionManager,
-        uint24 rebalanceDistance
-    ) public {
+    function rebalance(uint256 tokenId, IPositionManager positionManager) public {
         int24 tickDistance = _checkDistanceFromRange(tokenId);
         if (positionManager.getModuleState(tokenId, address(this))) {
+            uint24 rebalanceDistance = abi.decode(positionManager.getModuleData(tokenId, address(this)), (uint24));
             ///@dev rebalance only if the position's range is outside of the tick of the pool (tickDistance < 0) and the position is far enough from tick of the pool
             if (tickDistance < 0 && rebalanceDistance <= uint24(tickDistance)) {
                 (, , address token0, address token1, uint24 fee, , , , , , , ) = INonfungiblePositionManager(

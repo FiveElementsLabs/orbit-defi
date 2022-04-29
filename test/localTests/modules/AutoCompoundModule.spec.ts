@@ -283,7 +283,7 @@ describe('AutoCompoundModule.sol', function () {
     const tx = await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
   });
 
-  it('should be able not autocompound if fees are not enough', async function () {
+  it('should not autocompound if fees are not enough', async function () {
     //do some trades to accrue fees
     for (let i = 0; i < 2; i++) {
       await SwapRouter.connect(trader).exactInputSingle([
@@ -299,8 +299,9 @@ describe('AutoCompoundModule.sol', function () {
     }
 
     const position = await NonFungiblePositionManager.positions(2);
+    await PositionManager.connect(user).setModuleData(2, autoCompound.address, abiCoder.encode(['uint256'], [30]));
     //collect and reinvest fees
-    await autoCompound.connect(user).autoCompoundFees(PositionManager.address, 2, 30);
+    await autoCompound.connect(user).autoCompoundFees(PositionManager.address, 2);
     const positionPost = await NonFungiblePositionManager.positions(2);
     expect(positionPost.liquidity).to.lt(position.liquidity);
   });
@@ -321,12 +322,14 @@ describe('AutoCompoundModule.sol', function () {
 
     const position = await NonFungiblePositionManager.positions(2);
     //collect and reinvest fees
-    await autoCompound.connect(user).autoCompoundFees(PositionManager.address, 2, 1);
+    await PositionManager.connect(user).setModuleData(2, autoCompound.address, abiCoder.encode(['uint256'], [1]));
+    await autoCompound.connect(user).autoCompoundFees(PositionManager.address, 2);
     const positionPost = await NonFungiblePositionManager.positions(2);
     expect(positionPost.liquidity).to.gt(position.liquidity);
   });
 
   it('should revert if position Manager does not exist', async function () {
-    await expect(autoCompound.connect(user).autoCompoundFees(Factory.address, 2, 30));
+    await PositionManager.connect(user).setModuleData(2, autoCompound.address, abiCoder.encode(['uint256'], [30]));
+    await expect(autoCompound.connect(user).autoCompoundFees(Factory.address, 2));
   });
 });

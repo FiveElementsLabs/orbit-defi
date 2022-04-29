@@ -45,6 +45,7 @@ describe('AaveModule.sol', function () {
   let AaveModule: Contract;
   let usdcMock: Contract;
   let wbtcMock: Contract;
+  let abiCoder: AbiCoder;
 
   before(async function () {
     user = await user; //owner of the smart vault, a normal user
@@ -210,14 +211,16 @@ describe('AaveModule.sol', function () {
     // user approve AaveModule
     await PositionManager.connect(user).toggleModule(tokenId, AaveModule.address, true);
 
-    await PositionManager.connect(user).pushPositionId(tokenId);
+    await PositionManager.pushPositionId(tokenId);
+
+    abiCoder = ethers.utils.defaultAbiCoder;
   });
 
   describe('AaveModule - depositToAave', function () {
     it('should deposit token in position out of range', async function () {
       const beforePosition = await NonFungiblePositionManager.positions(tokenId);
-
-      await AaveModule.depositToAave(PositionManager.address, tokenId, 1);
+      await PositionManager.connect(user).setModuleData(tokenId, AaveModule.address, abiCoder.encode(['uint24'], [1]));
+      await AaveModule.depositToAave(PositionManager.address, tokenId);
 
       const pmData = await LendingPool.getUserAccountData(PositionManager.address);
       expect(pmData.totalCollateralETH).to.gt(0);
