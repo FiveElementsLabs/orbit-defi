@@ -1,7 +1,6 @@
 import '@nomiclabs/hardhat-ethers';
 import { expect } from 'chai';
 import { ContractFactory, Contract } from 'ethers';
-import { AbiCoder } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import hre from 'hardhat';
 import UniswapV3Factoryjson from '@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json';
@@ -15,18 +14,10 @@ import {
   tokensFixture,
   poolFixture,
   mintSTDAmount,
-  routerFixture,
   getSelectors,
   findbalanceSlot,
 } from '../shared/fixtures';
-import {
-  MockToken,
-  IUniswapV3Pool,
-  INonfungiblePositionManager,
-  PositionManager,
-  TestRouter,
-  DepositRecipes,
-} from '../../typechain';
+import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, TestRouter, DepositRecipes } from '../../typechain';
 
 describe('PositionManager.sol', function () {
   //GLOBAL VARIABLE - USE THIS
@@ -51,14 +42,14 @@ describe('PositionManager.sol', function () {
 
   let Factory: Contract; // the factory that will deploy all pools
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
-  let PositionManager: PositionManager; //Our smart vault named PositionManager
+  let PositionManager: Contract; //Our smart vault named PositionManager
   let Router: TestRouter; //Our router to perform swap
   let SwapRouter: Contract;
   let MintAction: Contract;
   let DecreaseLiquidityAction: Contract;
   let DecreaseLiquidityFallback: Contract;
   let AaveDepositFallback: Contract;
-  let DepositRecipes: Contract;
+  let DepositRecipes: DepositRecipes;
   let LendingPool: Contract;
   let usdcMock: Contract;
   let wbtcMock: Contract;
@@ -161,7 +152,7 @@ describe('PositionManager.sol', function () {
     );
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
-    PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
+    PositionManager = await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed);
 
     //deploy an action to test
     const ActionFactory = await ethers.getContractFactory('Mint');
@@ -175,7 +166,10 @@ describe('PositionManager.sol', function () {
 
     //deploy depositRecipes
     const DepositRecipesFactory = await ethers.getContractFactory('DepositRecipes');
-    DepositRecipes = await DepositRecipesFactory.deploy(uniswapAddressHolder.address, Factory.address);
+    DepositRecipes = (await DepositRecipesFactory.deploy(
+      uniswapAddressHolder.address,
+      Factory.address
+    )) as DepositRecipes;
     await DepositRecipes.deployed();
 
     //Deploy Aave Deposit Action
@@ -188,45 +182,14 @@ describe('PositionManager.sol', function () {
     wbtcMock = await ethers.getContractAt('MockToken', '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599');
 
     //APPROVE
-    //recipient: NonFungiblePositionManager - spender: user
-    await tokenEth
-      .connect(user)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
-    await tokenUsdc
-      .connect(user)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
-    await tokenDai
-      .connect(user)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
-    //recipient: NonFungiblePositionManager - spender: liquidityProvider
-    await tokenEth
-      .connect(liquidityProvider)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
-    await tokenUsdc
-      .connect(liquidityProvider)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
-    await tokenDai
-      .connect(liquidityProvider)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
-    //recipient: PositionManager - spender: user
-    await tokenEth.connect(user).approve(PositionManager.address, ethers.utils.parseEther('1000000000000'));
-    await tokenUsdc.connect(user).approve(PositionManager.address, ethers.utils.parseEther('1000000000000'));
-    await tokenDai.connect(user).approve(PositionManager.address, ethers.utils.parseEther('1000000000000'));
-    await usdcMock.connect(user).approve(PositionManager.address, ethers.utils.parseEther('1000000000000'));
-    await wbtcMock.connect(user).approve(PositionManager.address, ethers.utils.parseEther('1000000000000'));
     //recipient: Router - spender: trader
     await tokenEth.connect(trader).approve(SwapRouter.address, ethers.utils.parseEther('1000000000000'));
     await tokenUsdc.connect(trader).approve(SwapRouter.address, ethers.utils.parseEther('1000000000000'));
     await tokenDai.connect(trader).approve(SwapRouter.address, ethers.utils.parseEther('1000000000000'));
-    //recipient: Pool0 - spender: trader
-    await tokenEth.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
-    await tokenUsdc.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
-    await tokenDai.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
     //approval user to registry for test
     await registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
 
-    await NonFungiblePositionManager.setApprovalForAll(PositionManager.address, true);
-    //mint some tokens
+    //mint some tokens for user
     const slot = await findbalanceSlot(usdcMock, user);
     const encode = (types: any, values: any) => ethers.utils.defaultAbiCoder.encode(types, values);
 
@@ -234,6 +197,14 @@ describe('PositionManager.sol', function () {
     let value = encode(['uint'], [ethers.utils.parseEther('100000000')]);
 
     await hre.network.provider.send('hardhat_setStorageAt', [usdcMock.address, probedSlot, value]);
+
+    //mint some tokens for liquidityProvider
+    const slot2 = await findbalanceSlot(usdcMock, liquidityProvider);
+
+    let probedSlot2 = ethers.utils.keccak256(encode(['address', 'uint'], [liquidityProvider.address, slot2]));
+
+    await hre.network.provider.send('hardhat_setStorageAt', [usdcMock.address, probedSlot2, value]);
+
     //pass to PM some token
     await usdcMock.connect(user).approve(PositionManager.address, ethers.utils.parseEther('100000000'));
     await usdcMock.connect(user).transfer(PositionManager.address, ethers.utils.parseEther('10000000'));
@@ -349,6 +320,36 @@ describe('PositionManager.sol', function () {
       await AaveDepositFallback.connect(user).depositToAave(usdcMock.address, 200, LendingPool.address);
       await PositionManager.pushAavePosition(usdcMock.address, 200);
       expect(await PositionManager.aaveUserReserves(usdcMock.address)).to.equal(400);
+    });
+
+    it('should give user correct shares after accrued interest', async function () {
+      await usdcMock.connect(user).approve(LendingPool.address, 100000);
+      console.log('approve');
+      await LendingPool.connect(user).deposit(usdcMock.address, 200, user.address, 0);
+      console.log('deposit');
+      await PositionManager.connect(user).pushAavePosition(usdcMock.address, 200);
+      console.log('push');
+
+      await usdcMock.connect(liquidityProvider).approve(LendingPool.address, 100000);
+      console.log('approve');
+      await LendingPool.connect(liquidityProvider).deposit(usdcMock.address, 10000, liquidityProvider.address, 0);
+      console.log('deposit');
+      await LendingPool.connect(liquidityProvider).borrow(usdcMock.address, 5000, 2, 0, liquidityProvider.address);
+      console.log('borrow');
+
+      await ethers.provider.send('evm_mine', [Date.now() + 3600]);
+      console.log('mine');
+
+      await usdcMock.connect(user).approve(LendingPool.address, 100000);
+      console.log('approve');
+      const tx = await LendingPool.connect(user).deposit(usdcMock.address, 20000, user.address, 0);
+      console.log('deposit');
+      console.log(await tx.wait());
+      await PositionManager.connect(user).pushAavePosition(usdcMock.address, 20000);
+      console.log('push');
+      const positions = (await PositionManager.getAavePositions(usdcMock.address)) as any;
+      console.log(positions);
+      expect(positions[1].shares).to.lt(20000);
     });
   });
 
