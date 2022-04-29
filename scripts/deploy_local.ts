@@ -1,3 +1,3 @@
-import { keeperSetup } from "./keeper_setup";
+import { keeperSetup } from './keeper_setup';
 
 keeperSetup();

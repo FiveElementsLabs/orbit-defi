@@ -24,8 +24,8 @@ contract TestRouter is IUniswapV3MintCallback, IUniswapV3SwapCallback {
         uint128 amount
     ) external returns (uint256, uint256) {
         int24 tickSpacing = pool.tickSpacing();
-        require(tickLower % tickSpacing == 0, 'tickLower must be a multiple of tickSpacing');
-        require(tickUpper % tickSpacing == 0, 'tickUpper must be a multiple of tickSpacing');
+        require(tickLower % tickSpacing == 0, 'TestRouter::mint: tickLower must be a multiple of tickSpacing');
+        require(tickUpper % tickSpacing == 0, 'TestRouter::mint: tickUpper must be a multiple of tickSpacing');
         return pool.mint(msg.sender, tickLower, tickUpper, amount, abi.encode(msg.sender));
     }
 
