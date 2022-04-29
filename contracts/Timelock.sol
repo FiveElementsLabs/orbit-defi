@@ -48,7 +48,7 @@ contract Timelock {
     constructor(address _admin, uint256 _delay) {
         require(_delay >= MINIMUM_DELAY, 'Timelock::constructor: Delay must exceed minimum delay.');
         require(_delay <= MAXIMUM_DELAY, 'Timelock::constructor: Delay must not exceed maximum delay.');
-
+        require(_admin != address(0), 'Timelock::constructor: Admin address is 0.');
         admin = _admin;
         delay = _delay;
     }
@@ -66,6 +66,7 @@ contract Timelock {
     /// @notice Sets a new address as pending admin
     /// @param _pendingAdmin the pending admin
     function setNewPendingAdmin(address _pendingAdmin) public onlyAdmin {
+        require(_pendingAdmin != address(0), 'Timelock::setNewPendingAdmin: Pending admin address is 0.');
         pendingAdmin = _pendingAdmin;
         pendingAdminAccepted[_pendingAdmin] = false;
 
@@ -150,6 +151,7 @@ contract Timelock {
         bytes memory data,
         uint256 eta
     ) public payable onlyAdmin returns (bytes memory) {
+        require(targer != address(0), 'Timelock::executeTransaction: Target address is 0.');
         bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
         require(queuedTransactions[txHash], "Timelock::executeTransaction: Transaction hasn't been queued.");
         require(getBlockTimestamp() >= eta, "Timelock::executeTransaction: Transaction hasn't surpassed time lock.");
