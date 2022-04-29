@@ -23,7 +23,7 @@ contract PositionManagerFactory is IPositionManagerFactory {
         address _uniswapAddressHolderAddress,
         address _registryAddress,
         address _aaveAddressHolderAddress
-    ) public override returns (address[] memory) {
+    ) external override returns (address[] memory) {
         PositionManager manager = new PositionManager(_userAddress, _diamondCutFacet, _registryAddress);
         positionManagers.push(address(manager));
         userToPositionManager[_userAddress] = address(manager);
@@ -36,7 +36,7 @@ contract PositionManagerFactory is IPositionManagerFactory {
     ///@notice get all positionManager array of address
     ///@dev array need to return with a custom function to get all the array
     ///@return address[] return the array of positionManager
-    function getAllPositionManagers() public view override returns (address[] memory) {
+    function getAllPositionManagers() external view override returns (address[] memory) {
         return positionManagers;
     }
 }

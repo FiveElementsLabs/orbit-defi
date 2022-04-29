@@ -27,7 +27,7 @@ contract IdleLiquidityModule {
     ///@param tokenId tokenId of the position
     ///@param positionManager address of the position manager
     ///@return mintedId minted token id
-    function rebalance(uint256 tokenId, IPositionManager positionManager) public returns (uint256 mintedId) {
+    function rebalance(uint256 tokenId, IPositionManager positionManager) external returns (uint256 mintedId) {
         int24 tickDistance = _checkDistanceFromRange(tokenId);
         if (positionManager.getModuleState(tokenId, address(this))) {
             uint24 rebalanceDistance = abi.decode(positionManager.getModuleData(tokenId, address(this)), (uint24));

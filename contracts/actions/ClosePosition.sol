@@ -31,7 +31,7 @@ contract ClosePosition is IClosePosition {
     ///@return uint256 amount of token0 returned
     ///@return uint256 amount of token1 returned
     function closePosition(uint256 tokenId, bool returnTokenToUser)
-        public
+        external
         override
         returns (
             uint256,

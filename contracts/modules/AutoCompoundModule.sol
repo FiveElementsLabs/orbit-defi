@@ -27,7 +27,7 @@ contract AutoCompoundModule {
     ///@return amount0Increased amount of token0 compounded
     ///@return amount1Increased amount of token1 compounded
     function autoCompoundFees(IPositionManager positionManager, uint256 tokenId)
-        public
+        external
         returns (uint256 amount0Increased, uint256 amount1Increased)
     {
         ///@dev check if autocompound is active

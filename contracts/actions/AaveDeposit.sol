@@ -27,9 +27,8 @@ contract AaveDeposit is IAaveDeposit {
         address token,
         uint256 amount,
         address lendingPool
-    ) public override {
+    ) external override {
         ERC20Helper._approveToken(token, lendingPool, amount);
-
         ILendingPool(lendingPool).deposit(token, amount, address(this), 0);
     }
 }

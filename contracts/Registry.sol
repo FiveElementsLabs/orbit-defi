@@ -12,7 +12,14 @@ contract Registry is IRegistry {
     mapping(bytes32 => Entry) public modules;
     bytes32[] public moduleKeys;
 
+    event RegistryNewGovernance(address indexed _newGovernance);
+
     constructor(address _governance, address _positionManagerFactoryAddress) {
+        require(_governance != address(0), 'Registry::changeGovernance: governance address is 0');
+        require(
+            _positionManagerFactoryAddress != address(0),
+            'Registry::changeGovernance: positionManagerFactoryAddress address is 0'
+        );
         governance = _governance;
         positionManagerFactoryAddress = _positionManagerFactoryAddress;
     }
@@ -20,7 +27,9 @@ contract Registry is IRegistry {
     ///@notice change the address of the governance
     ///@param _governance the address of the new governance
     function changeGovernance(address _governance) external onlyGovernance {
+        require(_governance != address(0), 'Registry::changeGovernance: new governance address is 0');
         governance = _governance;
+        emit RegistryNewGovernance(_governance);
     }
 
     ///@notice Register a module
@@ -65,7 +74,7 @@ contract Registry is IRegistry {
     ///@notice Get the state of a module
     ///@param _id keccak256 of module id string
     ///@return bool activated
-    function isActive(bytes32 _id) public view override returns (bool) {
+    function isActive(bytes32 _id) external view override returns (bool) {
         return modules[_id].activated;
     }
 

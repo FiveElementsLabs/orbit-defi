@@ -28,7 +28,7 @@ contract AaveWithdraw is IAaveWithdraw {
         address token,
         uint256 amount,
         address lendingPool
-    ) public override returns (uint256) {
+    ) external override returns (uint256) {
         return ILendingPool(lendingPool).withdraw(token, amount, address(this));
     }
 }

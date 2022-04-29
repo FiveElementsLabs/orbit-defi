@@ -49,7 +49,7 @@ contract Mint is IMint {
     ///@return amount0Deposited token0 amount deposited
     ///@return amount1Deposited token1 amount deposited
     function mint(MintInput calldata inputs)
-        public
+        external
         override
         returns (
             uint256 tokenId,

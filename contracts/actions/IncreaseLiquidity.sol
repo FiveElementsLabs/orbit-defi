@@ -28,7 +28,7 @@ contract IncreaseLiquidity is IIncreaseLiquidity {
         uint256 tokenId,
         uint256 amount0Desired,
         uint256 amount1Desired
-    ) public override returns (uint256 amount0Deposited, uint256 amount1Deposited) {
+    ) external override returns (uint256 amount0Deposited, uint256 amount1Deposited) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
         require(

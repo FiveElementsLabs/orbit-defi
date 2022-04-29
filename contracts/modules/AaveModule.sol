@@ -30,7 +30,7 @@ contract AaveModule {
     ///@notice deposit a position in an Aave lending pool
     ///@param positionManager address of the position manager
     ///@param tokenId id of the Uniswap position to deposit
-    function depositToAave(address positionManager, uint256 tokenId) public {
+    function depositToAave(address positionManager, uint256 tokenId) external {
         require(
             IPositionManager(positionManager).getModuleState(tokenId, address(this)),
             'AaveModule::depositToAave: Module is inactive.'
