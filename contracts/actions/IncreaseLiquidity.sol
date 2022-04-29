@@ -13,7 +13,7 @@ interface IIncreaseLiquidity {
         uint256 tokenId,
         uint256 amount0Desired,
         uint256 amount1Desired
-    ) external;
+    ) external returns (uint256 amount0Deposited, uint256 amount1Deposited);
 }
 
 ///@notice action to increase the liquidity of a V3 position
@@ -22,11 +22,13 @@ contract IncreaseLiquidity is IIncreaseLiquidity {
     ///@param tokenId the id of the position token
     ///@param amount0Desired the desired amount of token0
     ///@param amount1Desired the desired amount of token1
+    ///@return amount0Deposited the amount of token0 that was added
+    ///@return amount1Deposited the amount of token1 that was added
     function increaseLiquidity(
         uint256 tokenId,
         uint256 amount0Desired,
         uint256 amount1Desired
-    ) external override {
+    ) external override returns (uint256 amount0Deposited, uint256 amount1Deposited) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
         require(
@@ -59,8 +61,8 @@ contract IncreaseLiquidity is IIncreaseLiquidity {
                 amount1Min: 0,
                 deadline: block.timestamp + 120
             });
-        INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).increaseLiquidity(
-                params
-            );
+        (, amount0Deposited, amount1Deposited) = INonfungiblePositionManager(
+            Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()
+        ).increaseLiquidity(params);
     }
 }

@@ -56,17 +56,13 @@ contract ClosePosition is IClosePosition {
             });
         nonfungiblePositionManager.decreaseLiquidity(decreaseliquidityparams);
 
-        (, , , , , , , , , , uint256 token0Closed, uint256 token1Closed) = nonfungiblePositionManager.positions(
-            tokenId
-        );
-
         INonfungiblePositionManager.CollectParams memory collectparams = INonfungiblePositionManager.CollectParams({
             tokenId: tokenId,
             recipient: returnTokenToUser ? Storage.owner : address(this),
             amount0Max: 2**128 - 1,
             amount1Max: 2**128 - 1
         });
-        nonfungiblePositionManager.collect(collectparams);
+        (uint256 token0Closed, uint256 token1Closed) = nonfungiblePositionManager.collect(collectparams);
 
         nonfungiblePositionManager.burn(tokenId);
 

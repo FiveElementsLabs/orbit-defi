@@ -11,14 +11,15 @@ import '../helpers/UniswapNFTHelper.sol';
 import '../helpers/ERC20Helper.sol';
 
 interface IZapOut {
-    function zapOut(uint256 tokenId, address tokenOut) external;
+    function zapOut(uint256 tokenId, address tokenOut) external returns (uint256 amountOut);
 }
 
 contract ZapOut is IZapOut {
     ///@notice burns a uni NFT with a single output token, the output token can be different from the two position tokens
     ///@param tokenId id of the NFT to burn
     ///@param tokenOut address of output token
-    function zapOut(uint256 tokenId, address tokenOut) external override {
+    ///@return amountOut amount of output token
+    function zapOut(uint256 tokenId, address tokenOut) external override returns (uint256 amountOut) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         INonfungiblePositionManager nonfungiblePositionManager = INonfungiblePositionManager(
             Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()
@@ -59,7 +60,7 @@ contract ZapOut is IZapOut {
         }
 
         ERC20Helper._approveToken(tokenOut, address(this), amount0 + amount1);
-        ERC20Helper._withdrawTokens(tokenOut, Storage.owner, amount0 + amount1);
+        amountOut = ERC20Helper._withdrawTokens(tokenOut, Storage.owner, amount0 + amount1);
     }
 
     ///@notice wrapper of getPoolLiquidity to use try/catch statement
