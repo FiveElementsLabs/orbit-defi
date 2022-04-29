@@ -17,7 +17,14 @@ import {
   getSelectors,
   findbalanceSlot,
 } from '../shared/fixtures';
-import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, TestRouter, DepositRecipes } from '../../typechain';
+import {
+  MockToken,
+  IUniswapV3Pool,
+  INonfungiblePositionManager,
+  TestRouter,
+  DepositRecipes,
+  ERC20,
+} from '../../typechain';
 
 describe('PositionManager.sol', function () {
   //GLOBAL VARIABLE - USE THIS
@@ -342,10 +349,16 @@ describe('PositionManager.sol', function () {
 
       await usdcMock.connect(user).approve(LendingPool.address, 100000);
       console.log('approve');
-      const tx = await LendingPool.connect(user).deposit(usdcMock.address, 20000, user.address, 0);
+      const aTokenAddress = (await LendingPool.getReserveData(usdcMock.address)).aTokenAddress;
+      const aUsdc = await ethers.getContractAt('MockToken', aTokenAddress);
+      const aBalanceBefore = await aUsdc.balanceOf(user.address);
+      await LendingPool.connect(user).deposit(usdcMock.address, 20000, user.address, 0);
       console.log('deposit');
-      console.log(await tx.wait());
-      await PositionManager.connect(user).pushAavePosition(usdcMock.address, 20000);
+      const aBalanceAfter = await aUsdc.balanceOf(user.address);
+      console.log(aBalanceAfter);
+      expect(aBalanceAfter).to.gt(aBalanceBefore);
+      //find aToken address and check balance differece
+      await PositionManager.connect(user).pushAavePosition(usdcMock.address, aBalanceAfter - aBalanceBefore);
       console.log('push');
       const positions = (await PositionManager.getAavePositions(usdcMock.address)) as any;
       console.log(positions);
