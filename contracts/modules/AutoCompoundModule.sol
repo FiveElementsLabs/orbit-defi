@@ -23,16 +23,11 @@ contract AutoCompoundModule {
     ///@notice executes our recipe for autocompounding
     ///@param positionManager address of the position manager
     ///@param tokenId id of the token to autocompound
-    ///@param feesThreshold threshold of the fees to autocompound
-    function autoCompoundFees(
-        IPositionManager positionManager,
-        uint256 tokenId,
-        uint256 feesThreshold
-    ) public {
+    function autoCompoundFees(IPositionManager positionManager, uint256 tokenId) public {
         ///@dev check if autocompound is active
         if (positionManager.getModuleState(tokenId, address(this))) {
             ///@dev check if compound need to be done
-            if (_checkIfCompoundIsNeeded(address(positionManager), tokenId, feesThreshold)) {
+            if (_checkIfCompoundIsNeeded(address(positionManager), tokenId)) {
                 (uint256 amount0Desired, uint256 amount1Desired) = ICollectFees(address(positionManager)).collectFees(
                     tokenId
                 );
@@ -45,13 +40,8 @@ contract AutoCompoundModule {
     ///@notice checks the position status
     ///@param positionManagerAddress address of the position manager
     ///@param tokenId token id of the position
-    ///@param feesThreshold threshold of the fees to autocompound
     ///@return true if the position needs to be collected
-    function _checkIfCompoundIsNeeded(
-        address positionManagerAddress,
-        uint256 tokenId,
-        uint256 feesThreshold
-    ) internal returns (bool) {
+    function _checkIfCompoundIsNeeded(address positionManagerAddress, uint256 tokenId) internal returns (bool) {
         (uint256 uncollectedFees0, uint256 uncollectedFees1) = IUpdateUncollectedFees(positionManagerAddress)
             .updateUncollectedFees(tokenId);
 
@@ -61,6 +51,20 @@ contract AutoCompoundModule {
             addressHolder.uniswapV3FactoryAddress()
         );
 
-        return (uncollectedFees0 * 100 > amount0 * feesThreshold || uncollectedFees1 * 100 > amount1 * feesThreshold);
+        uint256 feesThreshold = abi.decode(
+            IPositionManager(positionManagerAddress).getModuleData(tokenId, address(this)),
+            (uint256)
+        );
+
+        (uint160 sqrtPriceX96, , , , , , ) = IUniswapV3Pool(
+            UniswapNFTHelper._getPoolFromTokenId(
+                tokenId,
+                INonfungiblePositionManager(addressHolder.nonfungiblePositionManagerAddress()),
+                addressHolder.uniswapV3FactoryAddress()
+            )
+        ).slot0();
+        //returns true if the value of uncollected fees * 100 is greater than amount in the position * threshold
+        return (((uncollectedFees0 * sqrtPriceX96) / 2**96 + (uncollectedFees1 * 2**96) / sqrtPriceX96) * 100 >
+            ((amount0 * sqrtPriceX96) / 2**96 + (amount1 * 2**96) / sqrtPriceX96) * feesThreshold);
     }
 }

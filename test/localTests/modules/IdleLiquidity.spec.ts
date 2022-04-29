@@ -16,6 +16,7 @@ import {
   mintSTDAmount,
   routerFixture,
   getSelectors,
+  RegistryFixture,
 } from '../../shared/fixtures';
 import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager } from '../../../typechain';
 
@@ -120,15 +121,14 @@ describe('IdleLiquidityModule.sol', function () {
     const diamondCutFacet = await DiamondCutFacet.deploy();
     await diamondCutFacet.deployed();
 
-    // deploy Registry
-    const Registry = await ethers.getContractFactory('Registry');
-    const registry = await Registry.deploy(user.address);
-    await registry.deployed();
-
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactoryFactory = await ethers.getContractFactory('PositionManagerFactory');
     const PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
     await PositionManagerFactory.deployed();
+
+    // deploy Registry
+    const registry = (await RegistryFixture(user.address, PositionManagerFactory.address)).registryFixture;
+    await registry.deployed();
 
     await PositionManagerFactory.create(
       user.address,
@@ -284,7 +284,13 @@ describe('IdleLiquidityModule.sol', function () {
       expect(Math.abs((await NonFungiblePositionManager.positions(tokenId)).tickLower)).to.be.lt(Math.abs(tick));
       expect(Math.abs((await NonFungiblePositionManager.positions(tokenId)).tickUpper)).to.be.lt(Math.abs(tick));
 
-      await IdleLiquidityModule.rebalance(tokenId, PositionManager.address, 10);
+      await PositionManager.connect(user).setModuleData(
+        tokenId,
+        IdleLiquidityModule.address,
+        abiCoder.encode(['uint24'], [10])
+      );
+      // rebalance
+      await IdleLiquidityModule.rebalance(tokenId, PositionManager.address);
 
       await expect(NonFungiblePositionManager.ownerOf(tokenId)).to.be.reverted;
       expect(await NonFungiblePositionManager.ownerOf(tokenId.add(1))).to.equal(PositionManager.address);
@@ -293,8 +299,13 @@ describe('IdleLiquidityModule.sol', function () {
     });
 
     it('should faild cause inesistent tokenId', async function () {
+      await PositionManager.connect(user).setModuleData(
+        tokenId,
+        IdleLiquidityModule.address,
+        abiCoder.encode(['uint24'], [100])
+      );
       try {
-        await IdleLiquidityModule.rebalance(tokenId.add(1), PositionManager.address, 100);
+        await IdleLiquidityModule.rebalance(tokenId.add(1), PositionManager.address);
       } catch (error: any) {
         expect(error.message).to.include('Invalid token ID');
       }

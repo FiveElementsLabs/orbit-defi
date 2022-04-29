@@ -15,6 +15,7 @@ import {
   mintSTDAmount,
   getSelectors,
   findbalanceSlot,
+  RegistryFixture,
 } from '../../shared/fixtures';
 import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager } from '../../../typechain';
 
@@ -44,6 +45,7 @@ describe('AaveModule.sol', function () {
   let AaveModule: Contract;
   let usdcMock: Contract;
   let wbtcMock: Contract;
+  let abiCoder: AbiCoder;
 
   before(async function () {
     user = await user; //owner of the smart vault, a normal user
@@ -96,15 +98,14 @@ describe('AaveModule.sol', function () {
     const diamondCutFacet = await DiamondCutFacet.deploy();
     await diamondCutFacet.deployed();
 
-    // deploy Registry
-    const Registry = await ethers.getContractFactory('Registry');
-    const registry = await Registry.deploy(user.address);
-    await registry.deployed();
-
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactoryFactory = await ethers.getContractFactory('PositionManagerFactory');
     const PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
     await PositionManagerFactory.deployed();
+
+    // deploy Registry
+    const registry = (await RegistryFixture(user.address, PositionManagerFactory.address)).registryFixture;
+    await registry.deployed();
 
     await PositionManagerFactory.create(
       user.address,
@@ -208,16 +209,18 @@ describe('AaveModule.sol', function () {
     tokenId = receipt.events[receipt.events.length - 1].args.tokenId;
 
     // user approve AaveModule
-    await PositionManager.toggleModule(tokenId, AaveModule.address, true);
+    await PositionManager.connect(user).toggleModule(tokenId, AaveModule.address, true);
 
     await PositionManager.pushPositionId(tokenId);
+
+    abiCoder = ethers.utils.defaultAbiCoder;
   });
 
   describe('AaveModule - depositToAave', function () {
     it('should deposit token in position out of range', async function () {
       const beforePosition = await NonFungiblePositionManager.positions(tokenId);
-
-      await AaveModule.depositToAave(PositionManager.address, tokenId, 1);
+      await PositionManager.connect(user).setModuleData(tokenId, AaveModule.address, abiCoder.encode(['uint24'], [1]));
+      await AaveModule.depositToAave(PositionManager.address, tokenId);
 
       const pmData = await LendingPool.getUserAccountData(PositionManager.address);
       expect(pmData.totalCollateralETH).to.gt(0);
