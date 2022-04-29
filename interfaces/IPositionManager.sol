@@ -25,5 +25,7 @@ interface IPositionManager {
 
     function pushPositionId(uint256 tokenId) external;
 
+    function pushAavePosition(address token, uint256 amount) external;
+
     function getOwner() external view returns (address);
 }

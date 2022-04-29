@@ -330,39 +330,35 @@ describe('PositionManager.sol', function () {
     });
 
     it('should give user correct shares after accrued interest', async function () {
+      const aTokenAddress = (await LendingPool.getReserveData(usdcMock.address)).aTokenAddress;
+      const aUsdc = await ethers.getContractAt('MockToken', aTokenAddress);
+
+      console.log('atoken1', await aUsdc.balanceOf(PositionManager.address));
+      await usdcMock.connect(liquidityProvider).approve(LendingPool.address, 100000);
+      console.log('approve');
+      await LendingPool.connect(liquidityProvider).deposit(usdcMock.address, 100000, liquidityProvider.address, 0);
+      console.log('deposit');
+      await LendingPool.connect(liquidityProvider).borrow(usdcMock.address, 500, 2, 0, liquidityProvider.address);
+      console.log('borrow');
+      console.log('atoken2', await aUsdc.balanceOf(user.address));
+
+      await ethers.provider.send('evm_mine', [Date.now() + 60]);
+      console.log('mine');
+
+      const aBalanceBefore = await aUsdc.balanceOf(user.address);
       await usdcMock.connect(user).approve(LendingPool.address, 100000);
       console.log('approve');
       await LendingPool.connect(user).deposit(usdcMock.address, 200, user.address, 0);
       console.log('deposit');
-      await PositionManager.connect(user).pushAavePosition(usdcMock.address, 200);
-      console.log('push');
-
-      await usdcMock.connect(liquidityProvider).approve(LendingPool.address, 100000);
-      console.log('approve');
-      await LendingPool.connect(liquidityProvider).deposit(usdcMock.address, 10000, liquidityProvider.address, 0);
-      console.log('deposit');
-      await LendingPool.connect(liquidityProvider).borrow(usdcMock.address, 5000, 2, 0, liquidityProvider.address);
-      console.log('borrow');
-
-      await ethers.provider.send('evm_mine', [Date.now() + 3600]);
-      console.log('mine');
-
-      await usdcMock.connect(user).approve(LendingPool.address, 100000);
-      console.log('approve');
-      const aTokenAddress = (await LendingPool.getReserveData(usdcMock.address)).aTokenAddress;
-      const aUsdc = await ethers.getContractAt('MockToken', aTokenAddress);
-      const aBalanceBefore = await aUsdc.balanceOf(user.address);
-      await LendingPool.connect(user).deposit(usdcMock.address, 20000, user.address, 0);
-      console.log('deposit');
       const aBalanceAfter = await aUsdc.balanceOf(user.address);
-      console.log(aBalanceAfter);
+      console.log('atokenAfter', aBalanceAfter);
       expect(aBalanceAfter).to.gt(aBalanceBefore);
       //find aToken address and check balance differece
       await PositionManager.connect(user).pushAavePosition(usdcMock.address, aBalanceAfter - aBalanceBefore);
       console.log('push');
       const positions = (await PositionManager.getAavePositions(usdcMock.address)) as any;
       console.log(positions);
-      expect(positions[1].shares).to.lt(20000);
+      expect(positions[1].shares).to.lt(200);
     });
   });
 

@@ -162,5 +162,11 @@ describe('AaveDeposit.sol', function () {
       expect(balanceAfter).to.be.lt(balanceBefore);
       expect(pmData.ltv).to.be.gt(0);
     });
+
+    it('should update position to PositionManager', async function () {
+      const positions = await PositionManager.getAavePositions(usdcMock.address);
+      expect(positions.length).to.eq(1);
+      expect(positions[0].shares).to.eq(10000);
+    });
   });
 });

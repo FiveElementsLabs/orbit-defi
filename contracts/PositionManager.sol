@@ -157,7 +157,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@notice add awareness of aave position to positionManager
     ///@param token address of token deposited
     ///@param amount of aTokens recieved from deposit
-    function pushAavePosition(address token, uint256 amount) public {
+    function pushAavePosition(address token, uint256 amount) public override {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         uint256 shares;
         ///@notice when positionManager deposits into aave, we give the position one share
@@ -167,6 +167,8 @@ contract PositionManager is IPositionManager, ERC721Holder {
         } else {
             DataTypes.ReserveData memory reserveData = ILendingPool(Storage.aaveAddressHolder.lendingPoolAddress())
                 .getReserveData(token);
+            console.log('aTokenAmount', IERC20(reserveData.aTokenAddress).balanceOf(address(this)));
+            console.log('sharesEmitted', aaveUserReserves[token].sharesEmitted);
             shares =
                 (amount * aaveUserReserves[token].sharesEmitted) /
                 IERC20(reserveData.aTokenAddress).balanceOf(address(this));
