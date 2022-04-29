@@ -151,7 +151,7 @@ contract Timelock {
         bytes memory data,
         uint256 eta
     ) external payable onlyAdmin returns (bytes memory) {
-        require(targer != address(0), 'Timelock::executeTransaction: Target address is 0.');
+        require(target != address(0), 'Timelock::executeTransaction: Target address is 0.');
         bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
         require(queuedTransactions[txHash], "Timelock::executeTransaction: Transaction hasn't been queued.");
         require(getBlockTimestamp() >= eta, "Timelock::executeTransaction: Transaction hasn't surpassed time lock.");
