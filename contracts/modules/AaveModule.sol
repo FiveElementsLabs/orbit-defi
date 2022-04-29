@@ -31,19 +31,18 @@ contract AaveModule {
     ///@param positionManager address of the position manager
     ///@param tokenId id of the Uniswap position to deposit
     ///@param tickDelta minimum distance (in ticks) from pool tick to position tick to allow deposit on Aave
-    function depositToAave(
-        address positionManager,
-        uint256 tokenId,
-        uint24 tickDelta
-    ) external {
+    function depositToAave(address positionManager, uint256 tokenId) external {
         require(
             IPositionManager(positionManager).getModuleState(tokenId, address(this)),
             'AaveModule::depositToAave: Module is inactive.'
         );
         int24 tickDistance = _checkDistanceFromRange(tokenId);
+        uint24 tickDelta = abi.decode(
+            IPositionManager(positionManager).getModuleData(tokenId, address(this)),
+            (uint24)
+        );
         ///@dev move token to aave only if the position's range is outside of the tick of the pool
         ///@dev (tickDistance < 0) and the position is far enough from tick of the pool
-
         if (tickDistance < 0 && tickDelta <= uint24(tickDistance)) {
             (uint256 amount0, uint256 amount1) = UniswapNFTHelper._getAmountsfromTokenId(
                 tokenId,

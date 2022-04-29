@@ -14,7 +14,6 @@ import '../interfaces/IRegistry.sol';
 import '../interfaces/ILendingPool.sol';
 import './helpers/ERC20Helper.sol';
 import './utils/Storage.sol';
-import 'hardhat/console.sol';
 
 /**
  * @title   Position Manager
@@ -26,6 +25,57 @@ import 'hardhat/console.sol';
  */
 
 contract PositionManager is IPositionManager, ERC721Holder {
+    struct ModuleInfo {
+        bool isActive;
+        bytes data;
+    }
+
+    struct AaveReserve {
+        AavePosition[] positions;
+        uint256 sharesEmitted;
+    }
+
+    struct AavePosition {
+        uint256 id;
+        uint256 shares;
+    }
+
+    uint256[] private uniswapNFTs;
+    uint256 private aaveIdCounter = 0;
+    mapping(address => AaveReserve) public aaveUserReserves;
+    mapping(uint256 => mapping(address => ModuleInfo)) public activatedModules;
+
+    ///@notice emitted when a position is withdrawn
+    ///@param to address of the user
+    ///@param tokenId ID of the withdrawn NFT
+    event WithdrawUni(address to, uint256 tokenId);
+
+    ///@notice emitted when a ERC20 is withdrawn
+    ///@param tokenAddress address of the ERC20
+    ///@param to address of the user
+    ///@param amount of the ERC20
+    event WithdrawERC20(address tokenAddress, address to, uint256 amount);
+
+    ///@notice modifier to check if the msg.sender is the owner
+    modifier onlyOwner() {
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+
+        require(msg.sender == Storage.owner, 'PositionManager::onlyOwner: Only owner can call this function');
+        _;
+    }
+
+    ///@notice modifier to check if the position is owned by the positionManager
+    modifier onlyOwnedPosition(uint256 tokenId) {
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+        require(
+            INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(
+                tokenId
+            ) == address(this),
+            'PositionManager::onlyOwnedPosition: positionManager is not owner of the token'
+        );
+        _;
+    }
+
     constructor(address _owner, address _diamondCutFacet) payable {
         PositionManagerStorage.setContractOwner(_owner);
 
@@ -40,34 +90,6 @@ contract PositionManager is IPositionManager, ERC721Holder {
         });
         PositionManagerStorage.diamondCut(cut, address(0), '');
     }
-
-    mapping(uint256 => mapping(address => bool)) public activatedModules;
-
-    ///@notice emitted when a position is withdrawn
-    ///@param to address of the user
-    ///@param tokenId ID of the withdrawn NFT
-    event WithdrawUni(address to, uint256 tokenId);
-
-    ///@notice emitted when a ERC20 is withdrawn
-    ///@param tokenAddress address of the ERC20
-    ///@param to address of the user
-    ///@param amount of the ERC20
-    event WithdrawERC20(address tokenAddress, address to, uint256 amount);
-
-    uint256[] private uniswapNFTs;
-
-    struct AavePosition {
-        uint256 id;
-        uint256 shares;
-    }
-
-    struct AaveReserve {
-        AavePosition[] positions;
-        uint256 sharesEmitted;
-    }
-
-    mapping(address => AaveReserve) public aaveUserReserves;
-    uint256 private aaveIdCounter = 0;
 
     function init(
         address _owner,
@@ -136,14 +158,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
 
     ///@notice add tokenId in the uniswapNFTs array
     ///@param tokenId ID of the added NFT
-    function pushPositionId(uint256 tokenId) external override {
-        StorageStruct storage Storage = PositionManagerStorage.getStorage();
-        require(
-            INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(
-                tokenId
-            ) == address(this),
-            'PositionManager::pushPositionId: tokenId is not owned by this contract'
-        );
+    function pushPositionId(uint256 tokenId) external override onlyOwnedPosition(tokenId) {
         uniswapNFTs.push(tokenId);
     }
 
@@ -215,15 +230,46 @@ contract PositionManager is IPositionManager, ERC721Holder {
         uint256 tokenId,
         address moduleAddress,
         bool activated
-    ) external override onlyOwner {
-        activatedModules[tokenId][moduleAddress] = activated;
+    ) external override onlyOwner onlyOwnedPosition(tokenId) {
+        activatedModules[tokenId][moduleAddress].isActive = activated;
     }
 
     ///@notice return the state of the module for tokenId position
     ///@param tokenId ID of the position
     ///@param moduleAddress address of the module
-    function getModuleState(uint256 tokenId, address moduleAddress) external view override returns (bool) {
-        return activatedModules[tokenId][moduleAddress];
+    function getModuleState(uint256 tokenId, address moduleAddress)
+        external
+        view
+        override
+        onlyOwnedPosition(tokenId)
+        returns (bool)
+    {
+        return activatedModules[tokenId][moduleAddress].isActive;
+    }
+
+    ///@notice sets the data of a module strategy for tokenId position
+    ///@param tokenId ID of the position
+    ///@param moduleAddress address of the module
+    ///@param data data for the module
+    function setModuleData(
+        uint256 tokenId,
+        address moduleAddress,
+        bytes memory data
+    ) external override onlyOwner onlyOwnedPosition(tokenId) {
+        activatedModules[tokenId][moduleAddress].data = data;
+    }
+
+    ///@notice returns the data of a module strategy for tokenId position
+    ///@param tokenId ID of the position
+    ///@param moduleAddress address of the module
+    function getModuleData(uint256 tokenId, address moduleAddress)
+        external
+        view
+        override
+        onlyOwnedPosition(tokenId)
+        returns (bytes memory)
+    {
+        return activatedModules[tokenId][moduleAddress].data;
     }
 
     ///@notice return the address of this position manager owner
@@ -239,14 +285,6 @@ contract PositionManager is IPositionManager, ERC721Holder {
         ERC20Helper._approveToken(tokenAddress, address(this), 2**256 - 1);
         uint256 amount = ERC20Helper._withdrawTokens(tokenAddress, msg.sender, 2**256 - 1);
         emit WithdrawERC20(tokenAddress, msg.sender, amount);
-    }
-
-    ///@notice modifier to check if the msg.sender is the owner
-    modifier onlyOwner() {
-        StorageStruct storage Storage = PositionManagerStorage.getStorage();
-
-        require(msg.sender == Storage.owner, 'PositionManager::onlyOwner: Only owner can call this function');
-        _;
     }
 
     ///@notice function to check if an address corresponds to an active module (or this contract)
