@@ -13,6 +13,7 @@ import {
   tokensFixture,
   poolFixture,
   mintSTDAmount,
+  RegistryFixture,
 } from '../../shared/fixtures';
 import {
   MockToken,
@@ -124,11 +125,6 @@ describe('DepositRecipes.sol', function () {
     const DiamondCutFacetFactory = await ethers.getContractFactory('DiamondCutFacet');
     DiamondCutFacet = await DiamondCutFacetFactory.deploy();
     await DiamondCutFacet.deployed();
-
-    // deploy Registry
-    const Registry = await ethers.getContractFactory('Registry');
-    registry = await Registry.deploy(user.address);
-    await registry.deployed();
 
     //APPROVE
 
@@ -262,6 +258,10 @@ describe('DepositRecipes.sol', function () {
     PositionManagerFactoryFactory = (await ethers.getContractFactory('PositionManagerFactory')) as ContractFactory;
     PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
     await PositionManagerFactory.deployed();
+
+    // deploy Registry
+    registry = (await RegistryFixture(user.address, PositionManagerFactory.address)).registryFixture;
+    await registry.deployed();
 
     await PositionManagerFactory.create(
       user.address,

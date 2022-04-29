@@ -7,6 +7,7 @@ import {
   tokensFixture,
   poolFixture,
   routerFixture,
+  RegistryFixture,
 } from '../shared/fixtures';
 import { MockToken, INonfungiblePositionManager, ISwapRouter, UniswapAddressHolder, Registry } from '../../typechain';
 
@@ -84,11 +85,6 @@ describe('PositionManagerFactory.sol', function () {
     )) as UniswapAddressHolder;
     await uniswapAddressHolder.deployed();
 
-    //deploy registry
-    const registryFactory = await ethers.getContractFactory('Registry');
-    registry = await registryFactory.deploy(user.address);
-    await registry.deployed();
-
     // deploy DiamondCutFacet ----------------------------------------------------------------------
     const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet');
     diamondCutFacet = await DiamondCutFacet.deploy();
@@ -110,6 +106,10 @@ describe('PositionManagerFactory.sol', function () {
       await PositionManagerFactoryInstance.deployed();
 
       [owner] = await ethers.getSigners();
+
+      // deploy Registry
+      const registry = (await RegistryFixture(owner.address, PositionManagerFactoryInstance.address)).registryFixture;
+      await registry.deployed();
 
       await PositionManagerFactoryInstance.create(
         owner.address,
