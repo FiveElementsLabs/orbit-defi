@@ -64,16 +64,17 @@ contract MockERC20Helper {
     ///@param token address of the token
     ///@param to address of the user
     ///@param amount address of the balance
+    ///@return amountOut amount of withdrawn tokens
     function withdrawTokens(
         address token,
         address to,
         uint256 amount
-    ) public {
-        ERC20Helper._withdrawTokens(token, to, amount);
+    ) public returns (uint256 amountOut) {
+        amountOut = ERC20Helper._withdrawTokens(token, to, amount);
     }
 
-    function approve(address token, address to) public {
+    /* function approve(address token, address to) public {
         IERC20(token).approve(to, 2**256 - 1);
         IERC20(token).approve(address(this), 2**256 - 1);
-    }
+    } */
 }

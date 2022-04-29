@@ -22,7 +22,7 @@ contract AaveModule {
     IAaveAddressHolder public aaveAddressHolder;
     IUniswapAddressHolder uniswapAddressHolder;
 
-    constructor(address _aaveAddressHolder, address _uniswapAddressHolder) public {
+    constructor(address _aaveAddressHolder, address _uniswapAddressHolder) {
         aaveAddressHolder = IAaveAddressHolder(_aaveAddressHolder);
         uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
     }
