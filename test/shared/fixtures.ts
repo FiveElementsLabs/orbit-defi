@@ -36,9 +36,9 @@ export async function tokensFixture(name: string, decimal: number): Promise<Toke
   return { tokenFixture };
 }
 
-export async function RegistryFixture(ownerAddress: string): Promise<RegistryFixture> {
+export async function RegistryFixture(ownerAddress: string, positionManagerFactoryAddress: string): Promise<RegistryFixture> {
   const registryFactory = await ethers.getContractFactory('Registry');
-  const registryFixture: Registry = (await registryFactory.deploy(ownerAddress)) as Registry;
+  const registryFixture: Registry = (await registryFactory.deploy(ownerAddress, positionManagerFactoryAddress)) as Registry;
   return { registryFixture };
 }
 

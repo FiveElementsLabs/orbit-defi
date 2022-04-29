@@ -50,6 +50,14 @@ library PositionManagerStorage {
         emit OwnershipTransferred(previousOwner, _newOwner);
     }
 
+    function enforceIsGovernance() internal view {
+        StorageStruct storage ds = getStorage();
+        require(
+            msg.sender == ds.registry.governance(),
+            'Storage:enforceIsContractOwner:: Must be contract governance to call this function'
+        );
+    }
+
     event DiamondCut(IDiamondCut.FacetCut[] _diamondCut, address _init, bytes _calldata);
 
     // Internal function version of diamondCut

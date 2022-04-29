@@ -6,13 +6,15 @@ import '../interfaces/IRegistry.sol';
 
 /// @title Stores all the modules addresses
 contract Registry is IRegistry {
-    address public governance;
+    address public override governance;
+    address public override positionManagerFactoryAddress;
 
     mapping(bytes32 => Entry) public modules;
     bytes32[] public moduleKeys;
 
-    constructor(address _governance) {
+    constructor(address _governance, address _positionManagerFactoryAddress) {
         governance = _governance;
+        positionManagerFactoryAddress = _positionManagerFactoryAddress;
     }
 
     ///@notice change the address of the governance
