@@ -30,7 +30,7 @@ contract IdleLiquidityModule {
         uint256 tokenId,
         IPositionManager positionManager,
         uint24 rebalanceDistance
-    ) public {
+    ) external {
         int24 tickDistance = _checkDistanceFromRange(tokenId);
         if (positionManager.getModuleState(tokenId, address(this))) {
             ///@dev rebalance only if the position's range is outside of the tick of the pool (tickDistance < 0) and the position is far enough from tick of the pool

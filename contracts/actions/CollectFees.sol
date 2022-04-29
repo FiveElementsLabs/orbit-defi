@@ -21,7 +21,7 @@ contract CollectFees is ICollectFees {
     ///@param tokenId of token to collect fees from
     ///@return amount0 of token0 collected
     ///@return amount1 of token1 collected
-    function collectFees(uint256 tokenId) public override returns (uint256 amount0, uint256 amount1) {
+    function collectFees(uint256 tokenId) external override returns (uint256 amount0, uint256 amount1) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
         _updateUncollectedFees(tokenId);

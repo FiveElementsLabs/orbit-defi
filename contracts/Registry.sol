@@ -68,7 +68,7 @@ contract Registry is IRegistry {
     ///@notice Get the state of a module
     ///@param _id keccak256 of module id string
     ///@return bool activated
-    function isActive(bytes32 _id) public view override returns (bool) {
+    function isActive(bytes32 _id) external view override returns (bool) {
         return modules[_id].activated;
     }
 

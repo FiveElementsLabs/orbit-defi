@@ -22,7 +22,7 @@ contract UpdateUncollectedFees is IUpdateUncollectedFees {
     ///@param tokenId ID of the NFT
     ///@return uint256 token0 fee collected
     ///@return uint256 token1 fee collected
-    function updateUncollectedFees(uint256 tokenId) public override returns (uint256, uint256) {
+    function updateUncollectedFees(uint256 tokenId) external override returns (uint256, uint256) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
         INonfungiblePositionManager nonfungiblePositionManager = INonfungiblePositionManager(

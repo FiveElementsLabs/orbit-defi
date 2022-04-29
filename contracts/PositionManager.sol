@@ -74,7 +74,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
         address _uniswapAddressHolder,
         address _registry,
         address _aaveAddressHolder
-    ) public {
+    ) external {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         Storage.owner = _owner;
         Storage.uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
@@ -84,7 +84,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
 
     ///@notice withdraw uniswap position NFT from the position manager
     ///@param tokenId ID of withdrawn token
-    function withdrawUniNft(uint256 tokenId) public override onlyOwner {
+    function withdrawUniNft(uint256 tokenId) external override onlyOwner {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
         uint256 index = uniswapNFTs.length;
@@ -106,7 +106,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
 
     ///@notice remove awareness of tokenId UniswapV3 NFT
     ///@param tokenId ID of the NFT to remove
-    function removePositionId(uint256 tokenId) public override {
+    function removePositionId(uint256 tokenId) external override {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         ///@dev if ownerOf reverts, tokenId is non existent or it has been burned
         try
@@ -136,7 +136,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
 
     ///@notice add tokenId in the uniswapNFTs array
     ///@param tokenId ID of the added NFT
-    function pushPositionId(uint256 tokenId) public override {
+    function pushPositionId(uint256 tokenId) external override {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         require(
             INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(
@@ -157,7 +157,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@notice add awareness of aave position to positionManager
     ///@param token address of token deposited
     ///@param amount of aTokens recieved from deposit
-    function pushAavePosition(address token, uint256 amount) public {
+    function pushAavePosition(address token, uint256 amount) external {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         uint256 shares;
         ///@notice when positionManager deposits into aave, we give the position one share
@@ -180,7 +180,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@notice remove awareness of aave position from positionManager
     ///@param token address of token withdrawn
     ///@param id of the withdrawn position
-    function removeAavePosition(address token, uint256 id) public {
+    function removeAavePosition(address token, uint256 id) external {
         require(
             aaveUserReserves[token].sharesEmitted > 0,
             'PositionManager::removeAavePosition: no position to remove!'
@@ -203,7 +203,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
 
     ///@notice return all aave positions in a certain token
     ///@param token address of token
-    function getAavePositions(address token) public view returns (AavePosition[] memory) {
+    function getAavePositions(address token) external view returns (AavePosition[] memory) {
         return aaveUserReserves[token].positions;
     }
 

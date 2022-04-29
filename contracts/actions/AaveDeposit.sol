@@ -27,7 +27,7 @@ contract AaveDeposit is IAaveDeposit {
         address token,
         uint256 amount,
         address lendingPool
-    ) public override {
+    ) external override {
         if (IERC20(token).allowance(address(this), lendingPool) < amount) {
             IERC20(token).approve(lendingPool, 2**256 - 1);
         }

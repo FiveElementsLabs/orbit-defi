@@ -18,7 +18,7 @@ contract ZapOut is IZapOut {
     ///@notice burns a uni NFT with a single output token, the output token can be different from the two position tokens
     ///@param tokenId id of the NFT to burn
     ///@param tokenOut address of output token
-    function zapOut(uint256 tokenId, address tokenOut) public override {
+    function zapOut(uint256 tokenId, address tokenOut) external override {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         INonfungiblePositionManager nonfungiblePositionManager = INonfungiblePositionManager(
             Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()
@@ -60,6 +60,23 @@ contract ZapOut is IZapOut {
 
         ERC20Helper._approveToken(tokenOut, address(this), amount0 + amount1);
         ERC20Helper._withdrawTokens(tokenOut, Storage.owner, amount0 + amount1);
+    }
+
+    ///@notice wrapper of getPoolLiquidity to use try/catch statement
+    ///@param token0 address of first token
+    ///@param token1 address of second token
+    ///@param fee pool fee tier
+    ///@return liquidity of the pool
+    function getPoolLiquidity(
+        address token0,
+        address token1,
+        uint24 fee
+    ) external view returns (uint128 liquidity) {
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+        return
+            IUniswapV3Pool(
+                UniswapNFTHelper._getPool(Storage.uniswapAddressHolder.uniswapV3FactoryAddress(), token0, token1, fee)
+            ).liquidity();
     }
 
     ///@notice performs the swap to tokenOut
@@ -113,22 +130,5 @@ contract ZapOut is IZapOut {
         if (bestLiquidity == 0) {
             revert('ZapOut::_findBestFee: No pool found with desired tokens');
         }
-    }
-
-    ///@notice wrapper of getPoolLiquidity to use try/catch statement
-    ///@param token0 address of first token
-    ///@param token1 address of second token
-    ///@param fee pool fee tier
-    ///@return liquidity of the pool
-    function getPoolLiquidity(
-        address token0,
-        address token1,
-        uint24 fee
-    ) public view returns (uint128 liquidity) {
-        StorageStruct storage Storage = PositionManagerStorage.getStorage();
-        return
-            IUniswapV3Pool(
-                UniswapNFTHelper._getPool(Storage.uniswapAddressHolder.uniswapV3FactoryAddress(), token0, token1, fee)
-            ).liquidity();
     }
 }

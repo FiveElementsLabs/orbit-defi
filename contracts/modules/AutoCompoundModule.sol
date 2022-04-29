@@ -28,7 +28,7 @@ contract AutoCompoundModule {
         IPositionManager positionManager,
         uint256 tokenId,
         uint256 feesThreshold
-    ) public {
+    ) external {
         ///@dev check if autocompound is active
         if (positionManager.getModuleState(tokenId, address(this))) {
             ///@dev check if compound need to be done

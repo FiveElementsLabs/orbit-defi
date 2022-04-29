@@ -44,7 +44,7 @@ contract SwapToPositionRatio is ISwapToPositionRatio {
     ///@param amount0Out the new value of amount0
     ///@param amount1Out the new value of amount1
     function swapToPositionRatio(SwapToPositionInput memory inputs)
-        public
+        external
         override
         returns (uint256 amount0Out, uint256 amount1Out)
     {

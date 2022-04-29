@@ -55,7 +55,7 @@ contract Timelock {
 
     /// @notice Sets the minimum time delay
     /// @param _delay the new delay
-    function setDelay(uint256 _delay) public onlyAdmin {
+    function setDelay(uint256 _delay) external onlyAdmin {
         require(_delay >= MINIMUM_DELAY, 'Timelock::setDelay: Delay must exceed minimum delay.');
         require(_delay <= MAXIMUM_DELAY, 'Timelock::setDelay: Delay must not exceed maximum delay.');
         delay = _delay;
@@ -65,7 +65,7 @@ contract Timelock {
 
     /// @notice Sets a new address as pending admin
     /// @param _pendingAdmin the pending admin
-    function setNewPendingAdmin(address _pendingAdmin) public onlyAdmin {
+    function setNewPendingAdmin(address _pendingAdmin) external onlyAdmin {
         require(_pendingAdmin != address(0), 'Timelock::setNewPendingAdmin: Pending admin address is 0.');
         pendingAdmin = _pendingAdmin;
         pendingAdminAccepted[_pendingAdmin] = false;
@@ -74,13 +74,13 @@ contract Timelock {
     }
 
     /// @notice Pending admin accepts its role of new admin
-    function acceptAdminRole() public {
+    function acceptAdminRole() external {
         require(msg.sender == pendingAdmin, 'Timelock::acceptAdminRole: Call must come from pendingAdmin.');
         pendingAdminAccepted[msg.sender] = true;
     }
 
     /// @notice Confirms the pending admin as new admin after he accepted the role
-    function confirmNewAdmin() public onlyAdmin {
+    function confirmNewAdmin() external onlyAdmin {
         require(
             pendingAdminAccepted[pendingAdmin],
             'Timelock::confirmNewAdmin: Pending admin must accept admin role first.'
@@ -105,7 +105,7 @@ contract Timelock {
         string memory signature,
         bytes memory data,
         uint256 eta
-    ) public onlyAdmin returns (bytes32) {
+    ) external onlyAdmin returns (bytes32) {
         require(
             eta >= getBlockTimestamp().add(delay),
             'Timelock::queueTransaction: Estimated execution block must satisfy delay.'
@@ -130,7 +130,7 @@ contract Timelock {
         string memory signature,
         bytes memory data,
         uint256 eta
-    ) public onlyAdmin {
+    ) external onlyAdmin {
         bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
         queuedTransactions[txHash] = false;
 
@@ -150,7 +150,7 @@ contract Timelock {
         string memory signature,
         bytes memory data,
         uint256 eta
-    ) public payable onlyAdmin returns (bytes memory) {
+    ) external payable onlyAdmin returns (bytes memory) {
         require(targer != address(0), 'Timelock::executeTransaction: Target address is 0.');
         bytes32 txHash = keccak256(abi.encode(target, value, signature, data, eta));
         require(queuedTransactions[txHash], "Timelock::executeTransaction: Transaction hasn't been queued.");

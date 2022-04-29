@@ -35,7 +35,7 @@ contract AaveModule {
         address positionManager,
         uint256 tokenId,
         uint24 tickDelta
-    ) public {
+    ) external {
         require(
             IPositionManager(positionManager).getModuleState(tokenId, address(this)),
             'AaveModule::depositToAave: Module is inactive.'
