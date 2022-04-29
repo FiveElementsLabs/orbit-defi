@@ -6,16 +6,22 @@ import '../interfaces/IRegistry.sol';
 
 /// @title Stores all the modules addresses
 contract Registry is IRegistry {
-    address public governance;
+    address public override governance;
+    address public override positionManagerFactoryAddress;
 
     mapping(bytes32 => Entry) public modules;
     bytes32[] public moduleKeys;
 
     event RegistryNewGovernance(address indexed _newGovernance);
 
-    constructor(address _governance) {
-        require(_governance != address(0), 'Registry:changeGovernance:: new governance address is 0');
+    constructor(address _governance, address _positionManagerFactoryAddress) {
+        require(_governance != address(0), 'Registry:changeGovernance:: governance address is 0');
+        require(
+            _positionManagerFactoryAddress != address(0),
+            'Registry:changeGovernance:: positionManagerFactoryAddress address is 0'
+        );
         governance = _governance;
+        positionManagerFactoryAddress = _positionManagerFactoryAddress;
     }
 
     ///@notice change the address of the governance

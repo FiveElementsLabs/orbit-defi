@@ -64,6 +64,15 @@ contract PositionManager is IPositionManager, ERC721Holder {
         _;
     }
 
+    ///@notice modifier to check if the msg.sender is the PositionManagerFactory
+    modifier onlyFactory(address _registry) {
+        require(
+            IRegistry(_registry).positionManagerFactoryAddress() == msg.sender,
+            'PositionManager::init: Only PositionManagerFactory can init this contract'
+        );
+        _;
+    }
+
     ///@notice modifier to check if the position is owned by the positionManager
     modifier onlyOwnedPosition(uint256 tokenId) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
@@ -76,7 +85,11 @@ contract PositionManager is IPositionManager, ERC721Holder {
         _;
     }
 
-    constructor(address _owner, address _diamondCutFacet) payable {
+    constructor(
+        address _owner,
+        address _diamondCutFacet,
+        address _registry
+    ) payable onlyFactory(_registry) {
         PositionManagerStorage.setContractOwner(_owner);
 
         // Add the diamondCut external function from the diamondCutFacet
@@ -96,7 +109,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
         address _uniswapAddressHolder,
         address _registry,
         address _aaveAddressHolder
-    ) external {
+    ) external onlyFactory(_registry) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         Storage.owner = _owner;
         Storage.uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
