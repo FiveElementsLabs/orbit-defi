@@ -30,7 +30,6 @@ contract AaveModule {
     ///@notice deposit a position in an Aave lending pool
     ///@param positionManager address of the position manager
     ///@param tokenId id of the Uniswap position to deposit
-    ///@param tickDelta minimum distance (in ticks) from pool tick to position tick to allow deposit on Aave
     function depositToAave(address positionManager, uint256 tokenId) external {
         require(
             IPositionManager(positionManager).getModuleState(tokenId, address(this)),

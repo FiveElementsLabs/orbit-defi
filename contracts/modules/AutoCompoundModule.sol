@@ -23,7 +23,6 @@ contract AutoCompoundModule {
     ///@notice executes our recipe for autocompounding
     ///@param positionManager address of the position manager
     ///@param tokenId id of the token to autocompound
-    ///@param feesThreshold threshold of the fees to autocompound
     function autoCompoundFees(IPositionManager positionManager, uint256 tokenId) external {
         ///@dev check if autocompound is active
         if (positionManager.getModuleState(tokenId, address(this))) {

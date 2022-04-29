@@ -104,28 +104,6 @@ contract PositionManager is IPositionManager, ERC721Holder {
         Storage.aaveAddressHolder = IAaveAddressHolder(_aaveAddressHolder);
     }
 
-    ///@notice withdraw uniswap position NFT from the position manager
-    ///@param tokenId ID of withdrawn token
-    function withdrawUniNft(uint256 tokenId) external override onlyOwner {
-        StorageStruct storage Storage = PositionManagerStorage.getStorage();
-
-        uint256 index = uniswapNFTs.length;
-        for (uint256 i = 0; i < uniswapNFTs.length; i++) {
-            if (uniswapNFTs[i] == tokenId) {
-                index = i;
-                i = uniswapNFTs.length;
-            }
-        }
-        require(index < uniswapNFTs.length, 'PositionManager::withdrawUniNFT: token ID not found!');
-        INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).safeTransferFrom(
-            address(this),
-            msg.sender,
-            tokenId,
-            '0x0'
-        );
-        emit WithdrawUni(msg.sender, tokenId);
-    }
-
     ///@notice remove awareness of tokenId UniswapV3 NFT
     ///@param tokenId ID of the NFT to remove
     function removePositionId(uint256 tokenId) external override {
