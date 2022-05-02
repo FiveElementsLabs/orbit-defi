@@ -92,7 +92,10 @@ contract IdleLiquidityModule {
         int24 distanceFromUpper = tickUpper - tick;
         int24 distanceFromLower = tick - tickLower;
 
-        return distanceFromLower <= distanceFromUpper ? distanceFromLower : distanceFromUpper;
+        return
+            distanceFromLower * distanceFromUpper <= 0
+                ? _min24(distanceFromLower, distanceFromUpper)
+                : _absMin24(distanceFromLower, distanceFromUpper);
     }
 
     ///@notice calc tickLower and tickUpper with the same delta as the position but with tick of the pool in center
@@ -119,5 +122,13 @@ contract IdleLiquidityModule {
         int24 tickSpacing = int24(fee) / 50;
 
         return (((tick - tickDelta) / tickSpacing) * tickSpacing, ((tick + tickDelta) / tickSpacing) * tickSpacing);
+    }
+
+    function _min24(int24 a, int24 b) internal pure returns (int24) {
+        return a < b ? a : b;
+    }
+
+    function _absMin24(int24 a, int24 b) internal pure returns (int24) {
+        return uint24(a) < uint24(b) ? a : b;
     }
 }

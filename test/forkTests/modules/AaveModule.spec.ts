@@ -1,13 +1,16 @@
 import '@nomiclabs/hardhat-ethers';
 import { expect } from 'chai';
 import { ContractFactory, Contract } from 'ethers';
-import { AbiCoder } from 'ethers/lib/utils';
+import { AbiCoder, TransactionDescription } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import hre from 'hardhat';
 import UniswapV3Factoryjson from '@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json';
 import PositionManagerjson from '../../../artifacts/contracts/PositionManager.sol/PositionManager.json';
 import NonFungiblePositionManagerjson from '@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json';
 import LendingPooljson from '@aave/protocol-v2/artifacts/contracts/protocol/lendingpool/LendingPool.sol/LendingPool.json';
+import SwapRouterjson from '@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json';
+import UniswapV3Pooljson from '@uniswap/v3-core/artifacts/contracts/UniswapV3Pool.sol/UniswapV3Pool.json';
+import ATokenjson from '@aave/protocol-v2/artifacts/contracts/protocol/tokenization/AToken.sol/AToken.json';
 import {
   NonFungiblePositionManagerDescriptorBytecode,
   tokensFixture,
@@ -28,6 +31,10 @@ describe('AaveModule.sol', function () {
     return signers[1];
   });
 
+  let trader: any = ethers.getSigners().then(async (signers) => {
+    return signers[2];
+  });
+
   //all the token used globally
   let tokenEth: MockToken, tokenUsdc: MockToken, tokenDai: MockToken;
 
@@ -43,13 +50,16 @@ describe('AaveModule.sol', function () {
   let AaveDepositFallback: Contract;
   let LendingPool: Contract;
   let AaveModule: Contract;
-  let usdcMock: Contract;
-  let wbtcMock: Contract;
+  let usdcMock: MockToken;
+  let wbtcMock: MockToken;
   let abiCoder: AbiCoder;
+  let swapRouter: Contract;
+  let aUsdc: Contract;
 
   before(async function () {
     user = await user; //owner of the smart vault, a normal user
     liquidityProvider = await liquidityProvider;
+    trader = await trader;
 
     //deploy the tokens - ETH, USDC
     tokenEth = (await tokensFixture('ETH', 18)).tokenFixture;
@@ -64,9 +74,6 @@ describe('AaveModule.sol', function () {
     Factory = (await uniswapFactoryFactory.deploy()) as Contract;
     await Factory.deployed();
 
-    //deploy first pool
-    Pool0 = (await poolFixture(tokenEth, tokenUsdc, 3000, Factory)).pool;
-
     //mint 1e30 token, you can call with arbitrary amount
     await mintSTDAmount(tokenEth);
     await mintSTDAmount(tokenUsdc);
@@ -76,6 +83,14 @@ describe('AaveModule.sol', function () {
       '0xC36442b4a4522E871399CD717aBDD847Ab11FE88'
     )) as INonfungiblePositionManager;
 
+    Pool0 = (await ethers.getContractAtFromArtifact(
+      UniswapV3Pooljson,
+      '0x99ac8cA7087fA4A2A1FB6357269965A2014ABc35'
+    )) as IUniswapV3Pool;
+
+    //deploy SwapRouter
+    swapRouter = await ethers.getContractAtFromArtifact(SwapRouterjson, '0xE592427A0AEce92De3Edee1F18E0157C05861564');
+
     //LendingPool contract
     LendingPool = await ethers.getContractAtFromArtifact(LendingPooljson, '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9');
 
@@ -84,7 +99,7 @@ describe('AaveModule.sol', function () {
     const uniswapAddressHolder = await uniswapAddressHolderFactory.deploy(
       NonFungiblePositionManager.address,
       '0x1F98431c8aD98523631AE4a59f267346ea31F984',
-      Factory.address //random address because we don't need it
+      swapRouter.address
     );
     await uniswapAddressHolder.deployed();
 
@@ -119,44 +134,91 @@ describe('AaveModule.sol', function () {
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
 
     //Deploy Aave Deposit Action
-    const AaveDepositActionFactory = await ethers.getContractFactory('AaveDeposit');
-    const AaveDepositAction = (await AaveDepositActionFactory.deploy()) as Contract;
-    await AaveDepositAction.deployed();
+    const aaveDepositActionFactory = await ethers.getContractFactory('AaveDeposit');
+    const aaveDepositAction = (await aaveDepositActionFactory.deploy()) as Contract;
+    await aaveDepositAction.deployed();
 
     //Deploy Actions
-    const decreaseLiquidityActionFactory = await ethers.getContractFactory('DecreaseLiquidity');
-    const decreaseLiquidityAction = (await decreaseLiquidityActionFactory.deploy()) as Contract;
-    await decreaseLiquidityAction.deployed();
+    const aaveWithdrawActionFactory = await ethers.getContractFactory('AaveWithdraw');
+    const aaveWithdrawAction = (await aaveWithdrawActionFactory.deploy()) as Contract;
+    await aaveWithdrawAction.deployed();
 
-    const collectFeesActionFactory = await ethers.getContractFactory('CollectFees');
-    const collectFeesAction = (await collectFeesActionFactory.deploy()) as Contract;
-    await collectFeesAction.deployed();
+    const closePositionActionFactory = await ethers.getContractFactory('ClosePosition');
+    const closePositionAction = (await closePositionActionFactory.deploy()) as Contract;
+    await closePositionAction.deployed();
+
+    const swapActionFactory = await ethers.getContractFactory('Swap');
+    const swapAction = (await swapActionFactory.deploy()) as Contract;
+    await swapAction.deployed();
+
+    const SwapToPositionRatioActionFactory = await ethers.getContractFactory('SwapToPositionRatio');
+    const SwapToPositionRatioAction = (await SwapToPositionRatioActionFactory.deploy()) as Contract;
+    await SwapToPositionRatioAction.deployed();
+
+    const mintActionFactory = await ethers.getContractFactory('Mint');
+    const mintAction = (await mintActionFactory.deploy()) as Contract;
+    await mintAction.deployed();
 
     const AaveModuleFactory = await ethers.getContractFactory('AaveModule');
     AaveModule = await AaveModuleFactory.deploy(aaveAddressHolder.address, uniswapAddressHolder.address);
     await AaveModule.deployed();
 
     //Get mock tokens. These need to be real Mainnet addresses
-    usdcMock = await ethers.getContractAt('MockToken', '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48');
-    wbtcMock = await ethers.getContractAt('MockToken', '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599');
+    usdcMock = (await ethers.getContractAt('MockToken', '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48')) as MockToken;
+    wbtcMock = (await ethers.getContractAt('MockToken', '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599')) as MockToken;
+
+    //deploy first pool
+    /* Pool0 = (await poolFixture(wbtcMock, usdcMock, 3000, Factory)).pool;
+    console.log(Pool0); */
 
     //mint some wbtc
+    //for user
     let slot = await findbalanceSlot(wbtcMock, user);
     let encode = (types: any, values: any) => ethers.utils.defaultAbiCoder.encode(types, values);
     let probedSlot = ethers.utils.keccak256(encode(['address', 'uint'], [user.address, slot]));
     let value = encode(['uint'], [ethers.utils.parseEther('100000000')]);
     await hre.network.provider.send('hardhat_setStorageAt', [wbtcMock.address, probedSlot, value]);
+    //for liquidityProvider
+    slot = await findbalanceSlot(wbtcMock, liquidityProvider);
+    probedSlot = ethers.utils.keccak256(encode(['address', 'uint'], [liquidityProvider.address, slot]));
+    value = encode(['uint'], [ethers.utils.parseEther('100000000')]);
+    await hre.network.provider.send('hardhat_setStorageAt', [wbtcMock.address, probedSlot, value]);
+    //for trader
+    slot = await findbalanceSlot(wbtcMock, trader);
+    probedSlot = ethers.utils.keccak256(encode(['address', 'uint'], [trader.address, slot]));
+    value = encode(['uint'], [ethers.utils.parseEther('100000000')]);
+    await hre.network.provider.send('hardhat_setStorageAt', [wbtcMock.address, probedSlot, value]);
 
     //mint some usdc
+    //for user
     slot = await findbalanceSlot(usdcMock, user);
-    encode = (types: any, values: any) => ethers.utils.defaultAbiCoder.encode(types, values);
     probedSlot = ethers.utils.keccak256(encode(['address', 'uint'], [user.address, slot]));
+    value = encode(['uint'], [ethers.utils.parseEther('100000000')]);
+    await hre.network.provider.send('hardhat_setStorageAt', [usdcMock.address, probedSlot, value]);
+    //for liquidityProvider
+    slot = await findbalanceSlot(usdcMock, liquidityProvider);
+    probedSlot = ethers.utils.keccak256(encode(['address', 'uint'], [liquidityProvider.address, slot]));
+    value = encode(['uint'], [ethers.utils.parseEther('100000000')]);
+    await hre.network.provider.send('hardhat_setStorageAt', [usdcMock.address, probedSlot, value]);
+    //for trader
+    slot = await findbalanceSlot(usdcMock, trader);
+    probedSlot = ethers.utils.keccak256(encode(['address', 'uint'], [trader.address, slot]));
     value = encode(['uint'], [ethers.utils.parseEther('100000000')]);
     await hre.network.provider.send('hardhat_setStorageAt', [usdcMock.address, probedSlot, value]);
 
     //approve NFPM
     await usdcMock.connect(user).approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000'));
     await wbtcMock.connect(user).approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000'));
+    await usdcMock
+      .connect(liquidityProvider)
+      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000'));
+    await wbtcMock
+      .connect(liquidityProvider)
+      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000'));
+
+    //approve swap router
+    await usdcMock.connect(trader).approve(swapRouter.address, ethers.utils.parseEther('1000000000'));
+    await wbtcMock.connect(trader).approve(swapRouter.address, ethers.utils.parseEther('1000000000'));
 
     //approve user to registry (for testing)
     await registry.addNewContract(
@@ -169,23 +231,37 @@ describe('AaveModule.sol', function () {
     const cut = [];
     const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 };
     cut.push({
-      facetAddress: AaveDepositAction.address,
+      facetAddress: aaveDepositAction.address,
       action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(AaveDepositAction),
+      functionSelectors: await getSelectors(aaveDepositAction),
     });
     cut.push({
-      facetAddress: decreaseLiquidityAction.address,
+      facetAddress: aaveWithdrawAction.address,
       action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(decreaseLiquidityAction),
+      functionSelectors: await getSelectors(aaveWithdrawAction),
     });
     cut.push({
-      facetAddress: collectFeesAction.address,
+      facetAddress: closePositionAction.address,
       action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(collectFeesAction),
+      functionSelectors: await getSelectors(closePositionAction),
+    });
+    cut.push({
+      facetAddress: swapAction.address,
+      action: FacetCutAction.Add,
+      functionSelectors: await getSelectors(swapAction),
+    });
+    cut.push({
+      facetAddress: SwapToPositionRatioAction.address,
+      action: FacetCutAction.Add,
+      functionSelectors: await getSelectors(SwapToPositionRatioAction),
+    });
+    cut.push({
+      facetAddress: mintAction.address,
+      action: FacetCutAction.Add,
+      functionSelectors: await getSelectors(mintAction),
     });
     const diamondCut = await ethers.getContractAt('IDiamondCut', PositionManager.address);
     await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
-    AaveDepositFallback = (await ethers.getContractAt('IAaveDeposit', PositionManager.address)) as Contract;
 
     //mint a position
     const mintTx = await NonFungiblePositionManager.connect(user).mint(
@@ -193,13 +269,31 @@ describe('AaveModule.sol', function () {
         token0: wbtcMock.address,
         token1: usdcMock.address,
         fee: 3000,
-        tickLower: 0 - 60 * 10,
-        tickUpper: 0 + 60 * 10,
+        tickLower: 60000 - 60 * 100,
+        tickUpper: 60000 + 60 * 100,
         amount0Desired: '0x' + (1e10).toString(16),
         amount1Desired: '0x' + (1e10).toString(16),
         amount0Min: 0,
         amount1Min: 0,
         recipient: PositionManager.address,
+        deadline: Date.now() + 1000,
+      },
+      { gasLimit: 670000 }
+    );
+
+    //give pool some liquidity
+    await NonFungiblePositionManager.connect(liquidityProvider).mint(
+      {
+        token0: wbtcMock.address,
+        token1: usdcMock.address,
+        fee: 3000,
+        tickLower: 60000 - 60 * 1000,
+        tickUpper: 60000 + 60 * 1000,
+        amount0Desired: '0x' + (1e15).toString(16),
+        amount1Desired: '0x' + (1e15).toString(16),
+        amount0Min: 0,
+        amount1Min: 0,
+        recipient: liquidityProvider.address,
         deadline: Date.now() + 1000,
       },
       { gasLimit: 670000 }
@@ -214,20 +308,63 @@ describe('AaveModule.sol', function () {
     await PositionManager.pushPositionId(tokenId);
 
     abiCoder = ethers.utils.defaultAbiCoder;
+
+    const data = abiCoder.encode(['address'], [usdcMock.address]);
+
+    await PositionManager.setModuleData(tokenId, AaveModule.address, data);
+
+    const aUsdcAddress = (await LendingPool.getReserveData(usdcMock.address)).aTokenAddress;
+    aUsdc = await ethers.getContractAtFromArtifact(ATokenjson, aUsdcAddress);
   });
 
   describe('AaveModule - depositToAave', function () {
-    it('should deposit token in position out of range', async function () {
-      const beforePosition = await NonFungiblePositionManager.positions(tokenId);
-      await PositionManager.connect(user).setModuleData(tokenId, AaveModule.address, abiCoder.encode(['uint24'], [1]));
-      await AaveModule.depositToAave(PositionManager.address, tokenId);
+    it('should not deposit to aave if position is in range', async function () {
+      await AaveModule.connect(user).depositIfNeeded(PositionManager.address, tokenId);
+      expect(await NonFungiblePositionManager.ownerOf(tokenId)).to.equal(PositionManager.address);
+    });
 
-      const pmData = await LendingPool.getUserAccountData(PositionManager.address);
-      expect(pmData.totalCollateralETH).to.gt(0);
+    it('should deposit to aave if position is out of range', async function () {
+      await swapRouter.connect(trader).exactInputSingle({
+        tokenIn: usdcMock.address,
+        tokenOut: wbtcMock.address,
+        fee: 3000,
+        recipient: trader.address,
+        deadline: Date.now() + 1000,
+        amountIn: '0x' + (1e16).toString(16),
+        amountOutMinimum: 0,
+        sqrtPriceLimitX96: 0,
+      });
+      let slot0 = await Pool0.slot0();
+      expect(slot0.tick).to.gt(60000 + 60 * 100);
 
-      const afterPosition = await NonFungiblePositionManager.positions(tokenId);
+      await AaveModule.connect(user).depositIfNeeded(PositionManager.address, tokenId);
+      await expect(NonFungiblePositionManager.ownerOf(tokenId)).to.be.reverted;
 
-      expect(beforePosition.liquidity).to.gt(afterPosition.liquidity);
+      expect(await aUsdc.balanceOf(PositionManager.address)).to.gt(0);
+    });
+
+    it('should not return to position if still out of range', async function () {
+      await AaveModule.connect(user).withdrawIfNeeded(PositionManager.address, usdcMock.address, 0);
+      expect(await aUsdc.balanceOf(PositionManager.address)).to.gt(0);
+    });
+
+    it('should retrun to position if returns in range', async function () {
+      await swapRouter.connect(trader).exactInputSingle({
+        tokenIn: wbtcMock.address,
+        tokenOut: usdcMock.address,
+        fee: 3000,
+        recipient: trader.address,
+        deadline: Date.now() + 1000,
+        amountIn: '0x' + (3e12).toString(16),
+        amountOutMinimum: 0,
+        sqrtPriceLimitX96: 0,
+      });
+      let slot0 = await Pool0.slot0();
+      expect(slot0.tick).to.gt(60000 - 60 * 100);
+      expect(slot0.tick).to.lt(60000 + 60 * 100);
+
+      const tx = await AaveModule.connect(user).withdrawIfNeeded(PositionManager.address, usdcMock.address, 0);
+      expect(await aUsdc.balanceOf(PositionManager.address)).to.equal(0);
     });
   });
 });

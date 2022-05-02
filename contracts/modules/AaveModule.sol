@@ -16,6 +16,7 @@ import '../actions/ClosePosition.sol';
 import '../actions/Swap.sol';
 import '../actions/SwapToPositionRatio.sol';
 import '../actions/Mint.sol';
+import 'hardhat/console.sol';
 
 contract AaveModule {
     IAaveAddressHolder public aaveAddressHolder;
@@ -37,22 +38,23 @@ contract AaveModule {
     ///@notice deposit a position in an Aave lending pool
     ///@param positionManager address of the position manager
     ///@param tokenId id of the Uniswap position to deposit
-    function checkIfDepositIsNeeded(address positionManager, uint256 tokenId)
-        public
-        activeModule(positionManager, tokenId)
-    {
+    function depositIfNeeded(address positionManager, uint256 tokenId) public activeModule(positionManager, tokenId) {
         int24 tickDistance = _checkDistanceFromRange(tokenId);
-        (uint24 tickDelta, address toAaveToken) = abi.decode(
+
+        address toAaveToken = abi.decode(
             IPositionManager(positionManager).getModuleData(tokenId, address(this)),
-            (uint24, address)
+            (address)
         );
         ///@dev move token to aave only if the position's range is outside of the tick of the pool
-        ///@dev (tickDistance < 0) and the position is far enough from tick of the pool
-        if (tickDistance < 0 && tickDelta <= uint24(tickDistance)) {
+        if (tickDistance < 0) {
             _depositToAave(positionManager, tokenId, toAaveToken);
         }
     }
 
+    ///@notice deposit a uni v3 position to an Aave lending pool
+    ///@param positionManager address of the position manager
+    ///@param tokenId id of the Uniswap position to deposit
+    ///@param toAaveToken address of the token to deposit to Aave
     function _depositToAave(
         address positionManager,
         uint256 tokenId,
@@ -105,11 +107,11 @@ contract AaveModule {
             }
         }
 
-        //finally we deposit to aave
         require(
             ILendingPool(aaveAddressHolder.lendingPoolAddress()).getReserveData(token0).aTokenAddress != address(0),
             'AaveModule::_depositToAave: Aave token not found.'
         );
+
         (uint256 id, ) = IAaveDeposit(positionManager).depositToAave(toAaveToken, amountToAave);
 
         IPositionManager(positionManager).pushOldPositionData(
@@ -131,7 +133,11 @@ contract AaveModule {
         );
     }
 
-    function checkIfWithdrawIsNeeded(
+    ///@notice check if withdraw is needed and execute
+    ///@param positionManager address of the position manager
+    ///@param token address of the token of Aave position
+    ///@param id id of the Aave position to withdraw
+    function withdrawIfNeeded(
         address positionManager,
         address token,
         uint256 id
@@ -151,6 +157,10 @@ contract AaveModule {
         }
     }
 
+    ///@notice return a position to Uniswap
+    ///@param positionManager address of the position manager
+    ///@param token address of the token of Aave position
+    ///@param id id of the Aave position to withdraw
     function _returnToUniswap(
         address positionManager,
         address token,
@@ -215,7 +225,10 @@ contract AaveModule {
         int24 distanceFromUpper = tickUpper - tick;
         int24 distanceFromLower = tick - tickLower;
 
-        return distanceFromLower <= distanceFromUpper ? distanceFromLower : distanceFromUpper;
+        return
+            distanceFromLower * distanceFromUpper < 0
+                ? _min24(distanceFromLower, distanceFromUpper)
+                : _absMin24(distanceFromLower, distanceFromUpper);
     }
 
     ///@notice finds the best fee tier on which to perform a swap
@@ -257,5 +270,21 @@ contract AaveModule {
             IUniswapV3Pool(
                 UniswapNFTHelper._getPool(Storage.uniswapAddressHolder.uniswapV3FactoryAddress(), token0, token1, fee)
             ).liquidity();
+    }
+
+    ///@notice returns minimum of two int24
+    ///@param a first int24
+    ///@param b second int24
+    ///@return minimum of two int24
+    function _min24(int24 a, int24 b) internal pure returns (int24) {
+        return a < b ? a : b;
+    }
+
+    ///@notice returns absolute minimum of two int24
+    ///@param a first int24
+    ///@param b second int24
+    ///@return absolute minimum of two int24
+    function _absMin24(int24 a, int24 b) internal pure returns (int24) {
+        return uint24(a) < uint24(b) ? a : b;
     }
 }

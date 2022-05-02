@@ -46,6 +46,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
         _;
     }
 
+    ///@notice modifier to check if the msg.sender is positionManager or a module
     modifier onlyManagerOrModule() {
         require(
             _calledFromActiveModule(msg.sender) || msg.sender == address(this),
@@ -200,6 +201,10 @@ contract PositionManager is IPositionManager, ERC721Holder {
         return activatedModules[tokenId][moduleAddress].data;
     }
 
+    ///@notice stores old position data when liquidity is moved to aave
+    ///@param token address of the token
+    ///@param id ID of the position
+    ///@param oldPosition data of the position
     function pushOldPositionData(
         address token,
         uint256 id,
@@ -214,6 +219,10 @@ contract PositionManager is IPositionManager, ERC721Holder {
         Storage.aaveUserReserves[token].oldPosition[id] = oldPosition;
     }
 
+    ///@notice returns the old position data of an aave position
+    ///@param token address of the token
+    ///@param id ID of aave position
+    ///@return data of the position
     function getOldPositionData(address token, uint256 id)
         public
         view

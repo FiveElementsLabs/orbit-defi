@@ -336,63 +336,6 @@ describe('PositionManager.sol', function () {
     });
   });
 
-  describe('PositionManager - pushAavePosition', function () {
-    it('should give user shares if the first position is deposited', async function () {
-      await PositionManager.pushAavePosition(usdcMock.address, 200);
-      const positions = (await PositionManager.getAavePositions(usdcMock.address)) as any;
-      expect(positions[0].shares).to.eq(200);
-    });
-
-    it('should give user shares if a new position is deposited', async function () {
-      await AaveDepositFallback.connect(user).depositToAave(usdcMock.address, 200, LendingPool.address);
-      await PositionManager.pushAavePosition(usdcMock.address, 200);
-      expect(await PositionManager.aaveUserReserves(usdcMock.address)).to.equal(400);
-    });
-
-    it('should give user correct shares after accrued interest', async function () {
-      const aTokenAddress = (await LendingPool.getReserveData(usdcMock.address)).aTokenAddress;
-      const aUsdc = await ethers.getContractAt('MockToken', aTokenAddress);
-
-      console.log('atoken1', await aUsdc.balanceOf(PositionManager.address));
-      await usdcMock.connect(liquidityProvider).approve(LendingPool.address, 100000);
-      console.log('approve');
-      await LendingPool.connect(liquidityProvider).deposit(usdcMock.address, 100000, liquidityProvider.address, 0);
-      console.log('deposit');
-      await LendingPool.connect(liquidityProvider).borrow(usdcMock.address, 500, 2, 0, liquidityProvider.address);
-      console.log('borrow');
-      console.log('atoken2', await aUsdc.balanceOf(user.address));
-
-      await ethers.provider.send('evm_mine', [Date.now() + 60]);
-      console.log('mine');
-
-      const aBalanceBefore = await aUsdc.balanceOf(user.address);
-      await usdcMock.connect(user).approve(LendingPool.address, 100000);
-      console.log('approve');
-      await LendingPool.connect(user).deposit(usdcMock.address, 200, user.address, 0);
-      console.log('deposit');
-      const aBalanceAfter = await aUsdc.balanceOf(user.address);
-      console.log('atokenAfter', aBalanceAfter);
-      expect(aBalanceAfter).to.gt(aBalanceBefore);
-      //find aToken address and check balance differece
-      await PositionManager.connect(user).pushAavePosition(usdcMock.address, aBalanceAfter - aBalanceBefore);
-      console.log('push');
-      const positions = (await PositionManager.getAavePositions(usdcMock.address)) as any;
-      console.log(positions);
-      expect(positions[1].shares).to.lt(200);
-    });
-  });
-
-  describe('PositionManager - removeAavePosition', function () {
-    it('should correctly remove a position', async function () {
-      await PositionManager.pushAavePosition(usdcMock.address, 200);
-      let positions = (await PositionManager.getAavePositions(usdcMock.address)) as any;
-      expect(positions[0].shares).to.eq(200);
-
-      await PositionManager.removeAavePosition(usdcMock.address, positions[0].id);
-      const positionsAfter = (await PositionManager.getAavePositions(usdcMock.address)) as any;
-      expect(positionsAfter.length).to.eq(positions.length - 1);
-    });
-  });
   describe('PositionManager - onlyFactory', function () {
     it('should revert if not called by factory', async function () {
       await expect(

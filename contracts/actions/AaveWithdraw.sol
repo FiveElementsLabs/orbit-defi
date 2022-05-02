@@ -73,7 +73,7 @@ contract AaveWithdraw is IAaveWithdraw {
                     ];
                     Storage.aaveUserReserves[token].positionsId.pop();
                 }
-                i = length + 2;
+                i = length + 1;
             }
         }
 

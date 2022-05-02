@@ -43,6 +43,7 @@ describe('AaveWithdraw.sol', function () {
   let AaveWithdrawFallback: Contract;
   let LendingPool: Contract;
   let usdcMock: Contract;
+  let abiCoder: AbiCoder;
 
   before(async function () {
     user = await user; //owner of the smart vault, a normal user
@@ -161,20 +162,29 @@ describe('AaveWithdraw.sol', function () {
     const tx = await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
     AaveDepositFallback = (await ethers.getContractAt('IAaveDeposit', PositionManager.address)) as Contract;
     AaveWithdrawFallback = (await ethers.getContractAt('IAaveWithdraw', PositionManager.address)) as Contract;
+
+    abiCoder = ethers.utils.defaultAbiCoder;
   });
 
   describe('AaveWithdraw - withdrawFromAave', function () {
     it('should withdraw 5000 token to aave LendingPool', async function () {
-      await AaveDepositFallback.depositToAave(usdcMock.address, '10000', LendingPool.address);
+      const tx = await AaveDepositFallback.depositToAave(usdcMock.address, '5000');
+
+      const events = (await tx.wait()).events;
+      const depositEvent = events[events.length - 1];
+      const [id, shares] = abiCoder.decode(['uint256', 'uint256'], depositEvent.data);
+
+      await AaveDepositFallback.depositToAave(usdcMock.address, '5000');
+
       const balanceBefore = await usdcMock.balanceOf(PositionManager.address);
       const pmDataBefore = await LendingPool.getUserAccountData(PositionManager.address);
 
-      await AaveWithdrawFallback.withdrawFromAave(usdcMock.address, '5000', LendingPool.address);
+      await AaveWithdrawFallback.withdrawFromAave(usdcMock.address, id);
       const balanceAfter = await usdcMock.balanceOf(PositionManager.address);
       const pmDataAfter = await LendingPool.getUserAccountData(PositionManager.address);
 
       expect(balanceBefore).to.be.lt(balanceAfter);
-      expect(balanceAfter.sub(balanceBefore)).to.be.eq('5000');
+      expect(balanceAfter.sub(balanceBefore).toNumber()).to.be.closeTo(5000, 10);
       expect(pmDataBefore.totalCollateralETH).to.be.gt(pmDataAfter.totalCollateralETH);
     });
   });
