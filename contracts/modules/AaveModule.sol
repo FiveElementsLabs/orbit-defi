@@ -62,21 +62,13 @@ contract AaveModule {
             if (amount0Collected > 0) {
                 reserveData = ILendingPool(aaveAddressHolder.lendingPoolAddress()).getReserveData(token0);
                 if (reserveData.aTokenAddress != address(0)) {
-                    IAaveDeposit(positionManager).depositToAave(
-                        token0,
-                        amount0Collected,
-                        aaveAddressHolder.lendingPoolAddress()
-                    );
+                    IAaveDeposit(positionManager).depositToAave(token0, amount0Collected);
                 }
             }
             if (amount1Collected > 0) {
                 reserveData = ILendingPool(aaveAddressHolder.lendingPoolAddress()).getReserveData(token1);
                 if (reserveData.aTokenAddress != address(0)) {
-                    IAaveDeposit(positionManager).depositToAave(
-                        token1,
-                        amount1Collected,
-                        aaveAddressHolder.lendingPoolAddress()
-                    );
+                    IAaveDeposit(positionManager).depositToAave(token1, amount1Collected);
                 }
             }
         }

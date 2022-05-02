@@ -4,7 +4,6 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import '@openzeppelin/contracts/token/ERC721/ERC721Holder.sol';
-import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '../interfaces/IPositionManager.sol';
 import '../interfaces/DataTypes.sol';
 import '../interfaces/IUniswapAddressHolder.sol';
@@ -25,24 +24,7 @@ import './utils/Storage.sol';
  */
 
 contract PositionManager is IPositionManager, ERC721Holder {
-    struct ModuleInfo {
-        bool isActive;
-        bytes data;
-    }
-
-    struct AaveReserve {
-        AavePosition[] positions;
-        uint256 sharesEmitted;
-    }
-
-    struct AavePosition {
-        uint256 id;
-        uint256 shares;
-    }
-
     uint256[] private uniswapNFTs;
-    uint256 private aaveIdCounter = 0;
-    mapping(address => AaveReserve) public aaveUserReserves;
     mapping(uint256 => mapping(address => ModuleInfo)) public activatedModules;
 
     ///@notice emitted when a position is withdrawn
@@ -160,61 +142,6 @@ contract PositionManager is IPositionManager, ERC721Holder {
         return uniswapNFTsMemory;
     }
 
-    ///@notice add awareness of aave position to positionManager
-    ///@param token address of token deposited
-    ///@param amount of aTokens recieved from deposit
-    function pushAavePosition(address token, uint256 amount) public override {
-        StorageStruct storage Storage = PositionManagerStorage.getStorage();
-        uint256 shares;
-        ///@notice when positionManager deposits into aave, we give the position one share
-        ///        for each aToken recieved * shares_emitted / total_amount_of_aTokens owned
-        if (aaveUserReserves[token].sharesEmitted == 0) {
-            shares = amount;
-        } else {
-            DataTypes.ReserveData memory reserveData = ILendingPool(Storage.aaveAddressHolder.lendingPoolAddress())
-                .getReserveData(token);
-            console.log('aTokenAmount', IERC20(reserveData.aTokenAddress).balanceOf(address(this)));
-            console.log('sharesEmitted', aaveUserReserves[token].sharesEmitted);
-            shares =
-                (amount * aaveUserReserves[token].sharesEmitted) /
-                IERC20(reserveData.aTokenAddress).balanceOf(address(this));
-        }
-
-        aaveUserReserves[token].positions.push(AavePosition({id: aaveIdCounter, shares: shares}));
-        aaveUserReserves[token].sharesEmitted += shares;
-        aaveIdCounter++;
-    }
-
-    ///@notice remove awareness of aave position from positionManager
-    ///@param token address of token withdrawn
-    ///@param id of the withdrawn position
-    function removeAavePosition(address token, uint256 id) public {
-        require(
-            aaveUserReserves[token].sharesEmitted > 0,
-            'PositionManager::removeAavePosition: no position to remove!'
-        );
-        for (uint256 i = 0; i < aaveUserReserves[token].positions.length; i++) {
-            if (aaveUserReserves[token].positions[i].id == id) {
-                if (aaveUserReserves[token].positions.length > 1) {
-                    aaveUserReserves[token].sharesEmitted -= aaveUserReserves[token].positions[i].shares;
-                    aaveUserReserves[token].positions[i] = aaveUserReserves[token].positions[
-                        aaveUserReserves[token].positions.length - 1
-                    ];
-                    aaveUserReserves[token].positions.pop();
-                } else {
-                    delete aaveUserReserves[token].positions;
-                }
-                i = aaveUserReserves[token].positions.length;
-            }
-        }
-    }
-
-    ///@notice return all aave positions in a certain token
-    ///@param token address of token
-    function getAavePositions(address token) public view returns (AavePosition[] memory) {
-        return aaveUserReserves[token].positions;
-    }
-
     ///@notice toggle module state, activated (true) or not (false)
     ///@param tokenId ID of the NFT
     ///@param moduleAddress address of the module
@@ -328,7 +255,8 @@ contract PositionManager is IPositionManager, ERC721Holder {
     }
 
     receive() external payable {
+        revert();
         //we need to decide what to do when the contract receives ether
-        //for now we just keep it to be reused in the future
+        //for now we just revert
     }
 }
