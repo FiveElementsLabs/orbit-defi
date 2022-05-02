@@ -46,6 +46,14 @@ contract PositionManager is IPositionManager, ERC721Holder {
         _;
     }
 
+    modifier onlyManagerOrModule() {
+        require(
+            _calledFromActiveModule(msg.sender) || msg.sender == address(this),
+            'PositionManager::fallback: Only active modules can call this function'
+        );
+        _;
+    }
+
     ///@notice modifier to check if the msg.sender is the PositionManagerFactory
     modifier onlyFactory(address _registry) {
         require(
@@ -192,6 +200,35 @@ contract PositionManager is IPositionManager, ERC721Holder {
         return activatedModules[tokenId][moduleAddress].data;
     }
 
+    function pushOldPositionData(
+        address token,
+        uint256 id,
+        INonfungiblePositionManager.MintParams memory oldPosition
+    ) public override onlyManagerOrModule {
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+        require(
+            Storage.aaveUserReserves[token].positionShares[id] > 0,
+            'PositionManager::pushOldPositionData: positionShares does not exist'
+        );
+
+        Storage.aaveUserReserves[token].oldPosition[id] = oldPosition;
+    }
+
+    function getOldPositionData(address token, uint256 id)
+        view
+        override
+        onlyManagerOrModule
+        returns (INonfungiblePositionManager.MintParams memory)
+    {
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+        require(
+            Storage.aaveUserReserves[token].positionShares[id] > 0,
+            'PositionManager::getOldPositionData: positionShares does not exist'
+        );
+
+        return Storage.aaveUserReserves[token].oldPosition[id];
+    }
+
     ///@notice return the address of this position manager owner
     ///@return address of the owner
     function getOwner() external view override returns (address) {
@@ -221,11 +258,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
         }
     }
 
-    fallback() external payable {
-        require(
-            _calledFromActiveModule(msg.sender) || msg.sender == address(this),
-            'PositionManager::fallback: Only active modules can call this function'
-        );
+    fallback() external payable onlyManagerOrModule {
         StorageStruct storage Storage;
         bytes32 position = PositionManagerStorage.key;
         ///@dev get diamond storage position

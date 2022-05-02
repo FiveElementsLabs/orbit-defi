@@ -13,7 +13,7 @@ interface IPositionManager {
 
     struct AaveReserve {
         mapping(uint256 => uint256) positionShares;
-        mapping(uint256 => INonfungiblePositionManager.MintParams) uniPosition;
+        mapping(uint256 => INonfungiblePositionManager.MintParams) oldPosition;
         uint256[] positionsId;
         uint256 sharesEmitted;
     }
@@ -41,6 +41,16 @@ interface IPositionManager {
     function pushPositionId(uint256 tokenId) external;
 
     function removePositionId(uint256 index) external;
+
+    function pushOldPositionData(
+        address token,
+        uint256 id,
+        INonfungiblePositionManager.MintParams memory oldPosition
+    ) external;
+
+    function getOldPositionData(address token, uint256 id)
+        external view
+        returns (INonfungiblePositionManager.MintParams memory)
 
     function getOwner() external view returns (address);
 }
