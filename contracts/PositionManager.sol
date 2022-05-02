@@ -215,6 +215,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
     }
 
     function getOldPositionData(address token, uint256 id)
+        public
         view
         override
         onlyManagerOrModule

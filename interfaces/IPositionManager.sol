@@ -49,8 +49,9 @@ interface IPositionManager {
     ) external;
 
     function getOldPositionData(address token, uint256 id)
-        external view
-        returns (INonfungiblePositionManager.MintParams memory)
+        external
+        view
+        returns (INonfungiblePositionManager.MintParams memory);
 
     function getOwner() external view returns (address);
 }

@@ -4,9 +4,6 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
-import '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol';
-import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
-
 import '../../interfaces/ILendingPool.sol';
 import '../../interfaces/IAaveAddressHolder.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
@@ -14,8 +11,11 @@ import '../../interfaces/DataTypes.sol';
 import '../../interfaces/IPositionManager.sol';
 import '../helpers/UniswapNFTHelper.sol';
 import '../actions/AaveDeposit.sol';
+import '../actions/AaveWithdraw.sol';
 import '../actions/ClosePosition.sol';
 import '../actions/Swap.sol';
+import '../actions/SwapToPositionRatio.sol';
+import '../actions/Mint.sol';
 
 contract AaveModule {
     IAaveAddressHolder public aaveAddressHolder;
@@ -136,9 +136,15 @@ contract AaveModule {
         address token,
         uint256 id
     ) public {
-        INonfungiblePositionManager.MintParams oldPosition = IPositionManager(positionManager).getOldPositionData(id);
+        INonfungiblePositionManager.MintParams memory oldPosition = IPositionManager(positionManager)
+            .getOldPositionData(token, id);
         (, int24 tickPool, , , , , ) = IUniswapV3Pool(
-            UniswapNFTHelper._getPool(address(uniswapAddressHolder.uniswapV3FactoryAddress()), token0, token1, fee)
+            UniswapNFTHelper._getPool(
+                address(uniswapAddressHolder.uniswapV3FactoryAddress()),
+                oldPosition.token0,
+                oldPosition.token1,
+                oldPosition.fee
+            )
         ).slot0();
         if (tickPool > oldPosition.tickLower && tickPool < oldPosition.tickUpper) {
             _returnToUniswap(positionManager, token, id, oldPosition);
@@ -149,9 +155,35 @@ contract AaveModule {
         address positionManager,
         address token,
         uint256 id,
-        INonfungiblePositionManager.MintParams mintParams
+        INonfungiblePositionManager.MintParams memory mintParams
     ) internal {
-        uint256 amountOut = IAaveWithdraw(positionManager).withdrawFromAave(token, id);
+        uint256 amountWithdrawn = IAaveWithdraw(positionManager).withdrawFromAave(token, id);
+
+        uint256 amount0In = ISwap(positionManager).swap(token, mintParams.token0, mintParams.fee, amountWithdrawn);
+
+        (uint256 amount0Out, uint256 amount1Out) = ISwapToPositionRatio(positionManager).swapToPositionRatio(
+            ISwapToPositionRatio.SwapToPositionInput({
+                token0Address: mintParams.token0,
+                token1Address: mintParams.token1,
+                fee: mintParams.fee,
+                amount0In: amount0In,
+                amount1In: 0,
+                tickLower: mintParams.tickLower,
+                tickUpper: mintParams.tickUpper
+            })
+        );
+
+        IMint(positionManager).mint(
+            IMint.MintInput({
+                token0Address: mintParams.token0,
+                token1Address: mintParams.token1,
+                fee: mintParams.fee,
+                tickLower: mintParams.tickLower,
+                tickUpper: mintParams.tickUpper,
+                amount0Desired: amount0Out,
+                amount1Desired: amount1Out
+            })
+        );
     }
 
     ///@notice checkDistance from ticklower tickupper from tick of the pools

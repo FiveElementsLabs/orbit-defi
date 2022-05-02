@@ -68,7 +68,6 @@ contract AaveWithdraw is IAaveWithdraw {
                     delete Storage.aaveUserReserves[token];
                 } else {
                     Storage.aaveUserReserves[token].sharesEmitted -= Storage.aaveUserReserves[token].positionShares[id];
-                    delete Storage.aaveUserReserves[token].positionShares[id];
                     Storage.aaveUserReserves[token].positionsId[i] = Storage.aaveUserReserves[token].positionsId[
                         length - 1
                     ];
