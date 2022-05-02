@@ -15,14 +15,13 @@ import '../../interfaces/DataTypes.sol';
 import '../../interfaces/IPositionManager.sol';
 import '../helpers/UniswapNFTHelper.sol';
 import '../actions/AaveDeposit.sol';
-import '../actions/DecreaseLiquidity.sol';
-import '../actions/CollectFees.sol';
+import '../actions/ClosePosition.sol';
 
 contract AaveModule {
     IAaveAddressHolder public aaveAddressHolder;
     IUniswapAddressHolder uniswapAddressHolder;
 
-    constructor(address _aaveAddressHolder, address _uniswapAddressHolder) public {
+    constructor(address _aaveAddressHolder, address _uniswapAddressHolder) {
         aaveAddressHolder = IAaveAddressHolder(_aaveAddressHolder);
         uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
     }
@@ -56,8 +55,11 @@ contract AaveModule {
 
             DataTypes.ReserveData memory reserveData;
 
-            IDecreaseLiquidity(positionManager).decreaseLiquidity(tokenId, amount0, amount1);
-            (uint256 amount0Collected, uint256 amount1Collected) = ICollectFees(positionManager).collectFees(tokenId);
+            (uint256 tokenId, uint256 amount0Collected, uint256 amount1Collected) = IClosePosition(positionManager)
+                .closePosition(tokenId, false);
+
+            /* IDecreaseLiquidity(positionManager).decreaseLiquidity(tokenId, amount0, amount1);
+            (uint256 amount0Collected, uint256 amount1Collected) = ICollectFees(positionManager).collectFees(tokenId); */
 
             if (amount0Collected > 0) {
                 reserveData = ILendingPool(aaveAddressHolder.lendingPoolAddress()).getReserveData(token0);
@@ -73,6 +75,8 @@ contract AaveModule {
             }
         }
     }
+
+    function returnFromAave(address positionManager, uint256 tokenId) public {}
 
     ///@notice checkDistance from ticklower tickupper from tick of the pools
     ///@param tokenId tokenId of the position
