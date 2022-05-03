@@ -56,6 +56,12 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@param amount of the ERC20
     event WithdrawERC20(address tokenAddress, address to, uint256 amount);
 
+    ///@notice emitted when a module is activated/deactivated
+    ///@param module address of module
+    ///@param tokenId position on which change is made
+    ///@param isActive true if module is activated, false if deactivated
+    event ModuleStateChanged(address module, uint256 tokenId, bool isActive);
+
     ///@notice modifier to check if the msg.sender is the owner
     modifier onlyOwner() {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
@@ -223,6 +229,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
         bool activated
     ) external override onlyOwner onlyOwnedPosition(tokenId) {
         activatedModules[tokenId][moduleAddress].isActive = activated;
+        emit ModuleStateChanged(moduleAddress, tokenId, activated);
     }
 
     ///@notice return the state of the module for tokenId position

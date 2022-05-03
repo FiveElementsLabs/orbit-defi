@@ -9,7 +9,10 @@ contract PositionManagerFactory is IPositionManagerFactory {
     address[] public positionManagers;
     mapping(address => address) public override userToPositionManager;
 
-    event PositionManagerCreated(address indexed contractAddress, address userAddress, address uniswapAddressHolder);
+    ///@notice emitted when a new position manager is created
+    ///@param positionManager address of PositionManager
+    ///@param user address of user
+    event PositionManagerCreated(address indexed positionManager, address user);
 
     ///@notice deploy new positionManager and assign to userAddress
     ///@param _userAddress the address of the user that will be the owner of PositionManager
@@ -28,7 +31,7 @@ contract PositionManagerFactory is IPositionManagerFactory {
         positionManagers.push(address(manager));
         userToPositionManager[_userAddress] = address(manager);
         manager.init(_userAddress, _uniswapAddressHolderAddress, _registryAddress, _aaveAddressHolderAddress);
-        emit PositionManagerCreated(address(manager), _userAddress, _uniswapAddressHolderAddress);
+        emit PositionManagerCreated(address(manager), _userAddress);
 
         return positionManagers;
     }
