@@ -62,24 +62,5 @@ contract AaveWithdraw is IAaveWithdraw {
         Storage.aaveUserReserves[token].sharesEmitted -= Storage.aaveUserReserves[token].positionShares[id];
         Storage.aaveUserReserves[token].positionShares[id] = 0;
         Storage.aaveUserReserves[token].tokenIds[id] = 0;
-        /* //uint256 length = Storage.aaveUserReserves[token].positionsId.length;
-        //uint256 i = 0;
-
-        for (; i < length; i++) {
-            if (Storage.aaveUserReserves[token].positionsId[i] == id) {
-                if (length == 1) {
-                    delete Storage.aaveUserReserves[token];
-                } else {
-                    Storage.aaveUserReserves[token].sharesEmitted -= Storage.aaveUserReserves[token].positionShares[id];
-                    Storage.aaveUserReserves[token].positionsId[i] = Storage.aaveUserReserves[token].positionsId[
-                        length - 1
-                    ];
-                    Storage.aaveUserReserves[token].positionsId.pop();
-                }
-                i = length + 1;
-            }
-        }
-
-        require(i == length + 2, 'PositionManager::removeAavePosition: position not found!'); */
     }
 }
