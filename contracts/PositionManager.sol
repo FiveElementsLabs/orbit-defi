@@ -111,20 +111,6 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@notice remove awareness of tokenId UniswapV3 NFT
     ///@param tokenId ID of the NFT to remove
     function removePositionId(uint256 tokenId) public override onlyManagerOrModule {
-        /* StorageStruct storage Storage = PositionManagerStorage.getStorage();
-        ///@dev if ownerOf reverts, tokenId is non existent or it has been burned
-        try
-            INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(
-                tokenId
-            )
-        returns (address owner) {
-            require(
-                owner != address(this),
-                'PositionManager::removePositionId: positionManager is still owner of the token!'
-            );
-        } catch {
-            //do nothing
-        } */
         for (uint256 i = 0; i < uniswapNFTs.length; i++) {
             if (uniswapNFTs[i] == tokenId) {
                 if (uniswapNFTs.length > 1) {
