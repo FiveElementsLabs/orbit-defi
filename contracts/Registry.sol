@@ -12,6 +12,26 @@ contract Registry is IRegistry {
     mapping(bytes32 => Entry) public modules;
     bytes32[] public moduleKeys;
 
+    ///@notice emitted when governance address is changed
+    ///@param newGovernance the new governance address
+    event governanceChanged(address newGovernance);
+
+    ///@notice emitted when a contract is added to registry
+    ///@param newContract address of the new contract
+    ///@param moduleId keccak of module name
+    event newContractEvent(address newContract, bytes32 moduleId);
+
+    ///@notice emitted when a contract address is updated
+    ///@param oldContract address of the contract before update
+    ///@param newContract address of the contract after update
+    ///@param moduleId keccak of module name
+    event contractChanged(address oldContract, address newContract, bytes32 moduleId);
+
+    ///@notice emitted when a module is switched on/off
+    ///@param moduleId keccak of module name
+    ///@param isActive true if module is switched on, false otherwise
+    event moduleSwitched(bytes32 moduleId, bool isActive);
+
     constructor(address _governance, address _positionManagerFactoryAddress) {
         governance = _governance;
         positionManagerFactoryAddress = _positionManagerFactoryAddress;
@@ -21,6 +41,7 @@ contract Registry is IRegistry {
     ///@param _governance the address of the new governance
     function changeGovernance(address _governance) external onlyGovernance {
         governance = _governance;
+        emit governanceChanged(_governance);
     }
 
     ///@notice Register a module
@@ -30,6 +51,7 @@ contract Registry is IRegistry {
         require(modules[_id].contractAddress == address(0), 'Registry::addNewContract: Entry already exists.');
         modules[_id] = Entry({contractAddress: _contractAddress, activated: true});
         moduleKeys.push(_id);
+        emit newContractEvent(_contractAddress, _id);
     }
 
     ///@notice Changes a module's address
@@ -38,6 +60,7 @@ contract Registry is IRegistry {
     function changeContract(bytes32 _id, address _newContractAddress) external onlyGovernance {
         require(modules[_id].contractAddress != address(0), 'Registry::changeContract: Entry does not exist.');
         //Begin timelock
+        emit contractChanged(modules[_id].contractAddress, _newContractAddress, _id);
         modules[_id].contractAddress = _newContractAddress;
     }
 
