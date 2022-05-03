@@ -3,12 +3,12 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
-import '../../interfaces/IPositionManager.sol';
-import '../utils/Storage.sol';
+import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '../helpers/UniswapNFTHelper.sol';
 import '../helpers/ERC20Helper.sol';
+import '../utils/Storage.sol';
+import '../../interfaces/IPositionManager.sol';
 
 interface IZapOut {
     function zapOut(uint256 tokenId, address tokenOut) external returns (uint256);

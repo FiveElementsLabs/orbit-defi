@@ -3,11 +3,11 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol';
-import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
-import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
+import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
+import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
+import '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol';
 
 ///@title library to interact with NFT token and do some useful function with it
 library UniswapNFTHelper {

@@ -4,7 +4,6 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
-import '../../interfaces/IUniswapAddressHolder.sol';
 import '../utils/Storage.sol';
 
 interface IUpdateUncollectedFees {

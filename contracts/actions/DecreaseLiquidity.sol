@@ -3,15 +3,12 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import '../helpers/ERC20Helper.sol';
-import '../helpers/UniswapNFTHelper.sol';
-import '../../interfaces/IUniswapAddressHolder.sol';
-import '../utils/Storage.sol';
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
+import '../helpers/UniswapNFTHelper.sol';
+import '../utils/Storage.sol';
 
 interface IDecreaseLiquidity {
     function decreaseLiquidity(

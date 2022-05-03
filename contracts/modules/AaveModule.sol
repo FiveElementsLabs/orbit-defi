@@ -3,11 +3,9 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
-import '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
-
+import '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol';
 import '../../interfaces/ILendingPool.sol';
 import '../../interfaces/IAaveAddressHolder.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
@@ -22,7 +20,7 @@ contract AaveModule {
     IAaveAddressHolder public aaveAddressHolder;
     IUniswapAddressHolder uniswapAddressHolder;
 
-    constructor(address _aaveAddressHolder, address _uniswapAddressHolder) public {
+    constructor(address _aaveAddressHolder, address _uniswapAddressHolder) {
         aaveAddressHolder = IAaveAddressHolder(_aaveAddressHolder);
         uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
     }

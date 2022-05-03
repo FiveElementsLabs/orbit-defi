@@ -9,7 +9,6 @@ import '../helpers/SwapHelper.sol';
 import '../helpers/UniswapNFTHelper.sol';
 import '../helpers/ERC20Helper.sol';
 import '../utils/Storage.sol';
-import '../../interfaces/IUniswapAddressHolder.sol';
 
 interface ISwapToPositionRatio {
     ///@notice input the decoder expects
