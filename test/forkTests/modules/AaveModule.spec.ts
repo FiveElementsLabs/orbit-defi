@@ -145,9 +145,9 @@ describe('AaveModule.sol', function () {
     const aaveWithdrawAction = (await aaveWithdrawActionFactory.deploy()) as Contract;
     await aaveWithdrawAction.deployed();
 
-    const closePositionActionFactory = await ethers.getContractFactory('ClosePosition');
-    const closePositionAction = (await closePositionActionFactory.deploy()) as Contract;
-    await closePositionAction.deployed();
+    const decreaseLiquidityActionFactory = await ethers.getContractFactory('DecreaseLiquidity');
+    const decreaseLiquidityAction = (await decreaseLiquidityActionFactory.deploy()) as Contract;
+    await decreaseLiquidityAction.deployed();
 
     const swapActionFactory = await ethers.getContractFactory('Swap');
     const swapAction = (await swapActionFactory.deploy()) as Contract;
@@ -157,9 +157,13 @@ describe('AaveModule.sol', function () {
     const SwapToPositionRatioAction = (await SwapToPositionRatioActionFactory.deploy()) as Contract;
     await SwapToPositionRatioAction.deployed();
 
-    const mintActionFactory = await ethers.getContractFactory('Mint');
-    const mintAction = (await mintActionFactory.deploy()) as Contract;
-    await mintAction.deployed();
+    const increaseLiquidityActionFactory = await ethers.getContractFactory('IncreaseLiquidity');
+    const increaseLiquidityAction = (await increaseLiquidityActionFactory.deploy()) as Contract;
+    await increaseLiquidityAction.deployed();
+
+    const collectFeesActionFactory = await ethers.getContractFactory('CollectFees');
+    const collectFeesAction = (await collectFeesActionFactory.deploy()) as Contract;
+    await collectFeesAction.deployed();
 
     const AaveModuleFactory = await ethers.getContractFactory('AaveModule');
     AaveModule = await AaveModuleFactory.deploy(aaveAddressHolder.address, uniswapAddressHolder.address);
@@ -239,9 +243,9 @@ describe('AaveModule.sol', function () {
       functionSelectors: await getSelectors(aaveWithdrawAction),
     });
     cut.push({
-      facetAddress: closePositionAction.address,
+      facetAddress: increaseLiquidityAction.address,
       action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(closePositionAction),
+      functionSelectors: await getSelectors(increaseLiquidityAction),
     });
     cut.push({
       facetAddress: swapAction.address,
@@ -254,9 +258,14 @@ describe('AaveModule.sol', function () {
       functionSelectors: await getSelectors(SwapToPositionRatioAction),
     });
     cut.push({
-      facetAddress: mintAction.address,
+      facetAddress: decreaseLiquidityAction.address,
       action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(mintAction),
+      functionSelectors: await getSelectors(decreaseLiquidityAction),
+    });
+    cut.push({
+      facetAddress: collectFeesAction.address,
+      action: FacetCutAction.Add,
+      functionSelectors: await getSelectors(collectFeesAction),
     });
     const diamondCut = await ethers.getContractAt('IDiamondCut', PositionManager.address);
     await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
@@ -339,7 +348,6 @@ describe('AaveModule.sol', function () {
       expect((await Pool0.slot0()).tick).to.gt(tickUpper);
 
       await AaveModule.connect(user).depositIfNeeded(PositionManager.address, tokenId);
-      await expect(NonFungiblePositionManager.ownerOf(tokenId)).to.be.reverted;
 
       expect(await aUsdc.balanceOf(PositionManager.address)).to.gt(0);
     });

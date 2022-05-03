@@ -12,10 +12,11 @@ import '../../interfaces/IPositionManager.sol';
 import '../helpers/UniswapNFTHelper.sol';
 import '../actions/AaveDeposit.sol';
 import '../actions/AaveWithdraw.sol';
-import '../actions/ClosePosition.sol';
+import '../actions/DecreaseLiquidity.sol';
+import '../actions/CollectFees.sol';
 import '../actions/Swap.sol';
 import '../actions/SwapToPositionRatio.sol';
-import '../actions/Mint.sol';
+import '../actions/IncreaseLiquidity.sol';
 
 contract AaveModule {
     IAaveAddressHolder public aaveAddressHolder;
@@ -57,18 +58,21 @@ contract AaveModule {
         address token,
         uint256 id
     ) public {
-        INonfungiblePositionManager.MintParams memory oldPosition = IPositionManager(positionManager)
-            .getOldPositionData(token, id);
+        uint256 tokenId = IPositionManager(positionManager).getTokenIdFromAavePosition(token, id);
         (, int24 tickPool, , , , , ) = IUniswapV3Pool(
-            UniswapNFTHelper._getPool(
-                address(uniswapAddressHolder.uniswapV3FactoryAddress()),
-                oldPosition.token0,
-                oldPosition.token1,
-                oldPosition.fee
+            UniswapNFTHelper._getPoolFromTokenId(
+                tokenId,
+                INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()),
+                uniswapAddressHolder.uniswapV3FactoryAddress()
             )
         ).slot0();
-        if (tickPool > oldPosition.tickLower && tickPool < oldPosition.tickUpper) {
-            _returnToUniswap(positionManager, token, id, oldPosition);
+
+        (, , , int24 tickLower, int24 tickUpper) = UniswapNFTHelper._getTokens(
+            tokenId,
+            INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress())
+        );
+        if (tickPool > tickLower && tickPool < tickUpper) {
+            _returnToUniswap(positionManager, token, id, tokenId);
         }
     }
 
@@ -81,25 +85,18 @@ contract AaveModule {
         uint256 tokenId,
         address toAaveToken
     ) internal {
-        (
-            ,
-            ,
-            address token0,
-            address token1,
-            uint24 fee,
-            int24 tickLower,
-            int24 tickUpper,
-            ,
-            ,
-            ,
-            ,
+        (, , address token0, address token1, , , , , , , , ) = INonfungiblePositionManager(
+            uniswapAddressHolder.nonfungiblePositionManagerAddress()
+        ).positions(tokenId);
 
-        ) = INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).positions(tokenId);
-
-        (, uint256 amount0Collected, uint256 amount1Collected) = IClosePosition(positionManager).closePosition(
+        (uint256 amount0ToDecrease, uint256 amount1ToDecrease) = UniswapNFTHelper._getAmountsfromTokenId(
             tokenId,
-            false
+            INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()),
+            uniswapAddressHolder.uniswapV3FactoryAddress()
         );
+
+        IDecreaseLiquidity(positionManager).decreaseLiquidity(tokenId, amount0ToDecrease, amount1ToDecrease);
+        (uint256 amount0Collected, uint256 amount1Collected) = ICollectFees(positionManager).collectFees(tokenId);
 
         uint256 amountToAave = 0;
         if (amount0Collected > 0) {
@@ -128,30 +125,10 @@ contract AaveModule {
             }
         }
 
-        require(
-            ILendingPool(aaveAddressHolder.lendingPoolAddress()).getReserveData(token0).aTokenAddress != address(0),
-            'AaveModule::_depositToAave: Aave token not found.'
-        );
-
         (uint256 id, ) = IAaveDeposit(positionManager).depositToAave(toAaveToken, amountToAave);
 
-        IPositionManager(positionManager).pushOldPositionData(
-            toAaveToken,
-            id,
-            INonfungiblePositionManager.MintParams({
-                token0: token0,
-                token1: token1,
-                fee: fee,
-                tickLower: tickLower,
-                tickUpper: tickUpper,
-                amount0Desired: 0,
-                amount1Desired: 0,
-                amount0Min: 0,
-                amount1Min: 0,
-                recipient: 0x0000000000000000000000000000000000000000,
-                deadline: 0
-            })
-        );
+        IPositionManager(positionManager).pushTokenIdToAave(toAaveToken, id, tokenId);
+        IPositionManager(positionManager).removePositionId(tokenId);
     }
 
     ///@notice return a position to Uniswap
@@ -162,35 +139,30 @@ contract AaveModule {
         address positionManager,
         address token,
         uint256 id,
-        INonfungiblePositionManager.MintParams memory mintParams
+        uint256 tokenId
     ) internal {
         uint256 amountWithdrawn = IAaveWithdraw(positionManager).withdrawFromAave(token, id);
+        (address token0, address token1, uint24 fee, int24 tickLower, int24 tickUpper) = UniswapNFTHelper._getTokens(
+            tokenId,
+            INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress())
+        );
 
-        uint256 amount0In = ISwap(positionManager).swap(token, mintParams.token0, mintParams.fee, amountWithdrawn);
+        uint256 amount0In = ISwap(positionManager).swap(token, token0, fee, amountWithdrawn);
 
         (uint256 amount0Out, uint256 amount1Out) = ISwapToPositionRatio(positionManager).swapToPositionRatio(
             ISwapToPositionRatio.SwapToPositionInput({
-                token0Address: mintParams.token0,
-                token1Address: mintParams.token1,
-                fee: mintParams.fee,
+                token0Address: token0,
+                token1Address: token1,
+                fee: fee,
                 amount0In: amount0In,
                 amount1In: 0,
-                tickLower: mintParams.tickLower,
-                tickUpper: mintParams.tickUpper
+                tickLower: tickLower,
+                tickUpper: tickUpper
             })
         );
 
-        IMint(positionManager).mint(
-            IMint.MintInput({
-                token0Address: mintParams.token0,
-                token1Address: mintParams.token1,
-                fee: mintParams.fee,
-                tickLower: mintParams.tickLower,
-                tickUpper: mintParams.tickUpper,
-                amount0Desired: amount0Out,
-                amount1Desired: amount1Out
-            })
-        );
+        IIncreaseLiquidity(positionManager).increaseLiquidity(tokenId, amount0Out, amount1Out);
+        IPositionManager(positionManager).pushPositionId(tokenId);
     }
 
     ///@notice checkDistance from ticklower tickupper from tick of the pools

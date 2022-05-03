@@ -31,6 +31,12 @@ contract AaveDeposit is IAaveDeposit {
         ILendingPool lendingPool = ILendingPool(
             PositionManagerStorage.getStorage().aaveAddressHolder.lendingPoolAddress()
         );
+
+        require(
+            lendingPool.getReserveData(token).aTokenAddress != address(0),
+            'AaveDeposit::depositToAave: Aave token not found.'
+        );
+
         IAToken aToken = IAToken(lendingPool.getReserveData(token).aTokenAddress);
 
         uint256 balanceBefore = aToken.scaledBalanceOf(address(this));

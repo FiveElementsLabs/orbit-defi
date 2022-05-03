@@ -110,8 +110,8 @@ contract PositionManager is IPositionManager, ERC721Holder {
 
     ///@notice remove awareness of tokenId UniswapV3 NFT
     ///@param tokenId ID of the NFT to remove
-    function removePositionId(uint256 tokenId) public override {
-        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+    function removePositionId(uint256 tokenId) public override onlyManagerOrModule {
+        /* StorageStruct storage Storage = PositionManagerStorage.getStorage();
         ///@dev if ownerOf reverts, tokenId is non existent or it has been burned
         try
             INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(
@@ -124,7 +124,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
             );
         } catch {
             //do nothing
-        }
+        } */
         for (uint256 i = 0; i < uniswapNFTs.length; i++) {
             if (uniswapNFTs[i] == tokenId) {
                 if (uniswapNFTs.length > 1) {
@@ -204,11 +204,11 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@notice stores old position data when liquidity is moved to aave
     ///@param token address of the token
     ///@param id ID of the position
-    ///@param oldPosition data of the position
-    function pushOldPositionData(
+    ///@param tokenId of the position
+    function pushTokenIdToAave(
         address token,
         uint256 id,
-        INonfungiblePositionManager.MintParams memory oldPosition
+        uint256 tokenId
     ) public override onlyManagerOrModule {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         require(
@@ -216,19 +216,19 @@ contract PositionManager is IPositionManager, ERC721Holder {
             'PositionManager::pushOldPositionData: positionShares does not exist'
         );
 
-        Storage.aaveUserReserves[token].oldPosition[id] = oldPosition;
+        Storage.aaveUserReserves[token].tokenIds[id] = tokenId;
     }
 
     ///@notice returns the old position data of an aave position
     ///@param token address of the token
     ///@param id ID of aave position
-    ///@return data of the position
-    function getOldPositionData(address token, uint256 id)
+    ///@return tokenId of the position
+    function getTokenIdFromAavePosition(address token, uint256 id)
         public
         view
         override
         onlyManagerOrModule
-        returns (INonfungiblePositionManager.MintParams memory)
+        returns (uint256)
     {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         require(
@@ -236,7 +236,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
             'PositionManager::getOldPositionData: positionShares does not exist'
         );
 
-        return Storage.aaveUserReserves[token].oldPosition[id];
+        return Storage.aaveUserReserves[token].tokenIds[id];
     }
 
     ///@notice return the address of this position manager owner
