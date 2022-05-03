@@ -13,9 +13,11 @@ interface ICollectFees {
 ///@notice collect fees from a uniswapV3 position
 contract CollectFees is ICollectFees {
     ///@notice emitted upon collect fees of a UniswapV3 position
+    ///@param positionManager address of the position manager which collected fees
+    ///@param tokenId id of the position
     ///@param amount0 amount of token0 collected
     ///@param amount1 amount of token1 collected
-    event feesCollected(uint256 amount0, uint256 amount1);
+    event feesCollected(address indexed positionManager, uint256 tokenId, uint256 amount0, uint256 amount1);
 
     ///@notice collect fees from a uniswapV3 position
     ///@param tokenId of token to collect fees from
@@ -39,7 +41,7 @@ contract CollectFees is ICollectFees {
         });
 
         (amount0, amount1) = nonfungiblePositionManager.collect(params);
-        emit feesCollected(amount0, amount1);
+        emit feesCollected(address(this), tokenId, amount0, amount1);
     }
 
     ///@notice update the uncollected fees of a uniswapV3 position

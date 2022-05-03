@@ -20,9 +20,9 @@ interface IClosePosition {
 
 contract ClosePosition is IClosePosition {
     ///@notice emitted when a UniswapNFT position is closed
-    ///@param from address of PositionManager
+    ///@param positionManager address of PositionManager
     ///@param tokenId Id of the closed token
-    event CloseUniPosition(address indexed from, uint256 tokenId);
+    event CloseUniPosition(address indexed positionManager, uint256 tokenId);
 
     ///@notice close a UniswapV3 position NFT
     ///@param tokenId id of the token to close

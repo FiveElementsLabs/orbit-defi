@@ -19,6 +19,12 @@ interface IAaveDeposit {
 
 ///@notice action to deposit tokens into aave protocol
 contract AaveDeposit is IAaveDeposit {
+    ///@notice emitted when a deposit on aave is made
+    ///@param positionManager address of aave positionManager which deposited
+    ///@param token token address
+    ///@param amount amount deposited
+    event AaveDepositEvent(address indexed positionManager, address token, uint256 amount);
+
     ///@notice deposit to aave some token amount
     ///@param token token address
     ///@param amount amount to deposit
@@ -33,5 +39,6 @@ contract AaveDeposit is IAaveDeposit {
         }
 
         ILendingPool(lendingPool).deposit(token, amount, address(this), 0);
+        emit AaveDepositEvent(address(this), token, amount);
     }
 }

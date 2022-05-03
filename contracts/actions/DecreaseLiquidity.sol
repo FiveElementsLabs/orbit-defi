@@ -29,6 +29,11 @@ interface IDecreaseLiquidity {
 
 ///@notice action to decrease liquidity of an NFT position
 contract DecreaseLiquidity is IDecreaseLiquidity {
+    ///@notice emitted when liquidity is decreased
+    ///@param positionManager address of the position manager which decreased liquidity
+    ///@param tokenId id of the position
+    event decreaseLiquidityEvent(address indexed positionManager, uint256 tokenId);
+
     ///@notice decrease the liquidity of a V3 position
     ///@param tokenId the tokenId of the position
     ///@param amount0Desired the amount of token0 liquidity desired
@@ -90,5 +95,7 @@ contract DecreaseLiquidity is IDecreaseLiquidity {
         (amount0, amount1) = INonfungiblePositionManager(
             Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()
         ).decreaseLiquidity(decreaseliquidityparams);
+
+        emit decreaseLiquidityEvent(address(this), tokenId);
     }
 }
