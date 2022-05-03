@@ -59,8 +59,11 @@ contract AaveWithdraw is IAaveWithdraw {
     function _removeAavePosition(address token, uint256 id) internal {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
-        uint256 length = Storage.aaveUserReserves[token].positionsId.length;
-        uint256 i = 0;
+        Storage.aaveUserReserves[token].sharesEmitted -= Storage.aaveUserReserves[token].positionShares[id];
+        Storage.aaveUserReserves[token].positionShares[id] = 0;
+        Storage.aaveUserReserves[token].tokenIds[id] = 0;
+        /* //uint256 length = Storage.aaveUserReserves[token].positionsId.length;
+        //uint256 i = 0;
 
         for (; i < length; i++) {
             if (Storage.aaveUserReserves[token].positionsId[i] == id) {
@@ -77,6 +80,6 @@ contract AaveWithdraw is IAaveWithdraw {
             }
         }
 
-        require(i == length + 2, 'PositionManager::removeAavePosition: position not found!');
+        require(i == length + 2, 'PositionManager::removeAavePosition: position not found!'); */
     }
 }

@@ -57,6 +57,7 @@ describe('AaveModule.sol', function () {
   let aUsdc: Contract;
   let tickLower: number;
   let tickUpper: number;
+  let aaveId: any;
 
   before(async function () {
     user = await user; //owner of the smart vault, a normal user
@@ -347,13 +348,14 @@ describe('AaveModule.sol', function () {
 
       expect((await Pool0.slot0()).tick).to.gt(tickUpper);
 
-      await AaveModule.connect(user).depositIfNeeded(PositionManager.address, tokenId);
-
+      const tx = await AaveModule.connect(user).depositIfNeeded(PositionManager.address, tokenId);
+      const events = (await tx.wait()).events;
+      aaveId = abiCoder.decode(['uint256', 'uint256'], events[events.length - 1].data)[0];
       expect(await aUsdc.balanceOf(PositionManager.address)).to.gt(0);
     });
 
     it('should not return to position if still out of range', async function () {
-      await AaveModule.connect(user).withdrawIfNeeded(PositionManager.address, usdcMock.address, 0);
+      await AaveModule.connect(user).withdrawIfNeeded(PositionManager.address, usdcMock.address, aaveId);
       expect(await aUsdc.balanceOf(PositionManager.address)).to.gt(0);
     });
 
@@ -374,7 +376,7 @@ describe('AaveModule.sol', function () {
       expect(slot0.tick).to.gt(tickLower);
       expect(slot0.tick).to.lt(tickUpper);
 
-      const tx = await AaveModule.connect(user).withdrawIfNeeded(PositionManager.address, usdcMock.address, 0);
+      const tx = await AaveModule.connect(user).withdrawIfNeeded(PositionManager.address, usdcMock.address, aaveId);
       expect(await aUsdc.balanceOf(PositionManager.address)).to.equal(0);
     });
   });

@@ -14,7 +14,6 @@ interface IPositionManager {
     struct AaveReserve {
         mapping(uint256 => uint256) positionShares;
         mapping(uint256 => uint256) tokenIds;
-        uint256[] positionsId;
         uint256 sharesEmitted;
     }
 

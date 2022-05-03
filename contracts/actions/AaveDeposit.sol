@@ -53,12 +53,11 @@ contract AaveDeposit is IAaveDeposit {
         emit AaveDepositEvent(id, shares);
     }
 
-    function _updateAavePosition(address token, uint256 shares) internal returns (uint256 id) {
+    function _updateAavePosition(address token, uint256 shares) internal returns (uint256) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         Storage.aaveUserReserves[token].positionShares[Storage.aaveIdCounter] = shares;
         Storage.aaveUserReserves[token].sharesEmitted += shares;
-        id = Storage.aaveIdCounter;
-        Storage.aaveUserReserves[token].positionsId.push(id);
         Storage.aaveIdCounter++;
+        return Storage.aaveIdCounter - 1;
     }
 }
