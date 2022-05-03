@@ -5,6 +5,8 @@ pragma abicoder v2;
 
 import '@openzeppelin/contracts/token/ERC721/ERC721Holder.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
+import './helpers/ERC20Helper.sol';
+import './utils/Storage.sol';
 import '../interfaces/IPositionManager.sol';
 import '../interfaces/DataTypes.sol';
 import '../interfaces/IUniswapAddressHolder.sol';
@@ -12,8 +14,6 @@ import '../interfaces/IAaveAddressHolder.sol';
 import '../interfaces/IDiamondCut.sol';
 import '../interfaces/IRegistry.sol';
 import '../interfaces/ILendingPool.sol';
-import './helpers/ERC20Helper.sol';
-import './utils/Storage.sol';
 
 /**
  * @title   Position Manager
