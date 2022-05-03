@@ -27,11 +27,11 @@ contract IdleLiquidityModule {
     ///@param tokenId tokenId of the position
     ///@param positionManager address of the position manager
     function rebalance(uint256 tokenId, IPositionManager positionManager) public {
-        int24 tickDistance = _checkDistanceFromRange(tokenId);
+        uint24 tickDistance = _checkDistanceFromRange(tokenId);
         if (positionManager.getModuleState(tokenId, address(this))) {
             uint24 rebalanceDistance = abi.decode(positionManager.getModuleData(tokenId, address(this)), (uint24));
             ///@dev rebalance only if the position's range is outside of the tick of the pool (tickDistance < 0) and the position is far enough from tick of the pool
-            if (tickDistance < 0 && rebalanceDistance <= uint24(tickDistance)) {
+            if (tickDistance > 0 && rebalanceDistance <= tickDistance) {
                 (, , address token0, address token1, uint24 fee, , , , , , , ) = INonfungiblePositionManager(
                     uniswapAddressHolder.nonfungiblePositionManagerAddress()
                 ).positions(tokenId);
@@ -68,7 +68,7 @@ contract IdleLiquidityModule {
     ///@notice checkDistance from ticklower tickupper from tick of the pools
     ///@param tokenId tokenId of the position
     ///@return int24 distance from ticklower tickupper from tick of the pools and return the minimum distance
-    function _checkDistanceFromRange(uint256 tokenId) internal view returns (int24) {
+    function _checkDistanceFromRange(uint256 tokenId) internal view returns (uint24) {
         (
             ,
             ,
@@ -89,13 +89,13 @@ contract IdleLiquidityModule {
         );
         (, int24 tick, , , , , ) = pool.slot0();
 
-        int24 distanceFromUpper = tickUpper - tick;
-        int24 distanceFromLower = tick - tickLower;
-
-        return
-            distanceFromLower * distanceFromUpper <= 0
-                ? _min24(distanceFromLower, distanceFromUpper)
-                : _absMin24(distanceFromLower, distanceFromUpper);
+        if (tick > tickUpper) {
+            return uint24(tick - tickUpper);
+        } else if (tick < tickLower) {
+            return uint24(tickLower - tick);
+        } else {
+            return 0;
+        }
     }
 
     ///@notice calc tickLower and tickUpper with the same delta as the position but with tick of the pool in center
@@ -122,13 +122,5 @@ contract IdleLiquidityModule {
         int24 tickSpacing = int24(fee) / 50;
 
         return (((tick - tickDelta) / tickSpacing) * tickSpacing, ((tick + tickDelta) / tickSpacing) * tickSpacing);
-    }
-
-    function _min24(int24 a, int24 b) internal pure returns (int24) {
-        return a < b ? a : b;
-    }
-
-    function _absMin24(int24 a, int24 b) internal pure returns (int24) {
-        return uint24(a) < uint24(b) ? a : b;
     }
 }

@@ -16,7 +16,6 @@ import '../actions/ClosePosition.sol';
 import '../actions/Swap.sol';
 import '../actions/SwapToPositionRatio.sol';
 import '../actions/Mint.sol';
-import 'hardhat/console.sol';
 
 contract AaveModule {
     IAaveAddressHolder public aaveAddressHolder;
@@ -39,15 +38,37 @@ contract AaveModule {
     ///@param positionManager address of the position manager
     ///@param tokenId id of the Uniswap position to deposit
     function depositIfNeeded(address positionManager, uint256 tokenId) public activeModule(positionManager, tokenId) {
-        int24 tickDistance = _checkDistanceFromRange(tokenId);
-
         address toAaveToken = abi.decode(
             IPositionManager(positionManager).getModuleData(tokenId, address(this)),
             (address)
         );
         ///@dev move token to aave only if the position's range is outside of the tick of the pool
-        if (tickDistance < 0) {
+        if (_checkDistanceFromRange(tokenId) > 0) {
             _depositToAave(positionManager, tokenId, toAaveToken);
+        }
+    }
+
+    ///@notice check if withdraw is needed and execute
+    ///@param positionManager address of the position manager
+    ///@param token address of the token of Aave position
+    ///@param id id of the Aave position to withdraw
+    function withdrawIfNeeded(
+        address positionManager,
+        address token,
+        uint256 id
+    ) public {
+        INonfungiblePositionManager.MintParams memory oldPosition = IPositionManager(positionManager)
+            .getOldPositionData(token, id);
+        (, int24 tickPool, , , , , ) = IUniswapV3Pool(
+            UniswapNFTHelper._getPool(
+                address(uniswapAddressHolder.uniswapV3FactoryAddress()),
+                oldPosition.token0,
+                oldPosition.token1,
+                oldPosition.fee
+            )
+        ).slot0();
+        if (tickPool > oldPosition.tickLower && tickPool < oldPosition.tickUpper) {
+            _returnToUniswap(positionManager, token, id, oldPosition);
         }
     }
 
@@ -133,30 +154,6 @@ contract AaveModule {
         );
     }
 
-    ///@notice check if withdraw is needed and execute
-    ///@param positionManager address of the position manager
-    ///@param token address of the token of Aave position
-    ///@param id id of the Aave position to withdraw
-    function withdrawIfNeeded(
-        address positionManager,
-        address token,
-        uint256 id
-    ) public {
-        INonfungiblePositionManager.MintParams memory oldPosition = IPositionManager(positionManager)
-            .getOldPositionData(token, id);
-        (, int24 tickPool, , , , , ) = IUniswapV3Pool(
-            UniswapNFTHelper._getPool(
-                address(uniswapAddressHolder.uniswapV3FactoryAddress()),
-                oldPosition.token0,
-                oldPosition.token1,
-                oldPosition.fee
-            )
-        ).slot0();
-        if (tickPool > oldPosition.tickLower && tickPool < oldPosition.tickUpper) {
-            _returnToUniswap(positionManager, token, id, oldPosition);
-        }
-    }
-
     ///@notice return a position to Uniswap
     ///@param positionManager address of the position manager
     ///@param token address of the token of Aave position
@@ -199,7 +196,7 @@ contract AaveModule {
     ///@notice checkDistance from ticklower tickupper from tick of the pools
     ///@param tokenId tokenId of the position
     ///@return int24 distance from ticklower tickupper from tick of the pools and return the minimum distance
-    function _checkDistanceFromRange(uint256 tokenId) internal view returns (int24) {
+    function _checkDistanceFromRange(uint256 tokenId) internal view returns (uint24) {
         (
             ,
             ,
@@ -222,13 +219,13 @@ contract AaveModule {
         );
         (, int24 tick, , , , , ) = pool.slot0();
 
-        int24 distanceFromUpper = tickUpper - tick;
-        int24 distanceFromLower = tick - tickLower;
-
-        return
-            distanceFromLower * distanceFromUpper < 0
-                ? _min24(distanceFromLower, distanceFromUpper)
-                : _absMin24(distanceFromLower, distanceFromUpper);
+        if (tick > tickUpper) {
+            return uint24(tick - tickUpper);
+        } else if (tick < tickLower) {
+            return uint24(tickLower - tick);
+        } else {
+            return 0;
+        }
     }
 
     ///@notice finds the best fee tier on which to perform a swap
@@ -270,21 +267,5 @@ contract AaveModule {
             IUniswapV3Pool(
                 UniswapNFTHelper._getPool(Storage.uniswapAddressHolder.uniswapV3FactoryAddress(), token0, token1, fee)
             ).liquidity();
-    }
-
-    ///@notice returns minimum of two int24
-    ///@param a first int24
-    ///@param b second int24
-    ///@return minimum of two int24
-    function _min24(int24 a, int24 b) internal pure returns (int24) {
-        return a < b ? a : b;
-    }
-
-    ///@notice returns absolute minimum of two int24
-    ///@param a first int24
-    ///@param b second int24
-    ///@return absolute minimum of two int24
-    function _absMin24(int24 a, int24 b) internal pure returns (int24) {
-        return uint24(a) < uint24(b) ? a : b;
     }
 }

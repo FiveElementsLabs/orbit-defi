@@ -55,6 +55,8 @@ describe('AaveModule.sol', function () {
   let abiCoder: AbiCoder;
   let swapRouter: Contract;
   let aUsdc: Contract;
+  let tickLower: number;
+  let tickUpper: number;
 
   before(async function () {
     user = await user; //owner of the smart vault, a normal user
@@ -167,10 +169,6 @@ describe('AaveModule.sol', function () {
     usdcMock = (await ethers.getContractAt('MockToken', '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48')) as MockToken;
     wbtcMock = (await ethers.getContractAt('MockToken', '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599')) as MockToken;
 
-    //deploy first pool
-    /* Pool0 = (await poolFixture(wbtcMock, usdcMock, 3000, Factory)).pool;
-    console.log(Pool0); */
-
     //mint some wbtc
     //for user
     let slot = await findbalanceSlot(wbtcMock, user);
@@ -263,14 +261,17 @@ describe('AaveModule.sol', function () {
     const diamondCut = await ethers.getContractAt('IDiamondCut', PositionManager.address);
     await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
 
+    let slot0 = await Pool0.slot0();
+    tickLower = (Math.round(slot0.tick / 60) - 100) * 60;
+    tickUpper = (Math.round(slot0.tick / 60) + 100) * 60;
     //mint a position
     const mintTx = await NonFungiblePositionManager.connect(user).mint(
       {
         token0: wbtcMock.address,
         token1: usdcMock.address,
         fee: 3000,
-        tickLower: 60000 - 60 * 100,
-        tickUpper: 60000 + 60 * 100,
+        tickLower: tickLower,
+        tickUpper: tickUpper,
         amount0Desired: '0x' + (1e10).toString(16),
         amount1Desired: '0x' + (1e10).toString(16),
         amount0Min: 0,
@@ -287,8 +288,8 @@ describe('AaveModule.sol', function () {
         token0: wbtcMock.address,
         token1: usdcMock.address,
         fee: 3000,
-        tickLower: 60000 - 60 * 1000,
-        tickUpper: 60000 + 60 * 1000,
+        tickLower: (Math.round(slot0.tick / 60) - 1000) * 60,
+        tickUpper: (Math.round(slot0.tick / 60) + 1000) * 60,
         amount0Desired: '0x' + (1e15).toString(16),
         amount1Desired: '0x' + (1e15).toString(16),
         amount0Min: 0,
@@ -304,13 +305,11 @@ describe('AaveModule.sol', function () {
 
     // user approve AaveModule
     await PositionManager.connect(user).toggleModule(tokenId, AaveModule.address, true);
-
     await PositionManager.pushPositionId(tokenId);
 
     abiCoder = ethers.utils.defaultAbiCoder;
 
     const data = abiCoder.encode(['address'], [usdcMock.address]);
-
     await PositionManager.setModuleData(tokenId, AaveModule.address, data);
 
     const aUsdcAddress = (await LendingPool.getReserveData(usdcMock.address)).aTokenAddress;
@@ -324,18 +323,20 @@ describe('AaveModule.sol', function () {
     });
 
     it('should deposit to aave if position is out of range', async function () {
-      await swapRouter.connect(trader).exactInputSingle({
-        tokenIn: usdcMock.address,
-        tokenOut: wbtcMock.address,
-        fee: 3000,
-        recipient: trader.address,
-        deadline: Date.now() + 1000,
-        amountIn: '0x' + (1e16).toString(16),
-        amountOutMinimum: 0,
-        sqrtPriceLimitX96: 0,
-      });
-      let slot0 = await Pool0.slot0();
-      expect(slot0.tick).to.gt(60000 + 60 * 100);
+      while ((await Pool0.slot0()).tick < tickUpper) {
+        await swapRouter.connect(trader).exactInputSingle({
+          tokenIn: usdcMock.address,
+          tokenOut: wbtcMock.address,
+          fee: 3000,
+          recipient: trader.address,
+          deadline: Date.now() + 1000,
+          amountIn: '0x' + (1e16).toString(16),
+          amountOutMinimum: 0,
+          sqrtPriceLimitX96: 0,
+        });
+      }
+
+      expect((await Pool0.slot0()).tick).to.gt(tickUpper);
 
       await AaveModule.connect(user).depositIfNeeded(PositionManager.address, tokenId);
       await expect(NonFungiblePositionManager.ownerOf(tokenId)).to.be.reverted;
@@ -349,19 +350,21 @@ describe('AaveModule.sol', function () {
     });
 
     it('should retrun to position if returns in range', async function () {
-      await swapRouter.connect(trader).exactInputSingle({
-        tokenIn: wbtcMock.address,
-        tokenOut: usdcMock.address,
-        fee: 3000,
-        recipient: trader.address,
-        deadline: Date.now() + 1000,
-        amountIn: '0x' + (3e12).toString(16),
-        amountOutMinimum: 0,
-        sqrtPriceLimitX96: 0,
-      });
+      while ((await Pool0.slot0()).tick >= tickUpper) {
+        await swapRouter.connect(trader).exactInputSingle({
+          tokenIn: wbtcMock.address,
+          tokenOut: usdcMock.address,
+          fee: 3000,
+          recipient: trader.address,
+          deadline: Date.now() + 1000,
+          amountIn: '0x' + (3e12).toString(16),
+          amountOutMinimum: 0,
+          sqrtPriceLimitX96: 0,
+        });
+      }
       let slot0 = await Pool0.slot0();
-      expect(slot0.tick).to.gt(60000 - 60 * 100);
-      expect(slot0.tick).to.lt(60000 + 60 * 100);
+      expect(slot0.tick).to.gt(tickLower);
+      expect(slot0.tick).to.lt(tickUpper);
 
       const tx = await AaveModule.connect(user).withdrawIfNeeded(PositionManager.address, usdcMock.address, 0);
       expect(await aUsdc.balanceOf(PositionManager.address)).to.equal(0);

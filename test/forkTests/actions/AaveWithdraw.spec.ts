@@ -167,7 +167,7 @@ describe('AaveWithdraw.sol', function () {
   });
 
   describe('AaveWithdraw - withdrawFromAave', function () {
-    it('should withdraw 5000 token to aave LendingPool', async function () {
+    it('should withdraw position from aave LendingPool', async function () {
       const tx = await AaveDepositFallback.depositToAave(usdcMock.address, '5000');
 
       const events = (await tx.wait()).events;
