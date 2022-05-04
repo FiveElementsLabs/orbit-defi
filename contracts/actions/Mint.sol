@@ -41,7 +41,7 @@ contract Mint is IMint {
     ///@notice emitted when a UniswapNFT is deposited in PositionManager
     ///@param positionManager address of PositionManager
     ///@param tokenId Id of deposited token
-    event MintUniEvent(address indexed positionManager, uint256 tokenId);
+    event PositionMinted(address indexed positionManager, uint256 tokenId);
 
     ///@notice mints a UniswapV3 position NFT
     ///@param inputs struct of MintInput parameters
@@ -89,6 +89,6 @@ contract Mint is IMint {
         ).mint(params);
 
         IPositionManager(address(this)).pushPositionId(tokenId);
-        emit MintUniEvent(address(this), tokenId);
+        emit PositionMinted(address(this), tokenId);
     }
 }

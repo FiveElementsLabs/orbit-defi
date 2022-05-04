@@ -22,7 +22,7 @@ contract ClosePosition is IClosePosition {
     ///@notice emitted when a UniswapNFT position is closed
     ///@param positionManager address of PositionManager
     ///@param tokenId Id of the closed token
-    event CloseUniPosition(address indexed positionManager, uint256 tokenId);
+    event PositionClosed(address indexed positionManager, uint256 tokenId);
 
     ///@notice close a UniswapV3 position NFT
     ///@param tokenId id of the token to close
@@ -74,7 +74,7 @@ contract ClosePosition is IClosePosition {
         IPositionManager(address(this)).removePositionId(tokenId);
 
         //delete the position from the position manager
-        emit CloseUniPosition(address(this), tokenId);
+        emit PositionClosed(address(this), tokenId);
 
         //return the tokenId and tokens closed
         return (tokenId, token0Closed, token1Closed);

@@ -31,13 +31,13 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@notice emitted when a position is withdrawn
     ///@param to address of the user
     ///@param tokenId ID of the withdrawn NFT
-    event WithdrawUni(address to, uint256 tokenId);
+    event PositionWithdrawn(address to, uint256 tokenId);
 
     ///@notice emitted when a ERC20 is withdrawn
     ///@param tokenAddress address of the ERC20
     ///@param to address of the user
     ///@param amount of the ERC20
-    event WithdrawERC20(address tokenAddress, address to, uint256 amount);
+    event ERC20Withdrawn(address tokenAddress, address to, uint256 amount);
 
     ///@notice emitted when a module is activated/deactivated
     ///@param module address of module
@@ -245,7 +245,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
     function withdrawERC20(address tokenAddress) external override onlyOwner {
         ERC20Helper._approveToken(tokenAddress, address(this), 2**256 - 1);
         uint256 amount = ERC20Helper._withdrawTokens(tokenAddress, msg.sender, 2**256 - 1);
-        emit WithdrawERC20(tokenAddress, msg.sender, amount);
+        emit ERC20Withdrawn(tokenAddress, msg.sender, amount);
     }
 
     ///@notice function to check if an address corresponds to an active module (or this contract)

@@ -16,7 +16,7 @@ contract UpdateUncollectedFees is IUpdateUncollectedFees {
     ///@param tokenId Id of the updated position
     ///@param token0 fee collected
     ///@param token1 fee collected
-    event updateFees(address indexed positionManager, uint256 tokenId, uint256 token0, uint256 token1);
+    event FeesUpdated(address indexed positionManager, uint256 tokenId, uint256 token0, uint256 token1);
 
     ///@notice update the uncollected fees of a UniswapV3 position NFT
     ///@param tokenId ID of the NFT
@@ -40,7 +40,7 @@ contract UpdateUncollectedFees is IUpdateUncollectedFees {
         );
 
         (, , , , , , , , , , uint128 tokensOwed0, uint128 tokensOwed1) = nonfungiblePositionManager.positions(tokenId);
-        emit updateFees(address(this), tokenId, tokensOwed0, tokensOwed1);
+        emit FeesUpdated(address(this), tokenId, tokensOwed0, tokensOwed1);
         return (tokensOwed0, tokensOwed1);
     }
 }

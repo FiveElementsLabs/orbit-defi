@@ -42,7 +42,7 @@ contract SwapToPositionRatio is ISwapToPositionRatio {
     ///@param token1 address of second token of the pool
     ///@param amount0Out token0 amount swapped
     ///@param amount1Out token1 amount swapped
-    event SwapToPositionRatioEvent(
+    event SwappedToPositionRatio(
         address indexed positionManager,
         address token0,
         address token1,
@@ -94,13 +94,7 @@ contract SwapToPositionRatio is ISwapToPositionRatio {
             amount0Out = inputs.amount0In;
             amount1Out = inputs.amount1In;
         }
-        emit SwapToPositionRatioEvent(
-            address(this),
-            inputs.token0Address,
-            inputs.token1Address,
-            amount0Out,
-            amount1Out
-        );
+        emit SwappedToPositionRatio(address(this), inputs.token0Address, inputs.token1Address, amount0Out, amount1Out);
     }
 
     ///@notice swaps token0 for token1

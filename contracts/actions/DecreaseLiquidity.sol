@@ -29,7 +29,7 @@ contract DecreaseLiquidity is IDecreaseLiquidity {
     ///@notice emitted when liquidity is decreased
     ///@param positionManager address of the position manager which decreased liquidity
     ///@param tokenId id of the position
-    event decreaseLiquidityEvent(address indexed positionManager, uint256 tokenId);
+    event LiquidityDecreased(address indexed positionManager, uint256 tokenId);
 
     ///@notice decrease the liquidity of a V3 position
     ///@param tokenId the tokenId of the position
@@ -93,6 +93,6 @@ contract DecreaseLiquidity is IDecreaseLiquidity {
             Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()
         ).decreaseLiquidity(decreaseliquidityparams);
 
-        emit decreaseLiquidityEvent(address(this), tokenId);
+        emit LiquidityDecreased(address(this), tokenId);
     }
 }

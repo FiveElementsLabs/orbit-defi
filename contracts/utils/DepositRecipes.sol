@@ -29,13 +29,16 @@ contract DepositRecipes {
     }
 
     ///@notice emitted when a NFT is minted
+    ///@param positionManager the address of the position manager which recieved the position
+    ///@param from address of the user
     ///@param tokenId the id of the minted NFT
-    event MintedNFT(uint256 tokenId);
+    event PositionMinted(address indexed positionManager, address from, uint256 tokenId);
 
     ///@notice emitted when a position is created
+    ///@param positionManager the address of the position manager which recieved the position
     ///@param from address of the user
     ///@param tokenId ID of the minted NFT
-    event DepositUni(address indexed from, uint256 tokenId);
+    event PositionDeposited(address indexed positionManager, address from, uint256 tokenId);
 
     ///@notice add uniswap position NFT to the position manager
     ///@param tokenIds IDs of deposited tokens
@@ -48,7 +51,7 @@ contract DepositRecipes {
                 '0x0'
             );
             IPositionManager(positionManagerFactory.userToPositionManager(msg.sender)).pushPositionId(tokenIds[i]);
-            emit DepositUni(msg.sender, tokenIds[i]);
+            emit PositionDeposited(positionManagerFactory.userToPositionManager(msg.sender), msg.sender, tokenIds[i]);
         }
     }
 
@@ -92,7 +95,7 @@ contract DepositRecipes {
             })
         );
         IPositionManager(positionManagerAddress).pushPositionId(tokenId);
-        emit MintedNFT(tokenId);
+        emit PositionMinted(positionManagerAddress, msg.sender, tokenId);
     }
 
     ///@notice mints a uni NFT with a single input token, the token in input can be different from the two position tokens

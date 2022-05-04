@@ -21,7 +21,7 @@ contract IncreaseLiquidity is IIncreaseLiquidity {
     ///@notice emitted when liquidity is increased
     ///@param positionManager address of the position manager which increased liquidity
     ///@param tokenId id of the position
-    event increaseLiquidityEvent(address indexed positionManager, uint256 tokenId);
+    event LiquidityIncreased(address indexed positionManager, uint256 tokenId);
 
     ///@notice increase the liquidity of a UniswapV3 position
     ///@param tokenId the id of the position token
@@ -68,6 +68,6 @@ contract IncreaseLiquidity is IIncreaseLiquidity {
                 params
             );
 
-        emit increaseLiquidityEvent(address(this), tokenId);
+        emit LiquidityIncreased(address(this), tokenId);
     }
 }

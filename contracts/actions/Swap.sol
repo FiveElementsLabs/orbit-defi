@@ -17,7 +17,19 @@ interface ISwap {
 }
 
 contract Swap is ISwap {
-    event SwapEvent(uint256 amount1Out);
+    ///@notice emitted when a swap is performed
+    ///@param positionManager address of the position manager which performed the swap
+    ///@param tokenIn address of the token being swapped in
+    ///@param tokenOut address of the token being swapped out
+    ///@param amountIn amount of the token being swapped in
+    ///@param amountOut amount of the token being swapped out
+    event Swapped(
+        address indexed positionManager,
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn,
+        uint256 amountOut
+    );
 
     ///@notice swaps token0 for token1 on uniswap
     ///@param token0Address address of first token
@@ -48,6 +60,6 @@ contract Swap is ISwap {
         });
 
         amount1Out = swapRouter.exactInputSingle(swapParams);
-        emit SwapEvent(amount1Out);
+        emit Swapped(address(this), token0Address, token1Address, amount0In, amount1Out);
     }
 }

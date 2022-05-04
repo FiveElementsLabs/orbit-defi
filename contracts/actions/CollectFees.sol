@@ -17,7 +17,7 @@ contract CollectFees is ICollectFees {
     ///@param tokenId id of the position
     ///@param amount0 amount of token0 collected
     ///@param amount1 amount of token1 collected
-    event feesCollected(address indexed positionManager, uint256 tokenId, uint256 amount0, uint256 amount1);
+    event FeesCollected(address indexed positionManager, uint256 tokenId, uint256 amount0, uint256 amount1);
 
     ///@notice collect fees from a uniswapV3 position
     ///@param tokenId of token to collect fees from
@@ -41,7 +41,7 @@ contract CollectFees is ICollectFees {
         });
 
         (amount0, amount1) = nonfungiblePositionManager.collect(params);
-        emit feesCollected(address(this), tokenId, amount0, amount1);
+        emit FeesCollected(address(this), tokenId, amount0, amount1);
     }
 
     ///@notice update the uncollected fees of a uniswapV3 position

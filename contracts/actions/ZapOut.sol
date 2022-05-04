@@ -20,7 +20,7 @@ contract ZapOut is IZapOut {
     ///@param tokenId Id of zapped token
     ///@param tokenOut address of token zapped out
     ///@param amountOut amount of tokenOut zapped out
-    event ZapOutEvent(address indexed positionManager, uint256 tokenId, address tokenOut, uint256 amountOut);
+    event ZappedOut(address indexed positionManager, uint256 tokenId, address tokenOut, uint256 amountOut);
 
     ///@notice burns a uni NFT with a single output token, the output token can be different from the two position tokens
     ///@param tokenId id of the NFT to burn
@@ -69,7 +69,7 @@ contract ZapOut is IZapOut {
         ERC20Helper._approveToken(tokenOut, address(this), amount0 + amount1);
         ERC20Helper._withdrawTokens(tokenOut, Storage.owner, amount0 + amount1);
 
-        emit ZapOutEvent(address(this), tokenId, tokenOut, amount0 + amount1);
+        emit ZappedOut(address(this), tokenId, tokenOut, amount0 + amount1);
         return amount0 + amount1;
     }
 
