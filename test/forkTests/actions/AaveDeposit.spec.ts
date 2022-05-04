@@ -168,7 +168,8 @@ describe('AaveDeposit.sol', function () {
 
       const events = (await tx.wait()).events;
       const depositEvent = events[events.length - 1];
-      const [id, shares] = abiCoder.decode(['uint256', 'uint256'], depositEvent.data);
+      console.log(depositEvent.data);
+      const [, id, shares] = abiCoder.decode(['address', 'uint256', 'uint256'], depositEvent.data);
 
       expect(id).to.equal(0);
       expect(shares.toNumber()).to.be.closeTo(9309, 10);

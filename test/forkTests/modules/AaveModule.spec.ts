@@ -350,7 +350,7 @@ describe('AaveModule.sol', function () {
 
       const tx = await AaveModule.connect(user).depositIfNeeded(PositionManager.address, tokenId);
       const events = (await tx.wait()).events;
-      aaveId = abiCoder.decode(['uint256', 'uint256'], events[events.length - 1].data)[0];
+      aaveId = abiCoder.decode(['address', 'uint256', 'uint256'], events[events.length - 1].data)[1];
       expect(await aUsdc.balanceOf(PositionManager.address)).to.gt(0);
     });
 

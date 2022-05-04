@@ -172,7 +172,7 @@ describe('AaveWithdraw.sol', function () {
 
       const events = (await tx.wait()).events;
       const depositEvent = events[events.length - 1];
-      const [id, shares] = abiCoder.decode(['uint256', 'uint256'], depositEvent.data);
+      const [, id, shares] = abiCoder.decode(['address', 'uint256', 'uint256'], depositEvent.data);
 
       await AaveDepositFallback.depositToAave(usdcMock.address, '5000');
 
