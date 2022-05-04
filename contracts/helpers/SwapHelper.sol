@@ -3,9 +3,9 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
+import '@uniswap/v3-core/contracts/libraries/FixedPoint96.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
-import '@uniswap/v3-core/contracts/libraries/FixedPoint96.sol';
 
 ///@title library to help with swap amounts calculations
 library SwapHelper {

@@ -4,6 +4,9 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import '@openzeppelin/contracts/token/ERC721/ERC721Holder.sol';
+import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
+import './helpers/ERC20Helper.sol';
+import './utils/Storage.sol';
 import '../interfaces/IPositionManager.sol';
 import '../interfaces/DataTypes.sol';
 import '../interfaces/IUniswapAddressHolder.sol';
@@ -11,8 +14,6 @@ import '../interfaces/IAaveAddressHolder.sol';
 import '../interfaces/IDiamondCut.sol';
 import '../interfaces/IRegistry.sol';
 import '../interfaces/ILendingPool.sol';
-import './helpers/ERC20Helper.sol';
-import './utils/Storage.sol';
 
 /**
  * @title   Position Manager
@@ -30,13 +31,19 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@notice emitted when a position is withdrawn
     ///@param to address of the user
     ///@param tokenId ID of the withdrawn NFT
-    event WithdrawUni(address to, uint256 tokenId);
+    event PositionWithdrawn(address to, uint256 tokenId);
 
     ///@notice emitted when a ERC20 is withdrawn
     ///@param tokenAddress address of the ERC20
     ///@param to address of the user
     ///@param amount of the ERC20
-    event WithdrawERC20(address tokenAddress, address to, uint256 amount);
+    event ERC20Withdrawn(address tokenAddress, address to, uint256 amount);
+
+    ///@notice emitted when a module is activated/deactivated
+    ///@param module address of module
+    ///@param tokenId position on which change is made
+    ///@param isActive true if module is activated, false if deactivated
+    event ModuleStateChanged(address module, uint256 tokenId, bool isActive);
 
     ///@notice modifier to check if the msg.sender is the owner
     modifier onlyOwner() {
@@ -147,6 +154,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
         bool activated
     ) external override onlyOwner onlyOwnedPosition(tokenId) {
         activatedModules[tokenId][moduleAddress].isActive = activated;
+        emit ModuleStateChanged(moduleAddress, tokenId, activated);
     }
 
     ///@notice return the state of the module for tokenId position
@@ -237,7 +245,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
     function withdrawERC20(address tokenAddress) external override onlyOwner {
         ERC20Helper._approveToken(tokenAddress, address(this), 2**256 - 1);
         uint256 amount = ERC20Helper._withdrawTokens(tokenAddress, msg.sender, 2**256 - 1);
-        emit WithdrawERC20(tokenAddress, msg.sender, amount);
+        emit ERC20Withdrawn(tokenAddress, msg.sender, amount);
     }
 
     ///@notice function to check if an address corresponds to an active module (or this contract)

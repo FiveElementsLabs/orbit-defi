@@ -20,7 +20,12 @@ interface IAaveDeposit {
 
 ///@notice action to deposit tokens into aave protocol
 contract AaveDeposit is IAaveDeposit {
-    event AaveDepositEvent(uint256 id, uint256 shares);
+    ///@notice emitted when a deposit on aave is made
+    ///@param positionManager address of aave positionManager which deposited
+    ///@param token token address
+    ///@param id aave position id
+    ///@param shares shares emitted
+    event DepositedOnAave(address indexed positionManager, address token, uint256 id, uint256 shares);
 
     ///@notice deposit to aave some token amount
     ///@param token token address
@@ -50,7 +55,7 @@ contract AaveDeposit is IAaveDeposit {
         shares = aToken.scaledBalanceOf(address(this)) - balanceBefore;
 
         id = _updateAavePosition(token, shares);
-        emit AaveDepositEvent(id, shares);
+        emit DepositedOnAave(address(this), token, id, shares);
     }
 
     function _updateAavePosition(address token, uint256 shares) internal returns (uint256) {

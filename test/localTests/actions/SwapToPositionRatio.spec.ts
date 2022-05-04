@@ -239,9 +239,12 @@ describe('SwapToPositionRatio.sol', function () {
 
       const events = (await tx.wait()).events as any;
       const outputEvent = events[events.length - 1];
-      const amountsOut = abiCoder.decode(['uint256', 'uint256'], outputEvent.data);
-      expect(amountsOut[0].toNumber()).to.equal(199202);
-      expect(amountsOut[1].toNumber()).to.equal(100498);
+      const [, , amount0Out, amount1Out] = abiCoder.decode(
+        ['address', 'address', 'uint256', 'uint256'],
+        outputEvent.data
+      );
+      expect(amount0Out.toNumber()).to.equal(199202);
+      expect(amount1Out.toNumber()).to.equal(100498);
     });
 
     it('should revert if a too high/low tick is passed', async function () {

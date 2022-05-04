@@ -9,7 +9,6 @@ import '../helpers/SwapHelper.sol';
 import '../helpers/UniswapNFTHelper.sol';
 import '../helpers/ERC20Helper.sol';
 import '../utils/Storage.sol';
-import '../../interfaces/IUniswapAddressHolder.sol';
 
 interface ISwapToPositionRatio {
     ///@notice input the decoder expects
@@ -37,7 +36,19 @@ interface ISwapToPositionRatio {
 
 ///@notice action to swap to an exact position ratio
 contract SwapToPositionRatio is ISwapToPositionRatio {
-    event SwapToPositionRatioEvent(uint256 amount0Out, uint256 amount1Out);
+    ///@notice emitted when a positionManager swaps to ratio
+    ///@param positionManager address of PositionManager
+    ///@param token0 address of first token of the pool
+    ///@param token1 address of second token of the pool
+    ///@param amount0Out token0 amount swapped
+    ///@param amount1Out token1 amount swapped
+    event SwappedToPositionRatio(
+        address indexed positionManager,
+        address token0,
+        address token1,
+        uint256 amount0Out,
+        uint256 amount1Out
+    );
 
     ///@notice performs swap to optimal ratio for the position at tickLower and tickUpper
     ///@param inputs input bytes to be decoded according to SwapToPositionInput
@@ -83,7 +94,7 @@ contract SwapToPositionRatio is ISwapToPositionRatio {
             amount0Out = inputs.amount0In;
             amount1Out = inputs.amount1In;
         }
-        emit SwapToPositionRatioEvent(amount0Out, amount1Out);
+        emit SwappedToPositionRatio(address(this), inputs.token0Address, inputs.token1Address, amount0Out, amount1Out);
     }
 
     ///@notice swaps token0 for token1

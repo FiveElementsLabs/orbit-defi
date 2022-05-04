@@ -140,7 +140,7 @@ describe('Timelock.sol', function () {
       ).wait();
 
       const executeEvents = executeTxReceipt.events!;
-      expect(executeEvents[0].event).to.be.equal('ExecuteTransaction');
+      expect(executeEvents[1].event).to.be.equal('ExecuteTransaction');
     });
 
     it('Should revert if not enough time has passed', async function () {

@@ -5,11 +5,11 @@ pragma abicoder v2;
 
 import '../../interfaces/IPositionManager.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
-import '../helpers/UniswapNFTHelper.sol';
-import '../utils/Storage.sol';
 import '../actions/CollectFees.sol';
 import '../actions/IncreaseLiquidity.sol';
 import '../actions/UpdateUncollectedFees.sol';
+import '../helpers/UniswapNFTHelper.sol';
+import '../utils/Storage.sol';
 
 contract AutoCompoundModule {
     IUniswapAddressHolder addressHolder;

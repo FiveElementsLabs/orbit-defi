@@ -3,11 +3,10 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
+import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
-import '../../interfaces/ILendingPool.sol';
 import '../../interfaces/IAaveAddressHolder.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
-import '../../interfaces/DataTypes.sol';
 import '../../interfaces/IPositionManager.sol';
 import '../helpers/UniswapNFTHelper.sol';
 import '../actions/AaveDeposit.sol';

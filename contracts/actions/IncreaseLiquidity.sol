@@ -18,6 +18,11 @@ interface IIncreaseLiquidity {
 
 ///@notice action to increase the liquidity of a V3 position
 contract IncreaseLiquidity is IIncreaseLiquidity {
+    ///@notice emitted when liquidity is increased
+    ///@param positionManager address of the position manager which increased liquidity
+    ///@param tokenId id of the position
+    event LiquidityIncreased(address indexed positionManager, uint256 tokenId);
+
     ///@notice increase the liquidity of a UniswapV3 position
     ///@param tokenId the id of the position token
     ///@param amount0Desired the desired amount of token0
@@ -62,5 +67,7 @@ contract IncreaseLiquidity is IIncreaseLiquidity {
         INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).increaseLiquidity(
                 params
             );
+
+        emit LiquidityIncreased(address(this), tokenId);
     }
 }

@@ -3,15 +3,12 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import '../helpers/ERC20Helper.sol';
-import '../helpers/UniswapNFTHelper.sol';
-import '../../interfaces/IUniswapAddressHolder.sol';
-import '../utils/Storage.sol';
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
+import '../helpers/UniswapNFTHelper.sol';
+import '../utils/Storage.sol';
 
 interface IDecreaseLiquidity {
     function decreaseLiquidity(
@@ -29,6 +26,11 @@ interface IDecreaseLiquidity {
 
 ///@notice action to decrease liquidity of an NFT position
 contract DecreaseLiquidity is IDecreaseLiquidity {
+    ///@notice emitted when liquidity is decreased
+    ///@param positionManager address of the position manager which decreased liquidity
+    ///@param tokenId id of the position
+    event LiquidityDecreased(address indexed positionManager, uint256 tokenId);
+
     ///@notice decrease the liquidity of a V3 position
     ///@param tokenId the tokenId of the position
     ///@param amount0Desired the amount of token0 liquidity desired
@@ -90,5 +92,7 @@ contract DecreaseLiquidity is IDecreaseLiquidity {
         (amount0, amount1) = INonfungiblePositionManager(
             Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()
         ).decreaseLiquidity(decreaseliquidityparams);
+
+        emit LiquidityDecreased(address(this), tokenId);
     }
 }

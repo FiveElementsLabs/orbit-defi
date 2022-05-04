@@ -18,6 +18,12 @@ interface IAaveWithdraw {
 
 ///@notice action to withdraw tokens from aave protocol
 contract AaveWithdraw is IAaveWithdraw {
+    ///@notice emitted when a withdraw from aave is made
+    ///@param positionManager address of aave positionManager which withdrew
+    ///@param token token address
+    ///@param amount amount withdrawn
+    event WithdrawnFromAave(address indexed positionManager, address token, uint256 amount);
+
     ///@notice withdraw from aave some token amount
     ///@param token token address
     ///@param id position to withdraw from
@@ -38,6 +44,7 @@ contract AaveWithdraw is IAaveWithdraw {
         );
 
         _removeAavePosition(token, id);
+        emit WithdrawnFromAave(address(this), token, amountWithdrawn);
     }
 
     function _getAmount(address token, uint256 id) internal view returns (uint256 amount) {

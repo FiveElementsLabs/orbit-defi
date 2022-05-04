@@ -3,11 +3,11 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol';
-import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
-import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
+import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
+import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
+import '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol';
 
 ///@title library to interact with NFT token and do some useful function with it
 library UniswapNFTHelper {
@@ -138,47 +138,5 @@ library UniswapNFTHelper {
                 token0,
                 token1
             );
-    }
-
-    ///@notice finds the best fee tier on which to perform a swap
-    ///@param token0 address of first token
-    ///@param token1 address of second token
-    ///@return fee suggested fee tier
-    function _findBestFee(
-        address token0,
-        address token1,
-        address factory
-    ) internal view returns (uint24 fee) {
-        uint128 bestLiquidity = 0;
-        uint16[4] memory fees = [100, 500, 3000, 10000];
-
-        for (uint8 i = 0; i < 4; i++) {
-            try this.getPoolLiquidity(token0, token1, uint24(fees[i]), factory) returns (uint128 nextLiquidity) {
-                if (nextLiquidity > bestLiquidity) {
-                    bestLiquidity = nextLiquidity;
-                    fee = fees[i];
-                }
-            } catch {
-                //pass
-            }
-        }
-
-        if (bestLiquidity == 0) {
-            revert('ZapOut::_findBestFee: No pool found with desired tokens');
-        }
-    }
-
-    ///@notice wrapper of getPoolLiquidity to use try/catch statement
-    ///@param token0 address of first token
-    ///@param token1 address of second token
-    ///@param fee pool fee tier
-    ///@return liquidity of the pool
-    function getPoolLiquidity(
-        address token0,
-        address token1,
-        uint24 fee,
-        address factory
-    ) public view returns (uint128 liquidity) {
-        return IUniswapV3Pool(_getPool(factory, token0, token1, fee)).liquidity();
     }
 }
