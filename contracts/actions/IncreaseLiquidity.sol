@@ -34,7 +34,7 @@ contract IncreaseLiquidity is IIncreaseLiquidity {
             'IncreaseLiquidity::increaseLiquidity: Amounts cannot be both zero'
         );
 
-        (address token0Address, address token1Address) = UniswapNFTHelper._getTokens(
+        (address token0Address, address token1Address, , , ) = UniswapNFTHelper._getTokens(
             tokenId,
             INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress())
         );

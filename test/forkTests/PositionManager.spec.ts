@@ -1,7 +1,6 @@
 import '@nomiclabs/hardhat-ethers';
 import { expect } from 'chai';
 import { ContractFactory, Contract } from 'ethers';
-import { AbiCoder } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import hre from 'hardhat';
 import UniswapV3Factoryjson from '@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json';
@@ -15,22 +14,11 @@ import {
   tokensFixture,
   poolFixture,
   mintSTDAmount,
-  routerFixture,
   getSelectors,
   findbalanceSlot,
   RegistryFixture,
 } from '../shared/fixtures';
-import {
-  MockToken,
-  IUniswapV3Pool,
-  INonfungiblePositionManager,
-  PositionManager,
-  TestRouter,
-  DepositRecipes,
-  UniswapAddressHolder,
-  AaveAddressHolder,
-  DiamondCutFacet,
-} from '../../typechain';
+import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, TestRouter, DepositRecipes } from '../../typechain';
 
 describe('PositionManager.sol', function () {
   //GLOBAL VARIABLE - USE THIS
@@ -55,14 +43,14 @@ describe('PositionManager.sol', function () {
 
   let Factory: Contract; // the factory that will deploy all pools
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
-  let PositionManager: PositionManager; //Our smart vault named PositionManager
+  let PositionManager: Contract; //Our smart vault named PositionManager
   let Router: TestRouter; //Our router to perform swap
   let SwapRouter: Contract;
   let MintAction: Contract;
   let DecreaseLiquidityAction: Contract;
   let DecreaseLiquidityFallback: Contract;
   let AaveDepositFallback: Contract;
-  let DepositRecipes: Contract;
+  let DepositRecipes: DepositRecipes;
   let LendingPool: Contract;
   let usdcMock: Contract;
   let wbtcMock: Contract;
@@ -168,7 +156,7 @@ describe('PositionManager.sol', function () {
     );
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
-    PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
+    PositionManager = await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed);
 
     //deploy an action to test
     const ActionFactory = await ethers.getContractFactory('Mint');
@@ -182,8 +170,10 @@ describe('PositionManager.sol', function () {
 
     //deploy depositRecipes
     const DepositRecipesFactory = await ethers.getContractFactory('DepositRecipes');
-    DepositRecipes = await DepositRecipesFactory.deploy(UniswapAddressHolder.address, Factory.address);
-    await DepositRecipes.deployed();
+    DepositRecipes = (await DepositRecipesFactory.deploy(
+      UniswapAddressHolder.address,
+      Factory.address
+    )) as DepositRecipes;
 
     //Deploy Aave Deposit Action
     const AaveDepositActionFactory = await ethers.getContractFactory('AaveDeposit');
@@ -195,45 +185,14 @@ describe('PositionManager.sol', function () {
     wbtcMock = await ethers.getContractAt('MockToken', '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599');
 
     //APPROVE
-    //recipient: NonFungiblePositionManager - spender: user
-    await tokenEth
-      .connect(user)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
-    await tokenUsdc
-      .connect(user)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
-    await tokenDai
-      .connect(user)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
-    //recipient: NonFungiblePositionManager - spender: liquidityProvider
-    await tokenEth
-      .connect(liquidityProvider)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
-    await tokenUsdc
-      .connect(liquidityProvider)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
-    await tokenDai
-      .connect(liquidityProvider)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
-    //recipient: PositionManager - spender: user
-    await tokenEth.connect(user).approve(PositionManager.address, ethers.utils.parseEther('1000000000000'));
-    await tokenUsdc.connect(user).approve(PositionManager.address, ethers.utils.parseEther('1000000000000'));
-    await tokenDai.connect(user).approve(PositionManager.address, ethers.utils.parseEther('1000000000000'));
-    await usdcMock.connect(user).approve(PositionManager.address, ethers.utils.parseEther('1000000000000'));
-    await wbtcMock.connect(user).approve(PositionManager.address, ethers.utils.parseEther('1000000000000'));
     //recipient: Router - spender: trader
     await tokenEth.connect(trader).approve(SwapRouter.address, ethers.utils.parseEther('1000000000000'));
     await tokenUsdc.connect(trader).approve(SwapRouter.address, ethers.utils.parseEther('1000000000000'));
     await tokenDai.connect(trader).approve(SwapRouter.address, ethers.utils.parseEther('1000000000000'));
-    //recipient: Pool0 - spender: trader
-    await tokenEth.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
-    await tokenUsdc.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
-    await tokenDai.connect(trader).approve(Pool0.address, ethers.utils.parseEther('1000000000000'));
     //approval user to registry for test
     await Registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
 
-    await NonFungiblePositionManager.setApprovalForAll(PositionManager.address, true);
-    //mint some tokens
+    //mint some tokens for user
     const slot = await findbalanceSlot(usdcMock, user);
     const encode = (types: any, values: any) => ethers.utils.defaultAbiCoder.encode(types, values);
 
@@ -241,6 +200,14 @@ describe('PositionManager.sol', function () {
     let value = encode(['uint'], [ethers.utils.parseEther('100000000')]);
 
     await hre.network.provider.send('hardhat_setStorageAt', [usdcMock.address, probedSlot, value]);
+
+    //mint some tokens for liquidityProvider
+    const slot2 = await findbalanceSlot(usdcMock, liquidityProvider);
+
+    let probedSlot2 = ethers.utils.keccak256(encode(['address', 'uint'], [liquidityProvider.address, slot2]));
+
+    await hre.network.provider.send('hardhat_setStorageAt', [usdcMock.address, probedSlot2, value]);
+
     //pass to PM some token
     await usdcMock.connect(user).approve(PositionManager.address, ethers.utils.parseEther('100000000'));
     await usdcMock.connect(user).transfer(PositionManager.address, ethers.utils.parseEther('10000000'));
@@ -369,31 +336,6 @@ describe('PositionManager.sol', function () {
     });
   });
 
-  describe('PositionManager - pushAavePosition', function () {
-    it('should give user shares if the first position is deposited', async function () {
-      await PositionManager.pushAavePosition(usdcMock.address, 200);
-      const positions = (await PositionManager.getAavePositions(usdcMock.address)) as any;
-      expect(positions[0].shares).to.eq(200);
-    });
-
-    it('should give user shares if a new position is deposited', async function () {
-      await AaveDepositFallback.connect(user).depositToAave(usdcMock.address, 200, LendingPool.address);
-      await PositionManager.pushAavePosition(usdcMock.address, 200);
-      expect(await PositionManager.aaveUserReserves(usdcMock.address)).to.equal(400);
-    });
-  });
-
-  describe('PositionManager - removeAavePosition', function () {
-    it('should correctly remove a position', async function () {
-      await PositionManager.pushAavePosition(usdcMock.address, 200);
-      let positions = (await PositionManager.getAavePositions(usdcMock.address)) as any;
-      expect(positions[0].shares).to.eq(200);
-
-      await PositionManager.removeAavePosition(usdcMock.address, positions[0].id);
-      const positionsAfter = (await PositionManager.getAavePositions(usdcMock.address)) as any;
-      expect(positionsAfter.length).to.eq(positions.length - 1);
-    });
-  });
   describe('PositionManager - onlyFactory', function () {
     it('should revert if not called by factory', async function () {
       await expect(
