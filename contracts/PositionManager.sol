@@ -25,24 +25,7 @@ import '../interfaces/ILendingPool.sol';
  */
 
 contract PositionManager is IPositionManager, ERC721Holder {
-    struct ModuleInfo {
-        bool isActive;
-        bytes data;
-    }
-
-    struct AaveReserve {
-        AavePosition[] positions;
-        uint256 sharesEmitted;
-    }
-
-    struct AavePosition {
-        uint256 id;
-        uint256 shares;
-    }
-
     uint256[] private uniswapNFTs;
-    uint256 private aaveIdCounter = 0;
-    mapping(address => AaveReserve) public aaveUserReserves;
     mapping(uint256 => mapping(address => ModuleInfo)) public activatedModules;
 
     ///@notice emitted when a position is withdrawn
@@ -67,6 +50,15 @@ contract PositionManager is IPositionManager, ERC721Holder {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
         require(msg.sender == Storage.owner, 'PositionManager::onlyOwner: Only owner can call this function');
+        _;
+    }
+
+    ///@notice modifier to check if the msg.sender is positionManager or a module
+    modifier onlyManagerOrModule() {
+        require(
+            _calledFromActiveModule(msg.sender) || msg.sender == address(this),
+            'PositionManager::fallback: Only active modules can call this function'
+        );
         _;
     }
 
@@ -125,21 +117,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
 
     ///@notice remove awareness of tokenId UniswapV3 NFT
     ///@param tokenId ID of the NFT to remove
-    function removePositionId(uint256 tokenId) public override {
-        StorageStruct storage Storage = PositionManagerStorage.getStorage();
-        ///@dev if ownerOf reverts, tokenId is non existent or it has been burned
-        try
-            INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(
-                tokenId
-            )
-        returns (address owner) {
-            require(
-                owner != address(this),
-                'PositionManager::removePositionId: positionManager is still owner of the token!'
-            );
-        } catch {
-            //do nothing
-        }
+    function removePositionId(uint256 tokenId) public override onlyManagerOrModule {
         for (uint256 i = 0; i < uniswapNFTs.length; i++) {
             if (uniswapNFTs[i] == tokenId) {
                 if (uniswapNFTs.length > 1) {
@@ -164,59 +142,6 @@ contract PositionManager is IPositionManager, ERC721Holder {
     function getAllUniPositions() external view override returns (uint256[] memory) {
         uint256[] memory uniswapNFTsMemory = uniswapNFTs;
         return uniswapNFTsMemory;
-    }
-
-    ///@notice add awareness of aave position to positionManager
-    ///@param token address of token deposited
-    ///@param amount of aTokens recieved from deposit
-    function pushAavePosition(address token, uint256 amount) public {
-        StorageStruct storage Storage = PositionManagerStorage.getStorage();
-        uint256 shares;
-        ///@notice when positionManager deposits into aave, we give the position one share
-        ///        for each aToken recieved * shares_emitted / total_amount_of_aTokens owned
-        if (aaveUserReserves[token].sharesEmitted == 0) {
-            shares = amount;
-        } else {
-            DataTypes.ReserveData memory reserveData = ILendingPool(Storage.aaveAddressHolder.lendingPoolAddress())
-                .getReserveData(token);
-            shares =
-                (amount * aaveUserReserves[token].sharesEmitted) /
-                IERC20(reserveData.aTokenAddress).balanceOf(address(this));
-        }
-
-        aaveUserReserves[token].positions.push(AavePosition({id: aaveIdCounter, shares: shares}));
-        aaveUserReserves[token].sharesEmitted += shares;
-        aaveIdCounter++;
-    }
-
-    ///@notice remove awareness of aave position from positionManager
-    ///@param token address of token withdrawn
-    ///@param id of the withdrawn position
-    function removeAavePosition(address token, uint256 id) public {
-        require(
-            aaveUserReserves[token].sharesEmitted > 0,
-            'PositionManager::removeAavePosition: no position to remove!'
-        );
-        for (uint256 i = 0; i < aaveUserReserves[token].positions.length; i++) {
-            if (aaveUserReserves[token].positions[i].id == id) {
-                if (aaveUserReserves[token].positions.length > 1) {
-                    aaveUserReserves[token].sharesEmitted -= aaveUserReserves[token].positions[i].shares;
-                    aaveUserReserves[token].positions[i] = aaveUserReserves[token].positions[
-                        aaveUserReserves[token].positions.length - 1
-                    ];
-                    aaveUserReserves[token].positions.pop();
-                } else {
-                    delete aaveUserReserves[token].positions;
-                }
-                i = aaveUserReserves[token].positions.length;
-            }
-        }
-    }
-
-    ///@notice return all aave positions in a certain token
-    ///@param token address of token
-    function getAavePositions(address token) public view returns (AavePosition[] memory) {
-        return aaveUserReserves[token].positions;
     }
 
     ///@notice toggle module state, activated (true) or not (false)
@@ -270,6 +195,44 @@ contract PositionManager is IPositionManager, ERC721Holder {
         return activatedModules[tokenId][moduleAddress].data;
     }
 
+    ///@notice stores old position data when liquidity is moved to aave
+    ///@param token address of the token
+    ///@param id ID of the position
+    ///@param tokenId of the position
+    function pushTokenIdToAave(
+        address token,
+        uint256 id,
+        uint256 tokenId
+    ) public override onlyManagerOrModule {
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+        require(
+            Storage.aaveUserReserves[token].positionShares[id] > 0,
+            'PositionManager::pushOldPositionData: positionShares does not exist'
+        );
+
+        Storage.aaveUserReserves[token].tokenIds[id] = tokenId;
+    }
+
+    ///@notice returns the old position data of an aave position
+    ///@param token address of the token
+    ///@param id ID of aave position
+    ///@return tokenId of the position
+    function getTokenIdFromAavePosition(address token, uint256 id)
+        public
+        view
+        override
+        onlyManagerOrModule
+        returns (uint256)
+    {
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+        require(
+            Storage.aaveUserReserves[token].positionShares[id] > 0,
+            'PositionManager::getOldPositionData: positionShares does not exist'
+        );
+
+        return Storage.aaveUserReserves[token].tokenIds[id];
+    }
+
     ///@notice return the address of this position manager owner
     ///@return address of the owner
     function getOwner() external view override returns (address) {
@@ -299,11 +262,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
         }
     }
 
-    fallback() external payable {
-        require(
-            _calledFromActiveModule(msg.sender) || msg.sender == address(this),
-            'PositionManager::fallback: Only active modules can call this function'
-        );
+    fallback() external payable onlyManagerOrModule {
         StorageStruct storage Storage;
         bytes32 position = PositionManagerStorage.key;
         ///@dev get diamond storage position
@@ -333,7 +292,8 @@ contract PositionManager is IPositionManager, ERC721Holder {
     }
 
     receive() external payable {
+        revert();
         //we need to decide what to do when the contract receives ether
-        //for now we just keep it to be reused in the future
+        //for now we just revert
     }
 }

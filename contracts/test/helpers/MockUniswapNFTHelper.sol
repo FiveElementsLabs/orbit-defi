@@ -41,10 +41,19 @@ contract MockUniswapNFTHelper {
     ///@param nonfungiblePositionManager instance of the nonfungiblePositionManager given by the caller (address)
     ///@return token0address address of the token0
     ///@return token1address address of the token1
+    ///@return fee fee tier of the pool
+    ///@return tickLower of position
+    ///@return tickUpper of position
     function getTokens(uint256 tokenId, INonfungiblePositionManager nonfungiblePositionManager)
         public
         view
-        returns (address token0address, address token1address)
+        returns (
+            address token0address,
+            address token1address,
+            uint24 fee,
+            int24 tickLower,
+            int24 tickUpper
+        )
     {
         return UniswapNFTHelper._getTokens(tokenId, nonfungiblePositionManager);
     }

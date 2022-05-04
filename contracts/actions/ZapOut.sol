@@ -32,7 +32,7 @@ contract ZapOut is IZapOut {
             Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()
         );
 
-        (address token0, address token1) = UniswapNFTHelper._getTokens(tokenId, nonfungiblePositionManager);
+        (address token0, address token1, , , ) = UniswapNFTHelper._getTokens(tokenId, nonfungiblePositionManager);
 
         (, , , , , , , uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(tokenId);
 

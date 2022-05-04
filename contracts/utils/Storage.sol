@@ -2,6 +2,7 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
+import '../../interfaces/IPositionManager.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
 import '../../interfaces/IAaveAddressHolder.sol';
 import '../../interfaces/IDiamondCut.sol';
@@ -29,6 +30,8 @@ struct StorageStruct {
     address owner;
     IRegistry registry;
     IAaveAddressHolder aaveAddressHolder;
+    uint256 aaveIdCounter;
+    mapping(address => IPositionManager.AaveReserve) aaveUserReserves;
 }
 
 library PositionManagerStorage {

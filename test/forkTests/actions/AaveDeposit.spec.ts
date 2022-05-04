@@ -7,6 +7,7 @@ import hre from 'hardhat';
 import UniswapV3Factoryjson from '@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json';
 import PositionManagerjson from '../../../artifacts/contracts/PositionManager.sol/PositionManager.json';
 import LendingPooljson from '@aave/protocol-v2/artifacts/contracts/protocol/lendingpool/LendingPool.sol/LendingPool.json';
+import ATokenjson from '@aave/protocol-v2/artifacts/contracts/protocol/tokenization/AToken.sol/AToken.json';
 import {
   NonFungiblePositionManagerDescriptorBytecode,
   tokensFixture,
@@ -42,6 +43,7 @@ describe('AaveDeposit.sol', function () {
   let AaveDepositFallback: Contract;
   let LendingPool: Contract;
   let usdcMock: Contract;
+  let abiCoder: AbiCoder;
 
   before(async function () {
     user = await user; //owner of the smart vault, a normal user
@@ -103,7 +105,7 @@ describe('AaveDeposit.sol', function () {
       diamondCutFacet.address,
       uniswapAddressHolder.address,
       registry.address,
-      aaveAddressHolder.address,
+      aaveAddressHolder.address
     );
 
     const contractsDeployed = await PositionManagerFactory.positionManagers(0);
@@ -149,18 +151,27 @@ describe('AaveDeposit.sol', function () {
 
     const tx = await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
     AaveDepositFallback = (await ethers.getContractAt('IAaveDeposit', PositionManager.address)) as Contract;
+
+    abiCoder = ethers.utils.defaultAbiCoder;
   });
 
   describe('AaveDepositAction - depositToAave', function () {
-    it('should deposit 10000 token to aave LendingPool', async function () {
-      const balanceBefore = await usdcMock.balanceOf(PositionManager.address);
+    it('should deposit to aave and correctly update position manager', async function () {
+      await usdcMock.connect(user).approve(AaveDepositFallback.address, 10000);
+      await usdcMock.connect(user).transfer(AaveDepositFallback.address, 10000);
 
-      await AaveDepositFallback.depositToAave(usdcMock.address, '10000', LendingPool.address);
-      const balanceAfter = await usdcMock.balanceOf(PositionManager.address);
-      const pmData = await LendingPool.getUserAccountData(PositionManager.address);
-      expect(pmData.totalCollateralETH).to.gt(0);
-      expect(balanceAfter).to.be.lt(balanceBefore);
-      expect(pmData.ltv).to.be.gt(0);
+      const tx = await AaveDepositFallback.connect(user).depositToAave(usdcMock.address, 10000);
+
+      const aUsdcAddress = (await LendingPool.getReserveData(usdcMock.address)).aTokenAddress;
+      const aUsdc = await ethers.getContractAtFromArtifact(ATokenjson, aUsdcAddress);
+      expect((await aUsdc.balanceOf(PositionManager.address)).toNumber()).to.be.closeTo(10000, 10);
+
+      const events = (await tx.wait()).events;
+      const depositEvent = events[events.length - 1];
+      const [id, shares] = abiCoder.decode(['uint256', 'uint256'], depositEvent.data);
+
+      expect(id).to.equal(0);
+      expect(shares.toNumber()).to.be.closeTo(9309, 10);
     });
   });
 });
