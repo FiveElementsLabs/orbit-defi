@@ -8,8 +8,6 @@ import '../../interfaces/IAaveAddressHolder.sol';
 import '../../interfaces/IDiamondCut.sol';
 import '../../interfaces/IRegistry.sol';
 
-import 'hardhat/console.sol';
-
 struct FacetAddressAndPosition {
     address facetAddress;
     uint96 functionSelectorPosition; // position in facetFunctionSelectors.functionSelectors array

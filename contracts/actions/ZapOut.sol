@@ -14,6 +14,7 @@ interface IZapOut {
     function zapOut(uint256 tokenId, address tokenOut) external returns (uint256);
 }
 
+///@notice ZapOut allows users to close positions and withdraw to a single output token
 contract ZapOut is IZapOut {
     ///@notice emitted when a UniswapNFT is zapped out
     ///@param positionManager address of PositionManager

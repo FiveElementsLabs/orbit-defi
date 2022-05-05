@@ -16,9 +16,9 @@ import {
   getSelectors,
   RegistryFixture,
 } from '../../shared/fixtures';
-import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, ZapOut, PositionManager } from '../../../typechain';
+import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, ZapIn, PositionManager } from '../../../typechain';
 
-describe('ZapOut.sol', function () {
+describe('ZapIn.sol', function () {
   //GLOBAL VARIABLE - USE THIS
   let user: any = ethers.getSigners().then(async (signers) => {
     return signers[0];
@@ -280,6 +280,19 @@ describe('ZapOut.sol', function () {
   });
 
   describe('ZapIn.sol', function () {
-    it('should correctly exit a position', async function () {});
+    it('should correctly mint a position', async function () {
+      const beforeLength = await PositionManager.getAllUniPositions();
+      const txMint = await ZapInFallback.connect(user).zapIn(
+        tokenUsdc.address,
+        1000,
+        tokenUsdc.address,
+        tokenDai.address,
+        -600,
+        600,
+        500
+      );
+      const afterLength = await PositionManager.getAllUniPositions();
+      expect(Number(afterLength)).to.be.gt(Number(beforeLength));
+    });
   });
 });

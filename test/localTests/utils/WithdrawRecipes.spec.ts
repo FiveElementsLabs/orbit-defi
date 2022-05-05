@@ -132,6 +132,16 @@ describe('WithdrawRecipes.sol', function () {
     DiamondCutFacet = await DiamondCutFacetFactory.deploy();
     await DiamondCutFacet.deployed();
 
+    //deploy mint contract
+    const ClosePositionFactory = await ethers.getContractFactory('ClosePosition');
+    const closePositionAction = await ClosePosition.deploy();
+    await closePositionAction.deployed();
+
+    //deploy zapIn contract
+    const ZapOutFactory = await ethers.getContractFactory('ZapOut');
+    const zapOutAction = await ZapOutFactory.deploy();
+    await zapOutAction.deployed();
+
     //APPROVE
 
     //recipient: NonFungiblePositionManager - spender: liquidityProvider
@@ -279,10 +289,6 @@ describe('WithdrawRecipes.sol', function () {
     let contractsDeployed = await PositionManagerFactory.positionManagers(0);
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
 
-    const ClosePositionFactory = await ethers.getContractFactory('ClosePosition');
-    ClosePosition = await ClosePositionFactory.deploy();
-    await ClosePosition.deployed();
-
     await registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
 
     // add actions to position manager using diamond pattern
@@ -290,9 +296,14 @@ describe('WithdrawRecipes.sol', function () {
     const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 };
 
     cut.push({
-      facetAddress: ClosePosition.address,
+      facetAddress: closePositionAction.address,
       action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(ClosePosition),
+      functionSelectors: await getSelectors(closePositionAction),
+    });
+    cut.push({
+      facetAddress: zapOutAction.address,
+      action: FacetCutAction.Add,
+      functionSelectors: await getSelectors(zapOutAction),
     });
 
     const diamondCut = await ethers.getContractAt('IDiamondCut', PositionManager.address);
@@ -301,15 +312,12 @@ describe('WithdrawRecipes.sol', function () {
 
     //deploy WithdrawRecipes contract
     let WithdrawRecipesFactory = await ethers.getContractFactory('WithdrawRecipes');
-    WithdrawRecipes = (await WithdrawRecipesFactory.deploy(
-      UniswapAddressHolder.address,
-      PositionManagerFactory.address
-    )) as WithdrawRecipes;
+    WithdrawRecipes = (await WithdrawRecipesFactory.deploy(PositionManagerFactory.address)) as WithdrawRecipes;
     await WithdrawRecipes.deployed();
 
     let DepositRecipesFactory = await ethers.getContractFactory('DepositRecipes');
     DepositRecipes = (await DepositRecipesFactory.deploy(
-      UniswapAddressHolder.address,
+      NonFungiblePositionManager.address,
       PositionManagerFactory.address
     )) as DepositRecipes;
     await DepositRecipes.deployed();
