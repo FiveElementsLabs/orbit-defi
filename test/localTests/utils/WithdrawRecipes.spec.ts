@@ -134,7 +134,7 @@ describe('WithdrawRecipes.sol', function () {
 
     //deploy mint contract
     const ClosePositionFactory = await ethers.getContractFactory('ClosePosition');
-    const closePositionAction = await ClosePosition.deploy();
+    const closePositionAction = await ClosePositionFactory.deploy();
     await closePositionAction.deployed();
 
     //deploy zapIn contract
