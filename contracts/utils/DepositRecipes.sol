@@ -91,7 +91,7 @@ contract DepositRecipes {
                 amount0Min: 0,
                 amount1Min: 0,
                 recipient: positionManagerAddress,
-                deadline: block.timestamp + 1
+                deadline: block.timestamp + 120
             })
         );
         IPositionManager(positionManagerAddress).pushPositionId(tokenId);

@@ -53,11 +53,11 @@ contract PositionManager is IPositionManager, ERC721Holder {
         _;
     }
 
-    ///@notice modifier to check if the msg.sender is positionManager or a module
-    modifier onlyManagerOrModule() {
+    ///@notice modifier to check if the msg.sender is whitelisted
+    modifier onlyWhitelisted() {
         require(
-            _calledFromActiveModule(msg.sender) || msg.sender == address(this),
-            'PositionManager::fallback: Only active modules can call this function'
+            _calledFromRecipe(msg.sender) || _calledFromActiveModule(msg.sender) || msg.sender == address(this),
+            'PositionManager::fallback: Only whitelisted addresses can call this function'
         );
         _;
     }
@@ -117,7 +117,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
 
     ///@notice remove awareness of tokenId UniswapV3 NFT
     ///@param tokenId ID of the NFT to remove
-    function removePositionId(uint256 tokenId) public override onlyManagerOrModule {
+    function removePositionId(uint256 tokenId) public override onlyWhitelisted {
         for (uint256 i = 0; i < uniswapNFTs.length; i++) {
             if (uniswapNFTs[i] == tokenId) {
                 if (uniswapNFTs.length > 1) {
@@ -203,7 +203,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
         address token,
         uint256 id,
         uint256 tokenId
-    ) public override onlyManagerOrModule {
+    ) public override onlyWhitelisted {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         require(
             Storage.aaveUserReserves[token].positionShares[id] > 0,
@@ -221,7 +221,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
         public
         view
         override
-        onlyManagerOrModule
+        onlyWhitelisted
         returns (uint256)
     {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
@@ -257,12 +257,24 @@ contract PositionManager is IPositionManager, ERC721Holder {
         for (uint256 i = 0; i < keys.length; i++) {
             if (Storage.registry.moduleAddress(keys[i]) == _address && Storage.registry.isActive(keys[i]) == true) {
                 isCalledFromActiveModule = true;
-                i = keys.length;
+                break;
             }
         }
     }
 
-    fallback() external payable onlyManagerOrModule {
+    function _calledFromRecipe(address _address) internal view returns (bool isCalledFromRecipe) {
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+        bytes32[] memory recipeKeys = PositionManagerStorage.getRecipesKeys();
+
+        for (uint256 i = 0; i < recipeKeys.length; i++) {
+            if (Storage.registry.moduleAddress(recipeKeys[i]) == _address) {
+                isCalledFromRecipe = true;
+                break;
+            }
+        }
+    }
+
+    fallback() external payable onlyWhitelisted {
         StorageStruct storage Storage;
         bytes32 position = PositionManagerStorage.key;
         ///@dev get diamond storage position
