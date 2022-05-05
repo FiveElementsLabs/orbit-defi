@@ -10,6 +10,7 @@ import '../../interfaces/IPositionManagerFactory.sol';
 import '../helpers/SwapHelper.sol';
 import '../helpers/UniswapNFTHelper.sol';
 import '../helpers/ERC20Helper.sol';
+import '../actions/Mint.sol';
 
 ///@notice DepositRecipes allows user to fill their position manager with UniswapV3 positions
 ///        by depositing an already minted NFT or by minting directly a new one
@@ -96,6 +97,24 @@ contract DepositRecipes {
         );
         IPositionManager(positionManagerAddress).pushPositionId(tokenId);
         emit PositionMinted(positionManagerAddress, msg.sender, tokenId);
+    }
+
+    function mintAndDeposit(
+        address token0,
+        address token1,
+        uint24 fee,
+        int24 tickLower,
+        int24 tickUpper,
+        uint256 amount0Desired,
+        uint256 amount1Desired
+    ) external {
+        address positionManagerAddress = positionManagerFactory.userToPositionManager(msg.sender);
+        (uint256 tokenId, , ) = IMint(positionManagerAddress).mint(
+            IMint.MintInput(token0, token1, fee, tickLower, tickUpper, amount0Desired, amount1Desired)
+        );
+        IPositionManager(positionManagerAddress).pushPositionId(tokenId);
+
+        emit PositionDeposited(positionManagerFactory.userToPositionManager(msg.sender), msg.sender, tokenId);
     }
 
     ///@notice mints a uni NFT with a single input token, the token in input can be different from the two position tokens

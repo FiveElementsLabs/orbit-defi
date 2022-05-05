@@ -13,20 +13,12 @@ import {
   tokensFixture,
   poolFixture,
   mintSTDAmount,
-  RegistryFixture,
   getSelectors,
+  RegistryFixture,
 } from '../../shared/fixtures';
-import {
-  MockToken,
-  IUniswapV3Pool,
-  INonfungiblePositionManager,
-  WithdrawRecipes,
-  DepositRecipes,
-  PositionManager,
-} from '../../../typechain';
-import { DepositRecipesInterface } from '../../../typechain/DepositRecipes';
+import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, ZapOut, PositionManager } from '../../../typechain';
 
-describe('WithdrawRecipes.sol', function () {
+describe('ZapOut.sol', function () {
   //GLOBAL VARIABLE - USE THIS
   let user: any = ethers.getSigners().then(async (signers) => {
     return signers[0];
@@ -45,16 +37,8 @@ describe('WithdrawRecipes.sol', function () {
   let Factory: Contract; // the factory that will deploy all pools
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
   let SwapRouter: Contract;
-  let WithdrawRecipes: WithdrawRecipes;
-  let DepositRecipes: DepositRecipes;
+  let ZapInFallback: ZapIn;
   let PositionManager: PositionManager;
-  let PositionManagerFactory: Contract;
-  let PositionManagerFactoryFactory: ContractFactory;
-  let DiamondCutFacet: Contract;
-  let UniswapAddressHolder: Contract;
-  let registry: Contract;
-  let ClosePosition: Contract;
-  let tokenId: any;
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
@@ -120,17 +104,42 @@ describe('WithdrawRecipes.sol', function () {
     await SwapRouter.deployed();
 
     //deploy uniswapAddressHolder
-    const UniswapAddressHolderFactory = await ethers.getContractFactory('UniswapAddressHolder');
-    UniswapAddressHolder = await UniswapAddressHolderFactory.deploy(
+    const uniswapAddressHolderFactory = await ethers.getContractFactory('UniswapAddressHolder');
+    const uniswapAddressHolder = await uniswapAddressHolderFactory.deploy(
       NonFungiblePositionManager.address,
       Factory.address,
       SwapRouter.address
     );
-    await UniswapAddressHolder.deployed();
+    await uniswapAddressHolder.deployed();
 
-    const DiamondCutFacetFactory = await ethers.getContractFactory('DiamondCutFacet');
-    DiamondCutFacet = await DiamondCutFacetFactory.deploy();
-    await DiamondCutFacet.deployed();
+    //deploy ZapOut Action
+    const ZapOutFactory = await ethers.getContractFactory('ZapIn');
+    const ZapInAction = (await ZapOutFactory.deploy()) as ZapIn;
+    await ZapInAction.deployed();
+
+    const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet');
+    const diamondCutFacet = await DiamondCutFacet.deploy();
+    await diamondCutFacet.deployed();
+
+    //deploy the PositionManagerFactory => deploy PositionManager
+    const PositionManagerFactoryFactory = await ethers.getContractFactory('PositionManagerFactory');
+    const PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
+    await PositionManagerFactory.deployed();
+
+    // deploy Registry
+    const registry = (await RegistryFixture(user.address, PositionManagerFactory.address)).registryFixture;
+    await registry.deployed();
+
+    await PositionManagerFactory.create(
+      user.address,
+      diamondCutFacet.address,
+      uniswapAddressHolder.address,
+      registry.address,
+      '0x0000000000000000000000000000000000000000'
+    );
+
+    const contractsDeployed = await PositionManagerFactory.positionManagers(0);
+    PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
 
     //APPROVE
 
@@ -144,16 +153,11 @@ describe('WithdrawRecipes.sol', function () {
     await tokenDai
       .connect(liquidityProvider)
       .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
-    //recipient: NonfungiblePositionManager - spender: user
-    await tokenEth
-      .connect(user)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
-    await tokenUsdc
-      .connect(user)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
-    await tokenDai
-      .connect(user)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
+    //recipient: positionManager - spender: user
+    await tokenEth.connect(user).approve(PositionManager.address, ethers.utils.parseEther('100000000000000'));
+    await tokenUsdc.connect(user).approve(PositionManager.address, ethers.utils.parseEther('100000000000000'));
+    //approval user to registry for test
+    await registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
 
     // give pools some liquidity
     await NonFungiblePositionManager.connect(liquidityProvider).mint(
@@ -258,118 +262,24 @@ describe('WithdrawRecipes.sol', function () {
       { gasLimit: 670000 }
     );
 
-    //deploy the PositionManagerFactory => deploy PositionManager
-    PositionManagerFactoryFactory = (await ethers.getContractFactory('PositionManagerFactory')) as ContractFactory;
-    PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
-    await PositionManagerFactory.deployed();
-
-    // deploy Registry
-    registry = (await RegistryFixture(user.address, PositionManagerFactory.address)).registryFixture;
-    await registry.deployed();
-
-    //deploy the PositionManagerFactory => deploy PositionManager
-    await PositionManagerFactory.create(
-      user.address,
-      DiamondCutFacet.address,
-      UniswapAddressHolder.address,
-      registry.address,
-      '0x0000000000000000000000000000000000000000'
-    );
-
-    let contractsDeployed = await PositionManagerFactory.positionManagers(0);
-    PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
-
-    const ClosePositionFactory = await ethers.getContractFactory('ClosePosition');
-    ClosePosition = await ClosePositionFactory.deploy();
-    await ClosePosition.deployed();
-
-    await registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
-
     // add actions to position manager using diamond pattern
     const cut = [];
     const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 };
 
     cut.push({
-      facetAddress: ClosePosition.address,
+      facetAddress: ZapInAction.address,
       action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(ClosePosition),
+      functionSelectors: await getSelectors(ZapInAction),
     });
 
     const diamondCut = await ethers.getContractAt('IDiamondCut', PositionManager.address);
 
-    const tx = await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
+    await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
 
-    //deploy WithdrawRecipes contract
-    let WithdrawRecipesFactory = await ethers.getContractFactory('WithdrawRecipes');
-    WithdrawRecipes = (await WithdrawRecipesFactory.deploy(
-      UniswapAddressHolder.address,
-      PositionManagerFactory.address
-    )) as WithdrawRecipes;
-    await WithdrawRecipes.deployed();
-
-    let DepositRecipesFactory = await ethers.getContractFactory('DepositRecipes');
-    DepositRecipes = (await DepositRecipesFactory.deploy(
-      UniswapAddressHolder.address,
-      PositionManagerFactory.address
-    )) as DepositRecipes;
-    await DepositRecipes.deployed();
-
-    await registry.addNewContract(
-      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('DepositRecipes')),
-      DepositRecipes.address
-    );
-    await registry.addNewContract(
-      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('WithdrawRecipes')),
-      WithdrawRecipes.address
-    );
-
-    //recipient: positionManager - spender: user
-    await tokenEth.connect(user).approve(DepositRecipes.address, ethers.utils.parseEther('100000000000000'));
-    await tokenUsdc.connect(user).approve(DepositRecipes.address, ethers.utils.parseEther('100000000000000'));
-    await tokenDai.connect(user).approve(DepositRecipes.address, ethers.utils.parseEther('100000000000000'));
+    ZapInFallback = (await ethers.getContractAt('IZapIn', PositionManager.address)) as ZapIn;
   });
 
-  beforeEach(async function () {
-    const mintTx = await NonFungiblePositionManager.connect(user).mint(
-      {
-        token0: tokenUsdc.address,
-        token1: tokenDai.address,
-        fee: 500,
-        tickLower: 0 - 60 * 1000,
-        tickUpper: 0 + 60 * 1000,
-        amount0Desired: '0x' + (1e15).toString(16),
-        amount1Desired: '0x' + (1e15).toString(16),
-        amount0Min: 0,
-        amount1Min: 0,
-        recipient: user.address,
-        deadline: Date.now() + 1000,
-      },
-      { gasLimit: 670000 }
-    );
-
-    const events: any = (await mintTx.wait()).events;
-    tokenId = await events[events.length - 1].args.tokenId.toNumber();
-
-    await NonFungiblePositionManager.setApprovalForAll(DepositRecipes.address, true);
-    await DepositRecipes.connect(user).depositUniNft([tokenId]);
-  });
-
-  describe('WithdrawRecipes.withdrawUniNft()', function () {
-    it('should withdraw UniNft', async function () {
-      expect(await NonFungiblePositionManager.ownerOf(tokenId)).to.be.equal(PositionManager.address);
-      const balanceBefore = await tokenUsdc.balanceOf(user.address);
-
-      await WithdrawRecipes.connect(user).withdrawUniNft([tokenId], true);
-      expect(await tokenUsdc.balanceOf(user.address)).to.be.gt(balanceBefore);
-      await expect(NonFungiblePositionManager.ownerOf(tokenId)).to.be.reverted;
-    });
-    it('should withdraw UniNft zapping out', async function () {
-      expect(await NonFungiblePositionManager.ownerOf(tokenId)).to.be.equal(PositionManager.address);
-      const balanceBefore = await tokenDai.balanceOf(user.address);
-
-      await WithdrawRecipes.connect(user).zapOutUniNft([tokenId], tokenDai.address);
-      expect(await tokenDai.balanceOf(user.address)).to.be.gt(balanceBefore);
-      await expect(NonFungiblePositionManager.ownerOf(tokenId)).to.be.reverted;
-    });
+  describe('ZapIn.sol', function () {
+    it('should correctly exit a position', async function () {});
   });
 });
