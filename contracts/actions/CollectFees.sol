@@ -7,7 +7,7 @@ import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.s
 import '../utils/Storage.sol';
 
 interface ICollectFees {
-    function collectFees(uint256 tokenId) external returns (uint256 amount0, uint256 amount1);
+    function collectFees(uint256 tokenId, bool returnTokensToUser) external returns (uint256 amount0, uint256 amount1);
 }
 
 ///@notice collect fees from a uniswapV3 position
@@ -21,9 +21,14 @@ contract CollectFees is ICollectFees {
 
     ///@notice collect fees from a uniswapV3 position
     ///@param tokenId of token to collect fees from
+    ///@param returnTokensToUser whether or not to return the collected fees to the user
     ///@return amount0 of token0 collected
     ///@return amount1 of token1 collected
-    function collectFees(uint256 tokenId) public override returns (uint256 amount0, uint256 amount1) {
+    function collectFees(uint256 tokenId, bool returnTokensToUser)
+        public
+        override
+        returns (uint256 amount0, uint256 amount1)
+    {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
         _updateUncollectedFees(tokenId);
@@ -35,7 +40,7 @@ contract CollectFees is ICollectFees {
 
         INonfungiblePositionManager.CollectParams memory params = INonfungiblePositionManager.CollectParams({
             tokenId: tokenId,
-            recipient: address(this),
+            recipient: returnTokensToUser ? Storage.owner : address(this),
             amount0Max: feesToken0,
             amount1Max: feesToken1
         });

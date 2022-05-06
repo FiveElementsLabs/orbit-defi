@@ -251,7 +251,7 @@ describe('CollectFees.sol', function () {
       }
 
       // collect fees
-      tx = await collectFees.connect(user).collectFees(tokenId);
+      tx = await collectFees.connect(user).collectFees(tokenId, false);
       events = (await tx.wait()).events as any;
       const collectEvent = events[events.length - 1];
       const feesCollected = abiCoder.decode(['uint256', 'uint256'], collectEvent.data);

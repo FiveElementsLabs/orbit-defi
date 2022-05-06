@@ -23,6 +23,7 @@ import {
   WithdrawRecipes,
   DepositRecipes,
   PositionManager,
+  MockUniswapNFTHelper,
 } from '../../../typechain';
 import { DepositRecipesInterface } from '../../../typechain/DepositRecipes';
 
@@ -54,6 +55,7 @@ describe('WithdrawRecipes.sol', function () {
   let UniswapAddressHolder: Contract;
   let registry: Contract;
   let ClosePosition: Contract;
+  let MockUniswapNFTHelper: MockUniswapNFTHelper;
   let tokenId: any;
 
   before(async function () {
@@ -136,6 +138,16 @@ describe('WithdrawRecipes.sol', function () {
     const ClosePositionFactory = await ethers.getContractFactory('ClosePosition');
     const closePositionAction = await ClosePositionFactory.deploy();
     await closePositionAction.deployed();
+
+    //deploy decreaseLiquidity contract
+    const DecreaseLiquidityFactory = await ethers.getContractFactory('DecreaseLiquidity');
+    const decreaseLiquidityAction = await DecreaseLiquidityFactory.deploy();
+    await decreaseLiquidityAction.deployed();
+
+    //deploy collectFees contract+
+    const CollectFeesFactory = await ethers.getContractFactory('CollectFees');
+    const collectFeesAction = await CollectFeesFactory.deploy();
+    await collectFeesAction.deployed();
 
     //deploy zapIn contract
     const ZapOutFactory = await ethers.getContractFactory('ZapOut');
@@ -305,6 +317,16 @@ describe('WithdrawRecipes.sol', function () {
       action: FacetCutAction.Add,
       functionSelectors: await getSelectors(zapOutAction),
     });
+    cut.push({
+      facetAddress: decreaseLiquidityAction.address,
+      action: FacetCutAction.Add,
+      functionSelectors: await getSelectors(decreaseLiquidityAction),
+    });
+    cut.push({
+      facetAddress: collectFeesAction.address,
+      action: FacetCutAction.Add,
+      functionSelectors: await getSelectors(collectFeesAction),
+    });
 
     const diamondCut = await ethers.getContractAt('IDiamondCut', PositionManager.address);
 
@@ -312,7 +334,10 @@ describe('WithdrawRecipes.sol', function () {
 
     //deploy WithdrawRecipes contract
     let WithdrawRecipesFactory = await ethers.getContractFactory('WithdrawRecipes');
-    WithdrawRecipes = (await WithdrawRecipesFactory.deploy(PositionManagerFactory.address)) as WithdrawRecipes;
+    WithdrawRecipes = (await WithdrawRecipesFactory.deploy(
+      PositionManagerFactory.address,
+      UniswapAddressHolder.address
+    )) as WithdrawRecipes;
     await WithdrawRecipes.deployed();
 
     let DepositRecipesFactory = await ethers.getContractFactory('DepositRecipes');
@@ -321,6 +346,10 @@ describe('WithdrawRecipes.sol', function () {
       PositionManagerFactory.address
     )) as DepositRecipes;
     await DepositRecipes.deployed();
+
+    let MockUniswapNFTHelperFactory = await ethers.getContractFactory('MockUniswapNFTHelper');
+    MockUniswapNFTHelper = (await MockUniswapNFTHelperFactory.deploy()) as MockUniswapNFTHelper;
+    await MockUniswapNFTHelper.deployed();
 
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('DepositRecipes')),
@@ -363,19 +392,46 @@ describe('WithdrawRecipes.sol', function () {
   });
 
   describe('WithdrawRecipes.withdrawUniNft()', function () {
-    it('should withdraw UniNft', async function () {
+    it('should fully withdraw an UniNft', async function () {
       expect(await NonFungiblePositionManager.ownerOf(tokenId)).to.be.equal(PositionManager.address);
       const balanceBefore = await tokenUsdc.balanceOf(user.address);
 
-      await WithdrawRecipes.connect(user).withdrawUniNft([tokenId], true);
+      await WithdrawRecipes.connect(user).withdrawUniNft(tokenId, 10000);
       expect(await tokenUsdc.balanceOf(user.address)).to.be.gt(balanceBefore);
       await expect(NonFungiblePositionManager.ownerOf(tokenId)).to.be.reverted;
     });
+
+    it('should withdraw a percentage of UniNft', async function () {
+      expect(await NonFungiblePositionManager.ownerOf(tokenId)).to.be.equal(PositionManager.address);
+      const balanceBefore = await tokenUsdc.balanceOf(user.address);
+      const [amount0Before, amount1Before] = await MockUniswapNFTHelper.getAmountsfromTokenId(
+        tokenId,
+        NonFungiblePositionManager.address,
+        UniswapAddressHolder.uniswapV3FactoryAddress()
+      );
+
+      const percentageToWithdraw = 5000;
+      await WithdrawRecipes.connect(user).withdrawUniNft(tokenId, percentageToWithdraw);
+
+      const [amount0After, amount1After] = await MockUniswapNFTHelper.getAmountsfromTokenId(
+        tokenId,
+        NonFungiblePositionManager.address,
+        UniswapAddressHolder.uniswapV3FactoryAddress()
+      );
+
+      expect(amount0Before.toNumber()).to.be.closeTo(2 * amount0After.toNumber(), amount0After.toNumber() / 100);
+      expect(amount1Before.toNumber()).to.be.closeTo(2 * amount1After.toNumber(), amount1After.toNumber() / 100);
+
+      const balanceAfter = await tokenUsdc.balanceOf(user.address);
+      expect(balanceAfter).to.be.gt(balanceBefore);
+      await expect(NonFungiblePositionManager.ownerOf(tokenId)).to.not.be.reverted;
+    });
+
     it('should withdraw UniNft zapping out', async function () {
       expect(await NonFungiblePositionManager.ownerOf(tokenId)).to.be.equal(PositionManager.address);
       const balanceBefore = await tokenDai.balanceOf(user.address);
 
-      await WithdrawRecipes.connect(user).zapOutUniNft([tokenId], tokenDai.address);
+      await WithdrawRecipes.connect(user).zapOutUniNft(tokenId, tokenDai.address);
       expect(await tokenDai.balanceOf(user.address)).to.be.gt(balanceBefore);
       await expect(NonFungiblePositionManager.ownerOf(tokenId)).to.be.reverted;
     });

@@ -95,7 +95,10 @@ contract AaveModule {
         );
 
         IDecreaseLiquidity(positionManager).decreaseLiquidity(tokenId, amount0ToDecrease, amount1ToDecrease);
-        (uint256 amount0Collected, uint256 amount1Collected) = ICollectFees(positionManager).collectFees(tokenId);
+        (uint256 amount0Collected, uint256 amount1Collected) = ICollectFees(positionManager).collectFees(
+            tokenId,
+            false
+        );
 
         uint256 amountToAave = 0;
         if (amount0Collected > 0) {
