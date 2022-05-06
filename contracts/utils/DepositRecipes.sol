@@ -9,15 +9,16 @@ import '../../interfaces/actions/IMint.sol';
 import '../../interfaces/actions/IZapIn.sol';
 import '../../interfaces/IPositionManager.sol';
 import '../../interfaces/IPositionManagerFactory.sol';
+import '../../interfaces/IUniswapAddressHolder.sol';
 
 ///@notice DepositRecipes allows user to fill their position manager with UniswapV3 positions
 ///        by depositing an already minted NFT or by minting directly a new one
 contract DepositRecipes {
-    INonfungiblePositionManager nonfungiblePositionManager;
+    IUniswapAddressHolder uniswapAddressHolder;
     IPositionManagerFactory positionManagerFactory;
 
-    constructor(address _nonfungiblePositionManager, address _positionManagerFactory) {
-        nonfungiblePositionManager = INonfungiblePositionManager(_nonfungiblePositionManager);
+    constructor(address _uniswapAddressHolder, address _positionManagerFactory) {
+        uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
         positionManagerFactory = IPositionManagerFactory(_positionManagerFactory);
     }
 
@@ -33,7 +34,12 @@ contract DepositRecipes {
         address positionManagerAddress = positionManagerFactory.userToPositionManager(msg.sender);
 
         for (uint32 i = 0; i < tokenIds.length; i++) {
-            nonfungiblePositionManager.safeTransferFrom(msg.sender, positionManagerAddress, tokenIds[i], '0x0');
+            INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).safeTransferFrom(
+                msg.sender,
+                positionManagerAddress,
+                tokenIds[i],
+                '0x0'
+            );
             IPositionManager(positionManagerAddress).pushPositionId(tokenIds[i]);
             emit PositionDeposited(positionManagerAddress, msg.sender, tokenIds[i]);
         }

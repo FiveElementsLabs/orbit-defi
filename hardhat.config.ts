@@ -2,6 +2,7 @@ import 'hardhat-gas-reporter';
 import '@nomiclabs/hardhat-waffle';
 import '@typechain/hardhat';
 import '@nomiclabs/hardhat-ethers';
+import 'hardhat-deploy';
 import 'solidity-coverage';
 import 'dotenv/config';
 
@@ -82,11 +83,16 @@ export default {
       timeout: 1800000,
     },
     mumbai: {
-      url: 'https://polygon-mumbai.g.alchemy.com/v2/mUKm3cdZmLfDUkWQfH4PFWvWoIPI7chM',
-      accounts: ['063b6d5c1358b3689dd713f0b9be34c8858ca95a26e4031a803ec30f5936cf18'],
+      url: process.env.ALCHEMY_MUMBAI,
+      accounts: [process.env.TEST_PRIVATE_KEY],
     },
   },
   mocha: {
     timeout: 100000,
+  },
+  namedAccounts: {
+    deployer: {
+      default: 0,
+    },
   },
 };
