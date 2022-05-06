@@ -1,9 +1,15 @@
 {
-  "name": "uni-optimizer",
+  "name": "orbit-defi",
   "version": "1.0.0",
   "description": "Uniswap v3 optimizer",
-  "repository": "https://github.com/FiveElementsLabs/uni-optimizer.git",
+  "repository": "https://github.com/FiveElementsLabs/orbit-defi.git",
   "author": "FiveElementsLabs",
+  "scripts": {
+    "node": "npx hardhat node",
+    "deploy:mumbai": "npx hardhat --network mumbai deploy",
+    "post_deploy:mumbai": "npx hardhat --network mumbai deploy --tags PostDeploy",
+    "deploy:polygon": "npx hardhat --network polygon deploy"
+  },
   "devDependencies": {
     "@aave/protocol-v2": "^1.0.1",
     "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers",

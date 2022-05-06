@@ -94,5 +94,8 @@ export default {
     deployer: {
       default: 0,
     },
+    multiSig: {
+      default: 0,
+    },
   },
 };
