@@ -9,10 +9,7 @@ import '../helpers/UniswapNFTHelper.sol';
 import '../helpers/ERC20Helper.sol';
 import '../utils/Storage.sol';
 import '../../interfaces/IPositionManager.sol';
-
-interface IZapOut {
-    function zapOut(uint256 tokenId, address tokenOut) external returns (uint256);
-}
+import '../../interfaces/actions/IZapOut.sol';
 
 ///@notice ZapOut allows users to close positions and withdraw to a single output token
 contract ZapOut is IZapOut {

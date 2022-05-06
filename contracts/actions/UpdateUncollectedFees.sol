@@ -5,10 +5,7 @@ pragma abicoder v2;
 
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '../utils/Storage.sol';
-
-interface IUpdateUncollectedFees {
-    function updateUncollectedFees(uint256 tokenId) external returns (uint256, uint256);
-}
+import '../../interfaces/actions/IUpdateUncollectedFees.sol';
 
 contract UpdateUncollectedFees is IUpdateUncollectedFees {
     ///@notice emitted when a UniswapNFT position is updated

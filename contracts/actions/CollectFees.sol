@@ -5,10 +5,7 @@ pragma abicoder v2;
 
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '../utils/Storage.sol';
-
-interface ICollectFees {
-    function collectFees(uint256 tokenId, bool returnTokensToUser) external returns (uint256 amount0, uint256 amount1);
-}
+import '../../interfaces/actions/ICollectFees.sol';
 
 ///@notice collect fees from a uniswapV3 position
 contract CollectFees is ICollectFees {

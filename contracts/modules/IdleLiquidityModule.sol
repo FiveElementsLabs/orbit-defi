@@ -5,12 +5,12 @@ pragma abicoder v2;
 
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
-import '../actions/ClosePosition.sol';
-import '../actions/SwapToPositionRatio.sol';
-import '../actions/Mint.sol';
 import '../helpers/UniswapNFTHelper.sol';
 import '../../interfaces/IPositionManager.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
+import '../../interfaces/actions/IClosePosition.sol';
+import '../../interfaces/actions/ISwapToPositionRatio.sol';
+import '../../interfaces/actions/IMint.sol';
 
 ///@title Idle Liquidity Module to manage liquidity for a user position
 contract IdleLiquidityModule {

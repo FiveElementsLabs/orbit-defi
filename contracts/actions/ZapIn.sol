@@ -10,18 +10,7 @@ import '../helpers/SwapHelper.sol';
 import '../helpers/ERC20Helper.sol';
 import '../utils/Storage.sol';
 import '../../interfaces/IPositionManager.sol';
-
-interface IZapIn {
-    function zapIn(
-        address tokenIn,
-        uint256 amountIn,
-        address token0,
-        address token1,
-        int24 tickLower,
-        int24 tickUpper,
-        uint24 fee
-    ) external returns (uint256);
-}
+import '../../interfaces/actions/IZapIn.sol';
 
 contract ZapIn is IZapIn {
     ///@notice emitted when a UniswapNFT is zapped in

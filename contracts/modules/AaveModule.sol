@@ -5,17 +5,17 @@ pragma abicoder v2;
 
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
+import '../helpers/UniswapNFTHelper.sol';
 import '../../interfaces/IAaveAddressHolder.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
 import '../../interfaces/IPositionManager.sol';
-import '../helpers/UniswapNFTHelper.sol';
-import '../actions/AaveDeposit.sol';
-import '../actions/AaveWithdraw.sol';
-import '../actions/DecreaseLiquidity.sol';
-import '../actions/CollectFees.sol';
-import '../actions/Swap.sol';
-import '../actions/SwapToPositionRatio.sol';
-import '../actions/IncreaseLiquidity.sol';
+import '../../interfaces/actions/IAaveDeposit.sol';
+import '../../interfaces/actions/IAaveWithdraw.sol';
+import '../../interfaces/actions/IDecreaseLiquidity.sol';
+import '../../interfaces/actions/ICollectFees.sol';
+import '../../interfaces/actions/ISwap.sol';
+import '../../interfaces/actions/ISwapToPositionRatio.sol';
+import '../../interfaces/actions/IIncreaseLiquidity.sol';
 
 contract AaveModule {
     IAaveAddressHolder public aaveAddressHolder;
@@ -236,10 +236,9 @@ contract AaveModule {
         address token1,
         uint24 fee
     ) public view returns (uint128 liquidity) {
-        StorageStruct storage Storage = PositionManagerStorage.getStorage();
         return
             IUniswapV3Pool(
-                UniswapNFTHelper._getPool(Storage.uniswapAddressHolder.uniswapV3FactoryAddress(), token0, token1, fee)
+                UniswapNFTHelper._getPool(uniswapAddressHolder.uniswapV3FactoryAddress(), token0, token1, fee)
             ).liquidity();
     }
 }

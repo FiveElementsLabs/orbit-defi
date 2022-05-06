@@ -11,9 +11,9 @@ import '../helpers/SwapHelper.sol';
 import '../helpers/UniswapNFTHelper.sol';
 import '../helpers/ERC20Helper.sol';
 import '../actions/CollectFees.sol';
-import '../actions/ClosePosition.sol';
-import '../actions/DecreaseLiquidity.sol';
-import '../actions/ZapOut.sol';
+import '../../interfaces/actions/IClosePosition.sol';
+import '../../interfaces/actions/IDecreaseLiquidity.sol';
+import '../../interfaces/actions/IZapOut.sol';
 
 //TODO: create a file for all interfaces of actions (or maybe one for each action)
 

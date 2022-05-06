@@ -5,8 +5,8 @@ pragma abicoder v2;
 
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
-import '../actions/Mint.sol';
-import '../actions/ZapIn.sol';
+import '../../interfaces/actions/IMint.sol';
+import '../../interfaces/actions/IZapIn.sol';
 import '../../interfaces/IPositionManager.sol';
 import '../../interfaces/IPositionManagerFactory.sol';
 
