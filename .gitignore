@@ -10,3 +10,4 @@ build
 #Hardhat files
 cache
 artifacts
+deployments
