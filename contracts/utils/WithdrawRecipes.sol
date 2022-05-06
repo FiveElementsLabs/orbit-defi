@@ -29,20 +29,20 @@ contract WithdrawRecipes {
 
     ///@notice remove uniswap position NFT to the position manager
     ///@param tokenId ID of deposited token
-    ///@param percentageToWithdraw percentage of token to withdraw in base points
-    function withdrawUniNft(uint256 tokenId, uint256 percentageToWithdraw) external {
+    ///@param partToWithdraw percentage of token to withdraw in base points
+    function withdrawUniNft(uint256 tokenId, uint256 partToWithdraw) external {
         require(
-            percentageToWithdraw > 0 && percentageToWithdraw <= 10000,
-            'WithdrawRecipes::withdrawUniNft: Percentage to withdraw must be between 0 and 10000'
+            partToWithdraw > 0 && partToWithdraw <= 10000,
+            'WithdrawRecipes::withdrawUniNft: part to withdraw must be between 0 and 10000'
         );
-        if (percentageToWithdraw == 10000) {
+        if (partToWithdraw == 10000) {
             IClosePosition(positionManagerFactory.userToPositionManager(msg.sender)).closePosition(
                 tokenId,
                 true ///@dev return the tokens to the user
             );
         } else {
             // 1. get position size
-            // 2. divide for percentage to withdraw
+            // 2. divide for part to withdraw
             (uint256 amount0, uint256 amount1) = UniswapNFTHelper._getAmountsfromTokenId(
                 tokenId,
                 INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()),
@@ -50,8 +50,8 @@ contract WithdrawRecipes {
             );
             IDecreaseLiquidity(positionManagerFactory.userToPositionManager(msg.sender)).decreaseLiquidity(
                 tokenId,
-                (amount0 * percentageToWithdraw) / 10000,
-                (amount1 * percentageToWithdraw) / 10000
+                (amount0 * partToWithdraw) / 10000,
+                (amount1 * partToWithdraw) / 10000
             );
             ICollectFees(positionManagerFactory.userToPositionManager(msg.sender)).collectFees(tokenId, true);
         }
