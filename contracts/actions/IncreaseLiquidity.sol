@@ -7,14 +7,7 @@ import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.s
 import '../helpers/ERC20Helper.sol';
 import '../helpers/UniswapNFTHelper.sol';
 import '../utils/Storage.sol';
-
-interface IIncreaseLiquidity {
-    function increaseLiquidity(
-        uint256 tokenId,
-        uint256 amount0Desired,
-        uint256 amount1Desired
-    ) external;
-}
+import '../../interfaces/actions/IIncreaseLiquidity.sol';
 
 ///@notice action to increase the liquidity of a V3 position
 contract IncreaseLiquidity is IIncreaseLiquidity {

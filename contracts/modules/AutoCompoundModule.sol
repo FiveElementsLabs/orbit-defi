@@ -5,9 +5,9 @@ pragma abicoder v2;
 
 import '../../interfaces/IPositionManager.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
-import '../actions/CollectFees.sol';
-import '../actions/IncreaseLiquidity.sol';
-import '../actions/UpdateUncollectedFees.sol';
+import '../../interfaces/actions/ICollectFees.sol';
+import '../../interfaces/actions/IIncreaseLiquidity.sol';
+import '../../interfaces/actions/IUpdateUncollectedFees.sol';
 import '../helpers/UniswapNFTHelper.sol';
 import '../utils/Storage.sol';
 
@@ -29,7 +29,8 @@ contract AutoCompoundModule {
             ///@dev check if compound need to be done
             if (_checkIfCompoundIsNeeded(address(positionManager), tokenId)) {
                 (uint256 amount0Desired, uint256 amount1Desired) = ICollectFees(address(positionManager)).collectFees(
-                    tokenId
+                    tokenId,
+                    false
                 );
 
                 IIncreaseLiquidity(address(positionManager)).increaseLiquidity(tokenId, amount0Desired, amount1Desired);

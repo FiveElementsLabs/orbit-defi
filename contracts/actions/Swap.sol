@@ -6,15 +6,7 @@ pragma abicoder v2;
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '../helpers/ERC20Helper.sol';
 import '../utils/Storage.sol';
-
-interface ISwap {
-    function swap(
-        address token0Address,
-        address token1Address,
-        uint24 fee,
-        uint256 amount0In
-    ) external returns (uint256 amount1Out);
-}
+import '../../interfaces/actions/ISwap.sol';
 
 contract Swap is ISwap {
     ///@notice emitted when a swap is performed

@@ -19,7 +19,7 @@ contract MockUniswapNFTHelper {
         address token0,
         address token1,
         uint24 fee
-    ) public view returns (address) {
+    ) public pure returns (address) {
         return UniswapNFTHelper._getPool(factory, token0, token1, fee);
     }
 
@@ -56,6 +56,20 @@ contract MockUniswapNFTHelper {
         )
     {
         return UniswapNFTHelper._getTokens(tokenId, nonfungiblePositionManager);
+    }
+
+    ///@notice get the amount of tokens in a position
+    ///@param tokenId id of the position (NFT)
+    ///@param nonfungiblePositionManager instance of the nonfungiblePositionManager given by the caller (address)
+    ///@param factory address of the UniswapV3Factory
+    ///@return uint256 amount of token0
+    ///@return uint256 amount of token1
+    function getAmountsfromTokenId(
+        uint256 tokenId,
+        INonfungiblePositionManager nonfungiblePositionManager,
+        address factory
+    ) public view returns (uint256, uint256) {
+        return UniswapNFTHelper._getAmountsfromTokenId(tokenId, nonfungiblePositionManager, factory);
     }
 
     ///@notice get the amount of tokens from liquidity and tick ranges

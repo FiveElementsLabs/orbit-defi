@@ -13,7 +13,7 @@ library ERC20Helper {
     ///@notice approve the token to be able to transfer it
     ///@param token address of the token
     ///@param spender address of the spender
-    ///@param amount address of the balance
+    ///@param amount amount to approve
     function _approveToken(
         address token,
         address spender,
@@ -25,11 +25,11 @@ library ERC20Helper {
         IERC20(token).approve(spender, amount);
     }
 
-    ///@notice return the allowance of the token that spender is able to spend
+    ///@notice return the allowance of the token that the spender is able to spend
     ///@param token address of the token
     ///@param owner address of the owner
     ///@param spender address of the spender
-    ///@return uint256 amount of the allowance
+    ///@return uint256 allowance amount
     function _getAllowance(
         address token,
         address owner,
@@ -38,11 +38,11 @@ library ERC20Helper {
         return IERC20(token).allowance(owner, spender);
     }
 
-    ///@notice pull token if it is below the threshold of amount
+    ///@notice pull token if it is below the threshold amount
     ///@param token address of the token
-    ///@param from address of the from
-    ///@param amount address of the amount
-    ///@return uint256 amount of the token that was pulled
+    ///@param from address of the sender
+    ///@param amount amount of tokens to be pulled
+    ///@return uint256 amount of the tokens that were pulled
     function _pullTokensIfNeeded(
         address token,
         address from,

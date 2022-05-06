@@ -6,15 +6,8 @@ pragma abicoder v2;
 import '../../interfaces/IAToken.sol';
 import '../../interfaces/ILendingPool.sol';
 import '../../interfaces/IPositionManager.sol';
+import '../../interfaces/actions/IAaveWithdraw.sol';
 import '../utils/Storage.sol';
-
-interface IAaveWithdraw {
-    ///@notice withdraw from aave some token amount
-    ///@param token token address
-    ///@param id position to withdraw from
-    ///@return amountWithdrawn amount of token withdrawn from aave
-    function withdrawFromAave(address token, uint256 id) external returns (uint256 amountWithdrawn);
-}
 
 ///@notice action to withdraw tokens from aave protocol
 contract AaveWithdraw is IAaveWithdraw {

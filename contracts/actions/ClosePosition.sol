@@ -7,16 +7,7 @@ import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.s
 import '../utils/Storage.sol';
 import '../../interfaces/IPositionManager.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
-
-interface IClosePosition {
-    function closePosition(uint256 tokenId, bool returnTokenToUser)
-        external
-        returns (
-            uint256,
-            uint256,
-            uint256
-        );
-}
+import '../../interfaces/actions/IClosePosition.sol';
 
 contract ClosePosition is IClosePosition {
     ///@notice emitted when a UniswapNFT position is closed

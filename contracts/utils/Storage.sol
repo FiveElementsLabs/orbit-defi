@@ -44,6 +44,15 @@ library PositionManagerStorage {
         }
     }
 
+    function getRecipesKeys() internal pure returns (bytes32[] memory) {
+        bytes32[] memory recipes = new bytes32[](2);
+
+        recipes[0] = keccak256(abi.encodePacked('DepositRecipes'));
+        recipes[1] = keccak256(abi.encodePacked('WithdrawRecipes'));
+
+        return recipes;
+    }
+
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     function setContractOwner(address _newOwner) internal {
