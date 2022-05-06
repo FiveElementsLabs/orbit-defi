@@ -10,7 +10,7 @@ import '../../interfaces/IPositionManagerFactory.sol';
 import '../helpers/SwapHelper.sol';
 import '../helpers/UniswapNFTHelper.sol';
 import '../helpers/ERC20Helper.sol';
-import '../actions/CollectFees.sol';
+import '../../interfaces/actions/ICollectFees.sol';
 import '../../interfaces/actions/IClosePosition.sol';
 import '../../interfaces/actions/IDecreaseLiquidity.sol';
 import '../../interfaces/actions/IZapOut.sol';
