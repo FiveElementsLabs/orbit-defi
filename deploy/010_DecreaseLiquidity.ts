@@ -22,6 +22,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   // add actions to diamond cut
   await PositionManagerFactory.pushActionData(DecreaseLiquidity.address, await getSelectors(DecreaseLiquidity));
+  await new Promise((resolve) => setTimeout(resolve, 30000));
 };
 
 export default func;

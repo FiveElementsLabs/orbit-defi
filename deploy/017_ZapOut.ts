@@ -18,8 +18,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const zapOut = await ethers.getContract('ZapOut');
   const PositionManagerFactory = await ethers.getContract('PositionManagerFactory');
+
   // add actions to diamond cut
   await PositionManagerFactory.pushActionData(zapOut.address, await getSelectors(zapOut));
+  await new Promise((resolve) => setTimeout(resolve, 30000));
 };
 
 export default func;
