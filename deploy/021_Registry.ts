@@ -7,9 +7,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const { deployer } = await getNamedAccounts();
 
-  await deploy('PositionManagerFactory', {
+  await deploy('Registry', {
     from: deployer,
-    args: [],
+    args: [deployer],
     log: true,
     autoMine: true,
   });

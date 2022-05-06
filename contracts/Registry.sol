@@ -32,9 +32,14 @@ contract Registry is IRegistry {
     ///@param isActive true if module is switched on, false otherwise
     event ModuleSwitched(bytes32 moduleId, bool isActive);
 
-    constructor(address _governance, address _positionManagerFactoryAddress) {
+    constructor(address _governance) {
         governance = _governance;
-        positionManagerFactoryAddress = _positionManagerFactoryAddress;
+    }
+
+    ///@notice sets the Position manager factory address
+    ///@param _positionManagerFactory the address of the position manager factory
+    function setPositionManagerFactory(address _positionManagerFactory) external onlyGovernance {
+        positionManagerFactoryAddress = _positionManagerFactory;
     }
 
     ///@notice change the address of the governance

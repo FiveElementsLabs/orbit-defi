@@ -1,5 +1,7 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
+import { ethers } from 'hardhat';
+import { getSelectors } from '../test/shared/fixtures';
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
@@ -7,17 +9,19 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const { deployer } = await getNamedAccounts();
 
-  const nonfungiblePositionManager = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
-  const PositionManagerFactory = await deployments.get('PositionManagerFactory');
-
-  await deploy('DepositRecipes', {
+  await deploy('Mint', {
     from: deployer,
-    args: [nonfungiblePositionManager, PositionManagerFactory.address],
+    args: [],
     log: true,
     autoMine: true,
   });
+
+  const mintAction = await ethers.getContract('Mint');
+  const PositionManagerFactory = await ethers.getContract('PositionManagerFactory');
+  // add actions to diamond cut
+  await PositionManagerFactory.pushActionData(mintAction.address, await getSelectors(mintAction));
 };
 
 export default func;
-func.tags = ['Recipe'];
+func.tags = ['Action'];
 func.dependencies = ['PositionManagerFactory'];
