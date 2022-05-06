@@ -5,11 +5,15 @@ pragma abicoder v2;
 
 import '@openzeppelin/contracts/token/ERC721/ERC721Holder.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
-import '../interfaces/IPositionManager.sol';
-import '../interfaces/IUniswapAddressHolder.sol';
-import '../interfaces/IDiamondCut.sol';
 import './helpers/ERC20Helper.sol';
 import './utils/Storage.sol';
+import '../interfaces/IPositionManager.sol';
+import '../interfaces/DataTypes.sol';
+import '../interfaces/IUniswapAddressHolder.sol';
+import '../interfaces/IAaveAddressHolder.sol';
+import '../interfaces/IDiamondCut.sol';
+import '../interfaces/IRegistry.sol';
+import '../interfaces/ILendingPool.sol';
 
 /**
  * @title   Position Manager
@@ -21,7 +25,69 @@ import './utils/Storage.sol';
  */
 
 contract PositionManager is IPositionManager, ERC721Holder {
-    constructor(address _owner, address _diamondCutFacet) payable {
+    uint256[] private uniswapNFTs;
+    mapping(uint256 => mapping(address => ModuleInfo)) public activatedModules;
+
+    ///@notice emitted when a position is withdrawn
+    ///@param to address of the user
+    ///@param tokenId ID of the withdrawn NFT
+    event PositionWithdrawn(address to, uint256 tokenId);
+
+    ///@notice emitted when a ERC20 is withdrawn
+    ///@param tokenAddress address of the ERC20
+    ///@param to address of the user
+    ///@param amount of the ERC20
+    event ERC20Withdrawn(address tokenAddress, address to, uint256 amount);
+
+    ///@notice emitted when a module is activated/deactivated
+    ///@param module address of module
+    ///@param tokenId position on which change is made
+    ///@param isActive true if module is activated, false if deactivated
+    event ModuleStateChanged(address module, uint256 tokenId, bool isActive);
+
+    ///@notice modifier to check if the msg.sender is the owner
+    modifier onlyOwner() {
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+
+        require(msg.sender == Storage.owner, 'PositionManager::onlyOwner: Only owner can call this function');
+        _;
+    }
+
+    ///@notice modifier to check if the msg.sender is whitelisted
+    modifier onlyWhitelisted() {
+        require(
+            _calledFromRecipe(msg.sender) || _calledFromActiveModule(msg.sender) || msg.sender == address(this),
+            'PositionManager::fallback: Only whitelisted addresses can call this function'
+        );
+        _;
+    }
+
+    ///@notice modifier to check if the msg.sender is the PositionManagerFactory
+    modifier onlyFactory(address _registry) {
+        require(
+            IRegistry(_registry).positionManagerFactoryAddress() == msg.sender,
+            'PositionManager::init: Only PositionManagerFactory can init this contract'
+        );
+        _;
+    }
+
+    ///@notice modifier to check if the position is owned by the positionManager
+    modifier onlyOwnedPosition(uint256 tokenId) {
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+        require(
+            INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(
+                tokenId
+            ) == address(this),
+            'PositionManager::onlyOwnedPosition: positionManager is not owner of the token'
+        );
+        _;
+    }
+
+    constructor(
+        address _owner,
+        address _diamondCutFacet,
+        address _registry
+    ) payable onlyFactory(_registry) {
         PositionManagerStorage.setContractOwner(_owner);
 
         // Add the diamondCut external function from the diamondCutFacet
@@ -36,76 +102,30 @@ contract PositionManager is IPositionManager, ERC721Holder {
         PositionManagerStorage.diamondCut(cut, address(0), '');
     }
 
-    mapping(uint256 => mapping(address => bool)) public activatedModules;
-
-    ///@notice emitted when a position is withdrawn
-    ///@param to address of the user
-    ///@param tokenId ID of the withdrawn NFT
-    event WithdrawUni(address to, uint256 tokenId);
-
-    ///@notice emitted when a ERC20 is withdrawn
-    ///@param tokenAddress address of the ERC20
-    ///@param to address of the user
-    ///@param amount of the ERC20
-    event WithdrawERC20(address tokenAddress, address to, uint256 amount);
-
-    uint256[] private uniswapNFTs;
-
-    function init(address _owner, address _uniswapAddressHolder) public {
+    function init(
+        address _owner,
+        address _uniswapAddressHolder,
+        address _registry,
+        address _aaveAddressHolder
+    ) public onlyFactory(_registry) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         Storage.owner = _owner;
         Storage.uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
+        Storage.registry = IRegistry(_registry);
+        Storage.aaveAddressHolder = IAaveAddressHolder(_aaveAddressHolder);
     }
 
-    //TODO: refactor of user parameters
-    struct Module {
-        address moduleAddress;
-        bool activated;
-    }
-
-    ///@notice withdraw uniswap position NFT from the position manager
-    ///@param tokenId ID of withdrawn token
-    function withdrawUniNft(uint256 tokenId) public override onlyOwner {
-        StorageStruct storage Storage = PositionManagerStorage.getStorage();
-
-        uint256 index = uniswapNFTs.length;
+    ///@notice remove awareness of tokenId UniswapV3 NFT
+    ///@param tokenId ID of the NFT to remove
+    function removePositionId(uint256 tokenId) public override onlyWhitelisted {
         for (uint256 i = 0; i < uniswapNFTs.length; i++) {
             if (uniswapNFTs[i] == tokenId) {
-                index = i;
-                i = uniswapNFTs.length;
-            }
-        }
-        require(index < uniswapNFTs.length, 'PositionManager::withdrawUniNFT: token ID not found!');
-        INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).safeTransferFrom(
-            address(this),
-            msg.sender,
-            tokenId,
-            '0x0'
-        );
-        emit WithdrawUni(msg.sender, tokenId);
-    }
-
-    ///@notice remove awareness of UniswapV3 NFT at index
-    ///@param index index of the NFT in the uniswapNFTs array
-    function removePositionIdAtIndex(uint256 index) internal {
-        require(
-            msg.sender == address(this),
-            'PositionManager::removePositionId: only PositionManager can remove a position'
-        );
-        if (uniswapNFTs.length > 1) {
-            uniswapNFTs[index] = uniswapNFTs[uniswapNFTs.length - 1];
-            uniswapNFTs.pop();
-        } else {
-            delete uniswapNFTs;
-        }
-    }
-
-    ///@notice remove awareness of _id UniswapV3 NFT
-    ///@param _id ID of the NFT to remove
-    function removePositionId(uint256 _id) public override {
-        for (uint256 i = 0; i < uniswapNFTs.length; i++) {
-            if (uniswapNFTs[i] == _id) {
-                removePositionIdAtIndex(i);
+                if (uniswapNFTs.length > 1) {
+                    uniswapNFTs[i] = uniswapNFTs[uniswapNFTs.length - 1];
+                    uniswapNFTs.pop();
+                } else {
+                    delete uniswapNFTs;
+                }
                 return;
             }
         }
@@ -113,14 +133,13 @@ contract PositionManager is IPositionManager, ERC721Holder {
 
     ///@notice add tokenId in the uniswapNFTs array
     ///@param tokenId ID of the added NFT
-    function pushPositionId(uint256 tokenId) public override {
-        //TODO: this needs a modifier or a require!
+    function pushPositionId(uint256 tokenId) public override onlyOwnedPosition(tokenId) {
         uniswapNFTs.push(tokenId);
     }
 
     ///@notice return the IDs of the uniswap positions
     ///@return array of IDs
-    function getAllUniPosition() external view override returns (uint256[] memory) {
+    function getAllUniPositions() external view override returns (uint256[] memory) {
         uint256[] memory uniswapNFTsMemory = uniswapNFTs;
         return uniswapNFTsMemory;
     }
@@ -133,17 +152,89 @@ contract PositionManager is IPositionManager, ERC721Holder {
         uint256 tokenId,
         address moduleAddress,
         bool activated
-    ) external override onlyOwner {
-        activatedModules[tokenId][moduleAddress] = activated;
+    ) external override onlyOwner onlyOwnedPosition(tokenId) {
+        activatedModules[tokenId][moduleAddress].isActive = activated;
+        emit ModuleStateChanged(moduleAddress, tokenId, activated);
     }
 
     ///@notice return the state of the module for tokenId position
     ///@param tokenId ID of the position
     ///@param moduleAddress address of the module
-    function getModuleState(uint256 tokenId, address moduleAddress) external view override returns (bool) {
-        return activatedModules[tokenId][moduleAddress];
+    function getModuleState(uint256 tokenId, address moduleAddress)
+        external
+        view
+        override
+        onlyOwnedPosition(tokenId)
+        returns (bool)
+    {
+        return activatedModules[tokenId][moduleAddress].isActive;
     }
 
+    ///@notice sets the data of a module strategy for tokenId position
+    ///@param tokenId ID of the position
+    ///@param moduleAddress address of the module
+    ///@param data data for the module
+    function setModuleData(
+        uint256 tokenId,
+        address moduleAddress,
+        bytes memory data
+    ) external override onlyOwner onlyOwnedPosition(tokenId) {
+        activatedModules[tokenId][moduleAddress].data = data;
+    }
+
+    ///@notice returns the data of a module strategy for tokenId position
+    ///@param tokenId ID of the position
+    ///@param moduleAddress address of the module
+    function getModuleData(uint256 tokenId, address moduleAddress)
+        external
+        view
+        override
+        onlyOwnedPosition(tokenId)
+        returns (bytes memory)
+    {
+        return activatedModules[tokenId][moduleAddress].data;
+    }
+
+    ///@notice stores old position data when liquidity is moved to aave
+    ///@param token address of the token
+    ///@param id ID of the position
+    ///@param tokenId of the position
+    function pushTokenIdToAave(
+        address token,
+        uint256 id,
+        uint256 tokenId
+    ) public override onlyWhitelisted {
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+        require(
+            Storage.aaveUserReserves[token].positionShares[id] > 0,
+            'PositionManager::pushOldPositionData: positionShares does not exist'
+        );
+
+        Storage.aaveUserReserves[token].tokenIds[id] = tokenId;
+    }
+
+    ///@notice returns the old position data of an aave position
+    ///@param token address of the token
+    ///@param id ID of aave position
+    ///@return tokenId of the position
+    function getTokenIdFromAavePosition(address token, uint256 id)
+        public
+        view
+        override
+        onlyWhitelisted
+        returns (uint256)
+    {
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+        require(
+            Storage.aaveUserReserves[token].positionShares[id] > 0,
+            'PositionManager::getOldPositionData: positionShares does not exist'
+        );
+
+        return Storage.aaveUserReserves[token].tokenIds[id];
+    }
+
+    ///@notice return the address of this position manager owner
+    ///@return address of the owner
     function getOwner() external view override returns (address) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         return Storage.owner;
@@ -154,29 +245,36 @@ contract PositionManager is IPositionManager, ERC721Holder {
     function withdrawERC20(address tokenAddress) external override onlyOwner {
         ERC20Helper._approveToken(tokenAddress, address(this), 2**256 - 1);
         uint256 amount = ERC20Helper._withdrawTokens(tokenAddress, msg.sender, 2**256 - 1);
-        emit WithdrawERC20(tokenAddress, msg.sender, amount);
+        emit ERC20Withdrawn(tokenAddress, msg.sender, amount);
     }
 
-    ///@notice modifier to check if the msg.sender is the owner
-    modifier onlyOwner() {
+    ///@notice function to check if an address corresponds to an active module (or this contract)
+    ///@param _address input address
+    ///@return isCalledFromActiveModule boolean
+    function _calledFromActiveModule(address _address) internal view returns (bool isCalledFromActiveModule) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
-
-        require(msg.sender == Storage.owner, 'PositionManager::onlyOwner: Only owner can call this function');
-        _;
+        bytes32[] memory keys = Storage.registry.getModuleKeys();
+        for (uint256 i = 0; i < keys.length; i++) {
+            if (Storage.registry.moduleAddress(keys[i]) == _address && Storage.registry.isActive(keys[i]) == true) {
+                isCalledFromActiveModule = true;
+                break;
+            }
+        }
     }
 
-    ///@notice modifier to check if the msg.sender is the owner or a module
-    modifier onlyOwnerOrModule() {
+    function _calledFromRecipe(address _address) internal view returns (bool isCalledFromRecipe) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
+        bytes32[] memory recipeKeys = PositionManagerStorage.getRecipesKeys();
 
-        require(
-            (msg.sender == Storage.owner),
-            'PositionManager::onlyOwnerOrModule: Only owner or module can call this function'
-        );
-        _;
+        for (uint256 i = 0; i < recipeKeys.length; i++) {
+            if (Storage.registry.moduleAddress(recipeKeys[i]) == _address) {
+                isCalledFromRecipe = true;
+                break;
+            }
+        }
     }
 
-    fallback() external payable {
+    fallback() external payable onlyWhitelisted {
         StorageStruct storage Storage;
         bytes32 position = PositionManagerStorage.key;
         ///@dev get diamond storage position
@@ -206,7 +304,8 @@ contract PositionManager is IPositionManager, ERC721Holder {
     }
 
     receive() external payable {
+        revert();
         //we need to decide what to do when the contract receives ether
-        //for now we just keep it to be reused in the future
+        //for now we just revert
     }
 }

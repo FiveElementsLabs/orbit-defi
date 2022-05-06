@@ -2,14 +2,18 @@ import '@nomiclabs/hardhat-ethers';
 import { ContractFactory, Contract } from 'ethers';
 import { AbiCoder } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
-const hre = require('hardhat');
-const UniswapV3Factoryjson = require('@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json');
-const NonFungiblePositionManagerjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json');
-const NonFungiblePositionManagerDescriptorjson = require('@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json');
-const PositionManagerjson = require('../artifacts/contracts/PositionManager.sol/PositionManager.json');
-const SwapRouterjson = require('@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json');
-const FixturesConst = require('../test/shared/fixtures');
-import { tokensFixture, poolFixture, routerFixture } from '../test/shared/fixtures';
+import hre from 'hardhat';
+import UniswapV3Factoryjson from '@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json';
+import NonFungiblePositionManagerjson from '@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json';
+import NonFungiblePositionManagerDescriptorjson from '@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json';
+import PositionManagerjson from '../artifacts/contracts/PositionManager.sol/PositionManager.json';
+import SwapRouterjson from '@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json';
+import {
+  NonFungiblePositionManagerDescriptorBytecode,
+  tokensFixture,
+  poolFixture,
+  routerFixture,
+} from '../test/shared/fixtures';
 import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, SwapToPositionRatio } from '../typechain';
 
 const debug = process.env.NODE_ENV !== 'production';
@@ -83,7 +87,7 @@ export const keeperSetup = async () => {
   //deploy NonFungiblePositionManagerDescriptor and NonFungiblePositionManager
   const NonFungiblePositionManagerDescriptorFactory = new ContractFactory(
     NonFungiblePositionManagerDescriptorjson['abi'],
-    FixturesConst.NonFungiblePositionManagerDescriptorBytecode,
+    NonFungiblePositionManagerDescriptorBytecode,
     user
   );
   const NonFungiblePositionManagerDescriptor = await NonFungiblePositionManagerDescriptorFactory.deploy(
@@ -121,6 +125,11 @@ export const keeperSetup = async () => {
   )) as Contract;
   await UniswapAddressHolder.deployed();
 
+  // deploy Registry
+  const Registry = await ethers.getContractFactory('Registry');
+  const registry = await Registry.deploy(user.address);
+  await registry.deployed();
+
   //deploy the PositionManagerFactory => deploy PositionManager
   const PositionManagerFactoryFactory = await ethers.getContractFactory('PositionManagerFactory');
   const PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
@@ -130,7 +139,13 @@ export const keeperSetup = async () => {
   const diamondCutFacet = await DiamondCutFacet.deploy();
   await diamondCutFacet.deployed();
 
-  await PositionManagerFactory.create(user.address, diamondCutFacet.address, UniswapAddressHolder.address);
+  await PositionManagerFactory.create(
+    user.address,
+    diamondCutFacet.address,
+    UniswapAddressHolder.address,
+    registry.address,
+    '0x0000000000000000000000000000000000000000'
+  );
 
   //Deploy DepositRecipes
   const DepositRecipesFactory = await ethers.getContractFactory('DepositRecipes');

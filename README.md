@@ -1,4 +1,8 @@
-<h1 align="center">Orbit: Vault Optimizer</h1>
+<div align="center">
+<img src="https://user-images.githubusercontent.com/48695862/164207845-eabce4bd-e5f7-4065-b4d7-0b8c32289704.png" />
+</div>
+
+<h1 align="center">Smart Vault Optimizer</h1>
 
 <div align="center">
 

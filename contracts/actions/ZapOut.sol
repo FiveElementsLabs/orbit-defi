@@ -3,28 +3,34 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
-import '../../interfaces/IPositionManager.sol';
-import '../utils/Storage.sol';
-import '../helpers/NFTHelper.sol';
+import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
+import '../helpers/UniswapNFTHelper.sol';
 import '../helpers/ERC20Helper.sol';
+import '../utils/Storage.sol';
+import '../../interfaces/IPositionManager.sol';
+import '../../interfaces/actions/IZapOut.sol';
 
-interface IZapOut {
-    function zapOut(uint256 tokenId, address tokenOut) external;
-}
-
+///@notice ZapOut allows users to close positions and withdraw to a single output token
 contract ZapOut is IZapOut {
+    ///@notice emitted when a UniswapNFT is zapped out
+    ///@param positionManager address of PositionManager
+    ///@param tokenId Id of zapped token
+    ///@param tokenOut address of token zapped out
+    ///@param amountOut amount of tokenOut zapped out
+    event ZappedOut(address indexed positionManager, uint256 tokenId, address tokenOut, uint256 amountOut);
+
     ///@notice burns a uni NFT with a single output token, the output token can be different from the two position tokens
     ///@param tokenId id of the NFT to burn
     ///@param tokenOut address of output token
-    function zapOut(uint256 tokenId, address tokenOut) public override {
+    ///@return uint256 amount of tokenOut withdrawn
+    function zapOut(uint256 tokenId, address tokenOut) public override returns (uint256) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         INonfungiblePositionManager nonfungiblePositionManager = INonfungiblePositionManager(
             Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()
         );
 
-        (address token0, address token1) = NFTHelper._getTokenAddress(tokenId, nonfungiblePositionManager);
+        (address token0, address token1, , , ) = UniswapNFTHelper._getTokens(tokenId, nonfungiblePositionManager);
 
         (, , , , , , , uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(tokenId);
 
@@ -60,6 +66,9 @@ contract ZapOut is IZapOut {
 
         ERC20Helper._approveToken(tokenOut, address(this), amount0 + amount1);
         ERC20Helper._withdrawTokens(tokenOut, Storage.owner, amount0 + amount1);
+
+        emit ZappedOut(address(this), tokenId, tokenOut, amount0 + amount1);
+        return amount0 + amount1;
     }
 
     ///@notice performs the swap to tokenOut
@@ -111,7 +120,7 @@ contract ZapOut is IZapOut {
         }
 
         if (bestLiquidity == 0) {
-            revert('No pool found');
+            revert('ZapOut::_findBestFee: No pool found with desired tokens');
         }
     }
 
@@ -128,7 +137,7 @@ contract ZapOut is IZapOut {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         return
             IUniswapV3Pool(
-                NFTHelper._getPoolAddress(Storage.uniswapAddressHolder.uniswapV3FactoryAddress(), token0, token1, fee)
+                UniswapNFTHelper._getPool(Storage.uniswapAddressHolder.uniswapV3FactoryAddress(), token0, token1, fee)
             ).liquidity();
     }
 }

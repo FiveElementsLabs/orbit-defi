@@ -24,9 +24,15 @@ jobs:
       - run: npx --version
 
       - run: npx hardhat typechain
+        env:
+          INFURA_MAINNET: ${{ secrets.INFURA_MAINNET }}
       - run: echo "🎉 Hardhat Typechain passed."
 
       - run: npx hardhat test
+        env:
+          INFURA_MAINNET: ${{ secrets.INFURA_MAINNET }}
       - run: echo "🎉 Hardhat Test passed."
 
       - run: npx hardhat coverage
+        env:
+          INFURA_MAINNET: ${{ secrets.INFURA_MAINNET }}

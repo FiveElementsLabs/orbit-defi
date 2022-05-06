@@ -7,22 +7,13 @@ import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.s
 import '../utils/Storage.sol';
 import '../../interfaces/IPositionManager.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
+import '../../interfaces/actions/IClosePosition.sol';
 
-interface IClosePosition {
-    function closePosition(uint256 tokenId, bool returnTokenToUser)
-        external
-        returns (
-            uint256,
-            uint256,
-            uint256
-        );
-}
-
-contract ClosePosition {
+contract ClosePosition is IClosePosition {
     ///@notice emitted when a UniswapNFT position is closed
-    ///@param from address of PositionManager
+    ///@param positionManager address of PositionManager
     ///@param tokenId Id of the closed token
-    event CloseUniPosition(address indexed from, uint256 tokenId);
+    event PositionClosed(address indexed positionManager, uint256 tokenId);
 
     ///@notice close a UniswapV3 position NFT
     ///@param tokenId id of the token to close
@@ -32,6 +23,7 @@ contract ClosePosition {
     ///@return uint256 amount of token1 returned
     function closePosition(uint256 tokenId, bool returnTokenToUser)
         public
+        override
         returns (
             uint256,
             uint256,
@@ -73,7 +65,7 @@ contract ClosePosition {
         IPositionManager(address(this)).removePositionId(tokenId);
 
         //delete the position from the position manager
-        emit CloseUniPosition(address(this), tokenId);
+        emit PositionClosed(address(this), tokenId);
 
         //return the tokenId and tokens closed
         return (tokenId, token0Closed, token1Closed);

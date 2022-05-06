@@ -1,8 +1,8 @@
-const hre = require('hardhat');
+import hre from 'hardhat';
 
 import { ethers } from 'hardhat';
 import { PositionManager } from '../typechain';
-const PositionManagerjson = require('../artifacts/contracts/PositionManager.sol/PositionManager.json');
+import PositionManagerjson from '../artifacts/contracts/PositionManager.sol/PositionManager.json';
 
 import { keeperSetup } from './keeper_setup';
 
@@ -29,7 +29,7 @@ async function main() {
         positionManagerAddress
       )) as PositionManager;
 
-      const positionIds = await positionManagerContract.getAllUniPosition();
+      const positionIds = await positionManagerContract.getAllUniPositions();
 
       for (const positionId of positionIds) {
         if (debug) console.log(`-- Rebalancing position ID: ${positionId}`);
@@ -52,7 +52,7 @@ async function main() {
         positionManagerAddress
       )) as PositionManager;
 
-      const positionIds = await positionManagerContract.getAllUniPosition();
+      const positionIds = await positionManagerContract.getAllUniPositions();
 
       for (const positionId of positionIds) {
         if (debug) console.log(`-- Autocompounding position ID: ${positionId}`);

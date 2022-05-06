@@ -2,8 +2,11 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
+import '../../interfaces/IPositionManager.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
+import '../../interfaces/IAaveAddressHolder.sol';
 import '../../interfaces/IDiamondCut.sol';
+import '../../interfaces/IRegistry.sol';
 
 struct FacetAddressAndPosition {
     address facetAddress;
@@ -25,6 +28,10 @@ struct StorageStruct {
     address[] facetAddresses;
     IUniswapAddressHolder uniswapAddressHolder;
     address owner;
+    IRegistry registry;
+    IAaveAddressHolder aaveAddressHolder;
+    uint256 aaveIdCounter;
+    mapping(address => IPositionManager.AaveReserve) aaveUserReserves;
 }
 
 library PositionManagerStorage {
@@ -37,6 +44,15 @@ library PositionManagerStorage {
         }
     }
 
+    function getRecipesKeys() internal pure returns (bytes32[] memory) {
+        bytes32[] memory recipes = new bytes32[](2);
+
+        recipes[0] = keccak256(abi.encodePacked('DepositRecipes'));
+        recipes[1] = keccak256(abi.encodePacked('WithdrawRecipes'));
+
+        return recipes;
+    }
+
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     function setContractOwner(address _newOwner) internal {
@@ -44,6 +60,14 @@ library PositionManagerStorage {
         address previousOwner = ds.owner;
         ds.owner = _newOwner;
         emit OwnershipTransferred(previousOwner, _newOwner);
+    }
+
+    function enforceIsGovernance() internal view {
+        StorageStruct storage ds = getStorage();
+        require(
+            msg.sender == ds.registry.governance(),
+            'Storage:enforceIsContractOwner:: Must be contract governance to call this function'
+        );
     }
 
     event DiamondCut(IDiamondCut.FacetCut[] _diamondCut, address _init, bytes _calldata);
