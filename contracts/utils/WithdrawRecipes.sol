@@ -4,14 +4,12 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
-import '../helpers/SwapHelper.sol';
 import '../helpers/UniswapNFTHelper.sol';
-import '../helpers/ERC20Helper.sol';
 import '../../interfaces/IPositionManager.sol';
 import '../../interfaces/IPositionManagerFactory.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
-import '../../interfaces/actions/IClosePosition.sol';
 import '../../interfaces/actions/ICollectFees.sol';
+import '../../interfaces/actions/IClosePosition.sol';
 import '../../interfaces/actions/IDecreaseLiquidity.sol';
 import '../../interfaces/actions/IZapOut.sol';
 
