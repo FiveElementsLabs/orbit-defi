@@ -15,7 +15,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45', //swapRouter address
     ],
     log: true,
-    autoMine: true,
   });
 };
 

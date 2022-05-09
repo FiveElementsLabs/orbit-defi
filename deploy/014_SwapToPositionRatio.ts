@@ -23,7 +23,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   // add actions to diamond cut
   await PositionManagerFactory.pushActionData(
     swapToPositionRatioAction.address,
-    await getSelectors(swapToPositionRatioAction)
+    await getSelectors(swapToPositionRatioAction),
+    {
+      gasPrice: Config.gasPrice,
+      gasLimit: Config.gasLimit,
+    }
   );
   await new Promise((resolve) => setTimeout(resolve, Config.sleep));
 };

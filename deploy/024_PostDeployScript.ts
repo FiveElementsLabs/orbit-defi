@@ -20,21 +20,33 @@ const PostDeployScript: DeployFunction = async function (hre: HardhatRuntimeEnvi
 
   await Registry.addNewContract(
     hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('AutoCompoundModule')),
-    AutoCompoundModule.address
+    AutoCompoundModule.address,
+    {
+      gasPrice: Config.gasPrice,
+      gasLimit: Config.gasLimit,
+    }
   );
   await new Promise((resolve) => setTimeout(resolve, Config.sleep));
   console.log(':: Added AutoCompoundModule to Registry');
 
   await Registry.addNewContract(
     hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('IdleLiquidityModule')),
-    IdleLiquidityModule.address
+    IdleLiquidityModule.address,
+    {
+      gasPrice: Config.gasPrice,
+      gasLimit: Config.gasLimit,
+    }
   );
   await new Promise((resolve) => setTimeout(resolve, Config.sleep));
   console.log(':: Added IdleLiquidityModule to Registry');
 
   await Registry.addNewContract(
     hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('AaveModule')),
-    AaveModule.address
+    AaveModule.address,
+    {
+      gasPrice: Config.gasPrice,
+      gasLimit: Config.gasLimit,
+    }
   );
   await new Promise((resolve) => setTimeout(resolve, Config.sleep));
   console.log(':: Added AaveModule to Registry');
@@ -45,27 +57,41 @@ const PostDeployScript: DeployFunction = async function (hre: HardhatRuntimeEnvi
 
   await Registry.addNewContract(
     hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('DepositRecipes')),
-    DepositRecipes.address
+    DepositRecipes.address,
+    {
+      gasPrice: Config.gasPrice,
+      gasLimit: Config.gasLimit,
+    }
   );
   await new Promise((resolve) => setTimeout(resolve, Config.sleep));
   console.log(':: Added DepositRecipes to Registry');
 
   await Registry.addNewContract(
     hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('WithdrawRecipes')),
-    WithdrawRecipes.address
+    WithdrawRecipes.address,
+    {
+      gasPrice: Config.gasPrice,
+      gasLimit: Config.gasLimit,
+    }
   );
   await new Promise((resolve) => setTimeout(resolve, Config.sleep));
   console.log(':: Added WithdrawRecipes to Registry');
 
   // Set Timelock as Registry owner
   const Timelock = await ethers.getContract('Timelock');
-  await Registry.changeGovernance(Timelock.address);
+  await Registry.changeGovernance(Timelock.address, {
+    gasPrice: Config.gasPrice,
+    gasLimit: Config.gasLimit,
+  });
   await new Promise((resolve) => setTimeout(resolve, Config.sleep));
   console.log(':: Changed Registry governance to Timelock');
 
   // Set factory owner (has rights to push actions)
   const PositionManagerFactory = await ethers.getContract('PositionManagerFactory');
-  await PositionManagerFactory.changeGovernance(multiSig);
+  await PositionManagerFactory.changeGovernance(multiSig, {
+    gasPrice: Config.gasPrice,
+    gasLimit: Config.gasLimit,
+  });
   console.log(':: Changed PositionManagerFactory governance to multiSig');
 };
 
