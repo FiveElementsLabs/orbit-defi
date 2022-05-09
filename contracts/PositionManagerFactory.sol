@@ -8,11 +8,11 @@ import '../interfaces/IPositionManagerFactory.sol';
 import '../interfaces/IDiamondCut.sol';
 
 contract PositionManagerFactory is IPositionManagerFactory {
-    address governance;
-    address diamondCutFacet;
+    address public governance;
+    address public diamondCutFacet;
     address uniswapAddressHolder;
     address aaveAddressHolder;
-    address registry;
+    address public registry;
     address[] public positionManagers;
     IDiamondCut.FacetCut[] public actions;
     mapping(address => address) public override userToPositionManager;
@@ -27,8 +27,18 @@ contract PositionManagerFactory is IPositionManagerFactory {
         _;
     }
 
-    constructor(address _governance) {
+    constructor(
+        address _governance,
+        address _registry,
+        address _diamondCutFacet,
+        address _uniswapAddressHolder,
+        address _aaveAddressHolder
+    ) public {
         governance = _governance;
+        registry = _registry;
+        diamondCutFacet = _diamondCutFacet;
+        uniswapAddressHolder = _uniswapAddressHolder;
+        aaveAddressHolder = _aaveAddressHolder;
     }
 
     ///@notice changes the address of the governance
@@ -41,6 +51,7 @@ contract PositionManagerFactory is IPositionManagerFactory {
     ///@param actionAddress address of the action
     ///@param selectors action selectors
     function pushActionData(address actionAddress, bytes4[] calldata selectors) external onlyGovernance {
+        require(actionAddress != address(0), 'PositionManagerFactory::pushActionData: Action address cannot be 0');
         actions.push(
             IDiamondCut.FacetCut({
                 facetAddress: actionAddress,
@@ -54,7 +65,7 @@ contract PositionManagerFactory is IPositionManagerFactory {
     ///@return address[] return array of PositionManager address updated with the last deployed PositionManager
     function create() public override returns (address[] memory) {
         require(
-            userToPositionManager[msg.sender] == 0x0000000000000000000000000000000000000000,
+            userToPositionManager[msg.sender] == address(0),
             'PositionManagerFactory::create: User already has a PositionManager'
         );
         PositionManager manager = new PositionManager(msg.sender, diamondCutFacet, registry);

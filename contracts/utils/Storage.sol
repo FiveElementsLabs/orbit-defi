@@ -65,8 +65,8 @@ library PositionManagerStorage {
     function enforceIsGovernance() internal view {
         StorageStruct storage ds = getStorage();
         require(
-            msg.sender == ds.registry.governance(),
-            'Storage:enforceIsContractOwner:: Must be contract governance to call this function'
+            msg.sender == ds.registry.positionManagerFactoryAddress(),
+            'Storage:enforceIsContractOwner:: Must be contract positionManagerFactory to call this function'
         );
     }
 

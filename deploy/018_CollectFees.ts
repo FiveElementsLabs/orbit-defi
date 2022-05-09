@@ -2,6 +2,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { ethers } from 'hardhat';
 import { getSelectors } from '../test/shared/fixtures';
+import { Config } from './000_Config';
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
@@ -9,19 +10,20 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const { deployer } = await getNamedAccounts();
 
-  await deploy('ClosePosition', {
+  await deploy('CollectFees', {
     from: deployer,
     args: [],
     log: true,
     autoMine: true,
   });
 
-  const closePosition = await ethers.getContract('ClosePosition');
+  const CollectFees = await ethers.getContract('CollectFees');
+
   const PositionManagerFactory = await ethers.getContract('PositionManagerFactory');
 
   // add actions to diamond cut
-  await PositionManagerFactory.pushActionData(closePosition.address, await getSelectors(closePosition));
-  await new Promise((resolve) => setTimeout(resolve, 30000));
+  await PositionManagerFactory.pushActionData(CollectFees.address, await getSelectors(CollectFees));
+  await new Promise((resolve) => setTimeout(resolve, Config.sleep));
 };
 
 export default func;

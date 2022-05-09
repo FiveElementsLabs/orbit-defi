@@ -85,6 +85,12 @@ export default {
     mumbai: {
       url: process.env.ALCHEMY_MUMBAI,
       accounts: [process.env.TEST_PRIVATE_KEY],
+      verify: {
+        etherscan: {
+          apiKey: process.env.ETHERSCAN_API_KEY,
+          apiUrl: 'https://mumbai.polygonscan.com/',
+        },
+      },
     },
   },
   mocha: {

@@ -8,6 +8,7 @@ import {
   poolFixture,
   routerFixture,
   RegistryFixture,
+  getSelectors,
 } from '../shared/fixtures';
 import { MockToken, INonfungiblePositionManager, ISwapRouter, UniswapAddressHolder, Registry } from '../../typechain';
 
@@ -30,12 +31,15 @@ describe('PositionManagerFactory.sol', function () {
   let poolI: any;
   let diamondCutFacet: any;
   let registry: any;
+  let mintAction: any;
+  let AaveAddressHolder: Contract;
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
 
     signers = await ethers.getSigners();
     const user = signers[0];
+    owner = signers[0];
     token0 = await tokensFixture('ETH', 18).then((tokenFix) => tokenFix.tokenFixture);
     token1 = await tokensFixture('USDC', 6).then((tokenFix) => tokenFix.tokenFixture);
 
@@ -85,6 +89,11 @@ describe('PositionManagerFactory.sol', function () {
     )) as UniswapAddressHolder;
     await uniswapAddressHolder.deployed();
 
+    //deploy aaveAddressHolder
+    const aaveAddressHolderFactory = await ethers.getContractFactory('AaveAddressHolder');
+    AaveAddressHolder = await aaveAddressHolderFactory.deploy(NonFungiblePositionManager.address); //random address because it is not used
+    await AaveAddressHolder.deployed();
+
     // deploy DiamondCutFacet ----------------------------------------------------------------------
     const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet');
     diamondCutFacet = await DiamondCutFacet.deploy();
@@ -96,28 +105,43 @@ describe('PositionManagerFactory.sol', function () {
     await token1.approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'), {
       from: signers[0].address,
     });
+
+    const Mint = await ethers.getContractFactory('Mint');
+    mintAction = await Mint.deploy();
+    await mintAction.deployed();
   });
 
   describe('PositionManagerFactory - create', function () {
     it('Should create a new position manager instance', async function () {
       const PositionManagerFactory = await ethers.getContractFactory('PositionManagerFactory');
 
-      PositionManagerFactoryInstance = await PositionManagerFactory.deploy();
+      // deploy Registry
+      registry = (await RegistryFixture(owner.address)).registryFixture;
+      await registry.deployed();
+
+      PositionManagerFactoryInstance = await PositionManagerFactory.deploy(
+        owner.address,
+        registry.address,
+        diamondCutFacet.address,
+        uniswapAddressHolder.address,
+        AaveAddressHolder.address
+      );
       await PositionManagerFactoryInstance.deployed();
+
+      await registry.addNewContract(
+        hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('PositionManagerFactory')),
+        PositionManagerFactoryInstance.address
+      );
 
       [owner] = await ethers.getSigners();
 
-      // deploy Registry
-      const registry = (await RegistryFixture(owner.address, PositionManagerFactoryInstance.address)).registryFixture;
-      await registry.deployed();
-
-      await PositionManagerFactoryInstance.create(
-        owner.address,
-        diamondCutFacet.address,
-        uniswapAddressHolder.address,
-        registry.address,
-        '0x0000000000000000000000000000000000000000'
+      await PositionManagerFactoryInstance.connect(owner).pushActionData(
+        mintAction.address,
+        await getSelectors(mintAction)
       );
+      await registry.connect(owner).setPositionManagerFactory(PositionManagerFactoryInstance.address);
+
+      await PositionManagerFactoryInstance.create();
 
       const deployedContract = await PositionManagerFactoryInstance.positionManagers(0);
       const PositionManagerInstance = await ethers.getContractAt(PositionManagerContract.abi, deployedContract);
