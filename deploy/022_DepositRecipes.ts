@@ -7,17 +7,17 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const { deployer } = await getNamedAccounts();
 
-  const nonfungiblePositionManager = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
+  const UniswapAddressHolder = await deployments.get('UniswapAddressHolder');
   const PositionManagerFactory = await deployments.get('PositionManagerFactory');
 
   await deploy('DepositRecipes', {
     from: deployer,
-    args: [nonfungiblePositionManager, PositionManagerFactory.address],
+    args: [UniswapAddressHolder.address, PositionManagerFactory.address],
     log: true,
     autoMine: true,
   });
 };
 
 export default func;
-func.tags = ['Recipe'];
-func.dependencies = ['PositionManagerFactory'];
+func.tags = ['Recipe', 'DepositRecipe'];
+func.dependencies = ['PositionManagerFactory', 'UniswapAddressHolder'];
