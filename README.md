@@ -32,6 +32,19 @@ yarn install
 
 ## Usage
 
+Create an environment file `.env` with the following content:
+
+```text
+INFURA_MAINNET=https://mainnet.infura.io/v3/your_infura_key
+ALCHEMY_MUMBAI=https://polygon-mumbai.g.alchemy.com/v2/your_alchemy_key
+ALCHEMY_POLYGON=https://polygon-mainnet.g.alchemy.com/v2/your_alchemy_key
+TEST_PRIVATE_KEY=425....214
+POLYGON_PRIVATE_KEY=425....214
+ETHERSCAN_API_KEY=your_etherscan_api_key
+```
+
+Then you can compile the contracts:
+
 ```bash
 npx hardhat compile
 
