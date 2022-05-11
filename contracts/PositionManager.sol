@@ -118,7 +118,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
     ///@notice middleware to manage the deposit of the position
     ///@param tokenId ID of the position
     function middlewareDeposit(uint256 tokenId) public override onlyOwnedPosition(tokenId) {
-        setDefaultDataOfPosition(tokenId);
+        _setDefaultDataOfPosition(tokenId);
         pushPositionId(tokenId);
     }
 
