@@ -57,7 +57,7 @@ contract Registry is IRegistry {
     function addNewContract(
         bytes32 _id,
         address _contractAddress,
-        bytes memory _defaultValue,
+        bytes32 _defaultValue,
         bool _activatedByDefault
     ) external onlyGovernance {
         require(modules[_id].contractAddress == address(0), 'Registry::addNewContract: Entry already exists.');
@@ -99,7 +99,7 @@ contract Registry is IRegistry {
     ///@notice Get the info for a module
     ///@param _id keccak256 of module id string
     ///@param _defaultData default data for the module
-    function setDefaultValue(bytes32 _id, bytes memory _defaultData) external onlyGovernance {
+    function setDefaultValue(bytes32 _id, bytes32 _defaultData) external onlyGovernance {
         require(modules[_id].contractAddress != address(0), 'Registry::setDefaultValue: Entry does not exist.');
         modules[_id].defaultData = _defaultData;
     }
@@ -122,7 +122,7 @@ contract Registry is IRegistry {
         returns (
             address,
             bool,
-            bytes memory,
+            bytes32,
             bool
         )
     {

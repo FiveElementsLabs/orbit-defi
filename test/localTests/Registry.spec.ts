@@ -53,7 +53,7 @@ describe('Registry.sol', function () {
       await Registry.connect(deployer).addNewContract(
         idIdle,
         IdleLiquidityModule.address,
-        hre.ethers.utils.toUtf8Bytes('1'),
+        hre.ethers.utils.formatBytes32String('1'),
         true
       );
       const moduleInfo = await Registry.getModuleInfo(idIdle);
@@ -65,14 +65,24 @@ describe('Registry.sol', function () {
       try {
         const fakeId = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('ThisIsATest'));
 
-        await Registry.connect(user).addNewContract(fakeId, user.address, hre.ethers.utils.toUtf8Bytes('1'), true);
+        await Registry.connect(user).addNewContract(
+          fakeId,
+          user.address,
+          hre.ethers.utils.formatBytes32String('1'),
+          true
+        );
       } catch (err: any) {
         expect(err.toString()).to.have.string('Registry::onlyGovernance: Call must come from governance.');
       }
     });
     it('Should set default activation', async function () {
       const id = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Module'));
-      await Registry.connect(deployer).addNewContract(id, user.address, hre.ethers.utils.toUtf8Bytes('1'), true);
+      await Registry.connect(deployer).addNewContract(
+        id,
+        user.address,
+        hre.ethers.utils.formatBytes32String('1'),
+        true
+      );
       const moduleInfo = await Registry.getModuleInfo(id);
 
       expect(moduleInfo[3]).to.be.equal(true);
@@ -80,7 +90,7 @@ describe('Registry.sol', function () {
       await Registry.connect(deployer).addNewContract(
         newId,
         deployer.address,
-        hre.ethers.utils.toUtf8Bytes('1'),
+        hre.ethers.utils.formatBytes32String('1'),
         false
       );
       const anotherModuleInfo = await Registry.getModuleInfo(newId);
@@ -90,17 +100,26 @@ describe('Registry.sol', function () {
 
     it('Should set default value for module', async function () {
       const id = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Module3'));
-      await Registry.connect(deployer).addNewContract(id, user.address, abiCoder.encode(['uint256'], [10]), true);
+      await Registry.connect(deployer).addNewContract(
+        id,
+        user.address,
+        hre.ethers.utils.formatBytes32String('1'),
+        true
+      );
       const moduleInfo = await Registry.getModuleInfo(id);
-      console.log(abiCoder.encode(['uint256'], [10]));
-      expect(moduleInfo[2]).to.be.equal(abiCoder.encode(['uint256'], [10]));
+      expect(moduleInfo[2]).to.be.equal(hre.ethers.utils.formatBytes32String('1'));
     });
 
     it('Should not set default value for module', async function () {
       const id = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Module4'));
-      await Registry.connect(deployer).addNewContract(id, user.address, abiCoder.encode(['uint256'], [0]), true);
+      await Registry.connect(deployer).addNewContract(
+        id,
+        user.address,
+        hre.ethers.utils.formatBytes32String('0'),
+        true
+      );
       const moduleInfo = await Registry.getModuleInfo(id);
-      expect(moduleInfo[2]).to.be.equal(abiCoder.encode(['uint256'], [0]));
+      expect(moduleInfo[2]).to.be.equal(hre.ethers.utils.formatBytes32String('0'));
     });
 
     describe('Registry.sol - switchModuleState() ', function () {

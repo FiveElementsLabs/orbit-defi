@@ -6,7 +6,7 @@ interface IRegistry {
     struct Entry {
         address contractAddress;
         bool activated;
-        bytes defaultData;
+        bytes32 defaultData;
         bool activatedByDefault;
     }
 
@@ -28,7 +28,7 @@ interface IRegistry {
         returns (
             address,
             bool,
-            bytes memory,
+            bytes32,
             bool
         );
 }

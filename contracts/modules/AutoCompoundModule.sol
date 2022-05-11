@@ -53,9 +53,9 @@ contract AutoCompoundModule {
             addressHolder.uniswapV3FactoryAddress()
         );
 
-        (, bytes memory data) = IPositionManager(positionManagerAddress).getModuleInfo(tokenId, address(this));
+        (, bytes32 data) = IPositionManager(positionManagerAddress).getModuleInfo(tokenId, address(this));
 
-        uint256 feesThreshold = abi.decode(data, (uint256));
+        uint256 feesThreshold = uint256(data);
 
         (uint160 sqrtPriceX96, , , , , , ) = IUniswapV3Pool(
             UniswapNFTHelper._getPoolFromTokenId(

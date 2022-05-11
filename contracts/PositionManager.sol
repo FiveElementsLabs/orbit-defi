@@ -159,9 +159,9 @@ contract PositionManager is IPositionManager, ERC721Holder {
         bytes32[] memory moduleKeys = Storage.registry.getModuleKeys();
 
         for (uint32 i = 0; i < moduleKeys.length; i++) {
-            (address moduleAddress, , bytes memory defaultData, bool activatedByDefault) = Storage
-                .registry
-                .getModuleInfo(moduleKeys[i]);
+            (address moduleAddress, , bytes32 defaultData, bool activatedByDefault) = Storage.registry.getModuleInfo(
+                moduleKeys[i]
+            );
 
             activatedModules[tokenId][moduleAddress].isActive = activatedByDefault;
             activatedModules[tokenId][moduleAddress].data = defaultData;
@@ -188,9 +188,9 @@ contract PositionManager is IPositionManager, ERC721Holder {
     function setModuleData(
         uint256 tokenId,
         address moduleAddress,
-        bytes memory data
+        bytes32 data
     ) external override onlyOwner onlyOwnedPosition(tokenId) {
-        uint256 moduleData = abi.decode(data, (uint256));
+        uint256 moduleData = uint256(data);
         require(moduleData > 0, 'PositionManager::setModuleData: moduleData must be greater than 2%');
         activatedModules[tokenId][moduleAddress].data = data;
     }
@@ -204,7 +204,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
         external
         view
         override
-        returns (bool isActive, bytes memory data)
+        returns (bool isActive, bytes32 data)
     {
         return (activatedModules[_tokenId][_moduleAddress].isActive, activatedModules[_tokenId][_moduleAddress].data);
     }

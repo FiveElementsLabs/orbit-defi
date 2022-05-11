@@ -35,12 +35,16 @@ contract AaveModule {
     ///@notice deposit a position in an Aave lending pool
     ///@param positionManager address of the position manager
     ///@param tokenId id of the Uniswap position to deposit
-    function depositIfNeeded(address positionManager, uint256 tokenId) public activeModule(positionManager, tokenId) {
-        (, bytes memory data) = IPositionManager(positionManager).getModuleInfo(tokenId, address(this));
+    function depositIfNeeded(
+        address positionManager,
+        uint256 tokenId,
+        address toAaveToken
+    ) public activeModule(positionManager, tokenId) {
+        (, bytes32 data) = IPositionManager(positionManager).getModuleInfo(tokenId, address(this));
 
-        address toAaveToken = abi.decode(data, (address));
+        uint24 rebalanceDistance = uint24(uint256(data));
         ///@dev move token to aave only if the position's range is outside of the tick of the pool
-        if (_checkDistanceFromRange(tokenId) > 0) {
+        if (_checkDistanceFromRange(tokenId) > 0 && rebalanceDistance <= _checkDistanceFromRange(tokenId)) {
             _depositToAave(positionManager, tokenId, toAaveToken);
         }
     }
