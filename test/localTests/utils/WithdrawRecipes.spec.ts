@@ -24,6 +24,7 @@ import {
   DepositRecipes,
   PositionManager,
   MockUniswapNFTHelper,
+  AaveAddressHolder,
 } from '../../../typechain';
 import { DepositRecipesInterface } from '../../../typechain/DepositRecipes';
 
@@ -279,24 +280,40 @@ describe('WithdrawRecipes.sol', function () {
       },
       { gasLimit: 670000 }
     );
-
-    //deploy the PositionManagerFactory => deploy PositionManager
-    PositionManagerFactoryFactory = (await ethers.getContractFactory('PositionManagerFactory')) as ContractFactory;
-    PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
-    await PositionManagerFactory.deployed();
-
     // deploy Registry
-    registry = (await RegistryFixture(user.address, PositionManagerFactory.address)).registryFixture;
+    registry = (await RegistryFixture(user.address)).registryFixture;
     await registry.deployed();
 
     //deploy the PositionManagerFactory => deploy PositionManager
-    await PositionManagerFactory.create(
+    PositionManagerFactoryFactory = (await ethers.getContractFactory('PositionManagerFactory')) as ContractFactory;
+    PositionManagerFactory = (await PositionManagerFactoryFactory.deploy(
       user.address,
+      registry.address,
       DiamondCutFacet.address,
       UniswapAddressHolder.address,
-      registry.address,
       '0x0000000000000000000000000000000000000000'
+    )) as Contract;
+    await PositionManagerFactory.deployed();
+
+    await registry.setPositionManagerFactory(PositionManagerFactory.address);
+
+    await registry.addNewContract(
+      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('PositionManagerFactory')),
+      PositionManagerFactory.address
     );
+
+    //function pushActionData(address actionAddress, bytes4[] calldata selectors)
+
+    await PositionManagerFactory.pushActionData(closePositionAction.address, await getSelectors(closePositionAction));
+    await PositionManagerFactory.pushActionData(zapOutAction.address, await getSelectors(zapOutAction));
+    await PositionManagerFactory.pushActionData(
+      decreaseLiquidityAction.address,
+      await getSelectors(decreaseLiquidityAction)
+    );
+    await PositionManagerFactory.pushActionData(collectFeesAction.address, await getSelectors(collectFeesAction));
+
+    //deploy the PositionManagerFactory => deploy PositionManager
+    await PositionManagerFactory.create();
 
     let contractsDeployed = await PositionManagerFactory.positionManagers(0);
     PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
@@ -307,7 +324,7 @@ describe('WithdrawRecipes.sol', function () {
     const cut = [];
     const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 };
 
-    cut.push({
+    /*  cut.push({
       facetAddress: closePositionAction.address,
       action: FacetCutAction.Add,
       functionSelectors: await getSelectors(closePositionAction),
@@ -330,7 +347,7 @@ describe('WithdrawRecipes.sol', function () {
 
     const diamondCut = await ethers.getContractAt('IDiamondCut', PositionManager.address);
 
-    const tx = await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
+    const tx = await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []); */
 
     //deploy WithdrawRecipes contract
     let WithdrawRecipesFactory = await ethers.getContractFactory('WithdrawRecipes');
@@ -342,7 +359,7 @@ describe('WithdrawRecipes.sol', function () {
 
     let DepositRecipesFactory = await ethers.getContractFactory('DepositRecipes');
     DepositRecipes = (await DepositRecipesFactory.deploy(
-      NonFungiblePositionManager.address,
+      UniswapAddressHolder.address,
       PositionManagerFactory.address
     )) as DepositRecipes;
     await DepositRecipes.deployed();
@@ -434,6 +451,10 @@ describe('WithdrawRecipes.sol', function () {
       await WithdrawRecipes.connect(user).zapOutUniNft(tokenId, tokenDai.address);
       expect(await tokenDai.balanceOf(user.address)).to.be.gt(balanceBefore);
       await expect(NonFungiblePositionManager.ownerOf(tokenId)).to.be.reverted;
+    });
+    it('should revert if im not the owner of nft', async function () {
+      expect(await NonFungiblePositionManager.ownerOf(tokenId)).to.be.equal(PositionManager.address);
+      await expect(WithdrawRecipes.connect(liquidityProvider).withdrawUniNft(tokenId, 10000)).to.be.reverted;
     });
   });
 });
