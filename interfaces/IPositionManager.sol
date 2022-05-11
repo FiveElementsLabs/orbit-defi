@@ -17,8 +17,6 @@ interface IPositionManager {
         uint256 sharesEmitted;
     }
 
-    function getModuleState(uint256 tokenId, address moduleAddress) external view returns (bool);
-
     function toggleModule(
         uint256 tokenId,
         address moduleAddress,
@@ -31,7 +29,10 @@ interface IPositionManager {
         bytes memory data
     ) external;
 
-    function getModuleData(uint256 tokenId, address moduleAddress) external view returns (bytes memory);
+    function getModuleInfo(uint256 _tokenId, address _moduleAddress)
+        external
+        view
+        returns (bool isActive, bytes memory data);
 
     function withdrawERC20(address tokenAddress) external;
 

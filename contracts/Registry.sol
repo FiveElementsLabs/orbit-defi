@@ -52,9 +52,13 @@ contract Registry is IRegistry {
     ///@notice Register a module
     ///@param _id keccak256 of module id string
     ///@param _contractAddress address of the new module
-    function addNewContract(bytes32 _id, address _contractAddress) external onlyGovernance {
+    function addNewContract(
+        bytes32 _id,
+        address _contractAddress,
+        bytes32 _defaultValue
+    ) external onlyGovernance {
         require(modules[_id].contractAddress == address(0), 'Registry::addNewContract: Entry already exists.');
-        modules[_id] = Entry({contractAddress: _contractAddress, activated: true});
+        modules[_id] = Entry({contractAddress: _contractAddress, activated: true, defaultData: _defaultValue});
         moduleKeys.push(_id);
         emit ContractCreated(_contractAddress, _id);
     }
@@ -82,6 +86,11 @@ contract Registry is IRegistry {
     ///@return bytes32[] all module keys
     function getModuleKeys() external view override returns (bytes32[] memory) {
         return moduleKeys;
+    }
+
+    function setDefaultValue(bytes32 _id, bytes32 _defaultData) external onlyGovernance {
+        require(modules[_id].contractAddress != address(0), 'Registry::setDefaultValue: Entry does not exist.');
+        modules[_id].defaultData = _defaultData;
     }
 
     ///@notice Get the address of a module for a given key

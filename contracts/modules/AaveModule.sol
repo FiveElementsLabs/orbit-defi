@@ -22,10 +22,8 @@ contract AaveModule {
     IUniswapAddressHolder uniswapAddressHolder;
 
     modifier activeModule(address positionManager, uint256 tokenId) {
-        require(
-            IPositionManager(positionManager).getModuleState(tokenId, address(this)),
-            'AaveModule::activeModule: Module is inactive.'
-        );
+        (bool isActive, ) = IPositionManager(positionManager).getModuleInfo(tokenId, address(this));
+        require(isActive, 'AaveModule::activeModule: Module is inactive.');
         _;
     }
 
@@ -38,10 +36,9 @@ contract AaveModule {
     ///@param positionManager address of the position manager
     ///@param tokenId id of the Uniswap position to deposit
     function depositIfNeeded(address positionManager, uint256 tokenId) public activeModule(positionManager, tokenId) {
-        address toAaveToken = abi.decode(
-            IPositionManager(positionManager).getModuleData(tokenId, address(this)),
-            (address)
-        );
+        (, bytes memory data) = IPositionManager(positionManager).getModuleInfo(tokenId, address(this));
+
+        address toAaveToken = abi.decode(data, (address));
         ///@dev move token to aave only if the position's range is outside of the tick of the pool
         if (_checkDistanceFromRange(tokenId) > 0) {
             _depositToAave(positionManager, tokenId, toAaveToken);

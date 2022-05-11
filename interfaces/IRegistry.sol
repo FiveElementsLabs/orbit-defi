@@ -6,6 +6,7 @@ interface IRegistry {
     struct Entry {
         address contractAddress;
         bool activated;
+        bytes32 defaultData;
     }
 
     ///@notice return the address of PositionManagerFactory

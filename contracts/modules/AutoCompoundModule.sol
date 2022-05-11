@@ -25,7 +25,8 @@ contract AutoCompoundModule {
     ///@param tokenId id of the token to autocompound
     function autoCompoundFees(IPositionManager positionManager, uint256 tokenId) public {
         ///@dev check if autocompound is active
-        if (positionManager.getModuleState(tokenId, address(this))) {
+        (bool isActive, ) = positionManager.getModuleInfo(tokenId, address(this));
+        if (isActive) {
             ///@dev check if compound need to be done
             if (_checkIfCompoundIsNeeded(address(positionManager), tokenId)) {
                 (uint256 amount0Desired, uint256 amount1Desired) = ICollectFees(address(positionManager)).collectFees(
@@ -52,10 +53,9 @@ contract AutoCompoundModule {
             addressHolder.uniswapV3FactoryAddress()
         );
 
-        uint256 feesThreshold = abi.decode(
-            IPositionManager(positionManagerAddress).getModuleData(tokenId, address(this)),
-            (uint256)
-        );
+        (, bytes memory data) = IPositionManager(positionManagerAddress).getModuleInfo(tokenId, address(this));
+
+        uint256 feesThreshold = abi.decode(data, (uint256));
 
         (uint160 sqrtPriceX96, , , , , , ) = IUniswapV3Pool(
             UniswapNFTHelper._getPoolFromTokenId(

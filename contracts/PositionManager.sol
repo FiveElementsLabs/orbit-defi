@@ -157,19 +157,6 @@ contract PositionManager is IPositionManager, ERC721Holder {
         emit ModuleStateChanged(moduleAddress, tokenId, activated);
     }
 
-    ///@notice return the state of the module for tokenId position
-    ///@param tokenId ID of the position
-    ///@param moduleAddress address of the module
-    function getModuleState(uint256 tokenId, address moduleAddress)
-        external
-        view
-        override
-        onlyOwnedPosition(tokenId)
-        returns (bool)
-    {
-        return activatedModules[tokenId][moduleAddress].isActive;
-    }
-
     ///@notice sets the data of a module strategy for tokenId position
     ///@param tokenId ID of the position
     ///@param moduleAddress address of the module
@@ -182,17 +169,13 @@ contract PositionManager is IPositionManager, ERC721Holder {
         activatedModules[tokenId][moduleAddress].data = data;
     }
 
-    ///@notice returns the data of a module strategy for tokenId position
-    ///@param tokenId ID of the position
-    ///@param moduleAddress address of the module
-    function getModuleData(uint256 tokenId, address moduleAddress)
+    function getModuleInfo(uint256 _tokenId, address _moduleAddress)
         external
         view
         override
-        onlyOwnedPosition(tokenId)
-        returns (bytes memory)
+        returns (bool isActive, bytes memory data)
     {
-        return activatedModules[tokenId][moduleAddress].data;
+        return (activatedModules[_tokenId][_moduleAddress].isActive, activatedModules[_tokenId][_moduleAddress].data);
     }
 
     ///@notice stores old position data when liquidity is moved to aave
