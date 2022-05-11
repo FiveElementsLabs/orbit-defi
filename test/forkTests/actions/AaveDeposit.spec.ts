@@ -86,13 +86,13 @@ describe('AaveDeposit.sol', function () {
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')),
       user.address,
-      hre.ethers.utils.toUtf8Bytes('1'),
+      hre.ethers.utils.formatBytes32String('1'),
       true
     );
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Factory')),
       PositionManagerFactory.address,
-      hre.ethers.utils.toUtf8Bytes('1'),
+      hre.ethers.utils.formatBytes32String('1'),
       true
     );
 

@@ -98,7 +98,7 @@ describe('DepositRecipes.sol', function () {
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('PositionManagerFactory')),
       PositionManagerFactory.address,
-      abiCoder.encode(['uint256'], [1]),
+      hre.ethers.utils.formatBytes32String('1'),
       true
     );
     await registry.setPositionManagerFactory(PositionManagerFactory.address);
@@ -115,21 +115,21 @@ describe('DepositRecipes.sol', function () {
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('DepositRecipes')),
       DepositRecipes.address,
-      abiCoder.encode(['uint256'], [1]),
+      hre.ethers.utils.formatBytes32String('1'),
       true
     );
 
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')),
       user.address,
-      abiCoder.encode(['uint256'], [1]),
+      hre.ethers.utils.formatBytes32String('1'),
       true
     );
 
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('AutoCompoundModule')),
       AutoCompoundModule.address,
-      abiCoder.encode(['uint256'], [5]),
+      hre.ethers.utils.formatBytes32String('5'),
       true
     );
 
@@ -401,7 +401,7 @@ describe('DepositRecipes.sol', function () {
 
       console.log('autocompound address: ', AutoCompoundModule.address);
       expect(moduleData[0]).to.be.equal(true);
-      expect(moduleData[1]).to.be.equal(abiCoder.encode(['uint256'], [5]));
+      expect(moduleData[1]).to.be.equal(hre.ethers.utils.formatBytes32String('5'));
     });
   });
 

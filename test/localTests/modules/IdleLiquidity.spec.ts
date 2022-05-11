@@ -102,20 +102,20 @@ describe('IdleLiquidityModule.sol', function () {
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')),
       user.address,
-      abiCoder.encode(['uint256'], [2]),
+      hre.ethers.utils.formatBytes32String('2'),
       true
     );
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Factory')),
       PositionManagerFactory.address,
-      abiCoder.encode(['uint256'], [2]),
+      hre.ethers.utils.formatBytes32String('2'),
       true
     );
 
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('IdleLiquidityModule')),
       IdleLiquidityModule.address,
-      abiCoder.encode(['uint256'], [2]),
+      hre.ethers.utils.formatBytes32String('2'),
       true
     );
 

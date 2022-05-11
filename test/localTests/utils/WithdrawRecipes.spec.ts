@@ -127,26 +127,26 @@ describe('WithdrawRecipes.sol', function () {
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')),
       user.address,
-      abiCoder.encode(['uint256'], [1]),
-      abiCoder.encode(['bool'], [true])
+      hre.ethers.utils.formatBytes32String('1'),
+      true
     );
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Factory')),
       PositionManagerFactory.address,
-      abiCoder.encode(['uint256'], [1]),
-      abiCoder.encode(['bool'], [true])
+      hre.ethers.utils.formatBytes32String('1'),
+      true
     );
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('DepositRecipes')),
       DepositRecipes.address,
-      abiCoder.encode(['uint256'], [1]),
-      abiCoder.encode(['bool'], [true])
+      hre.ethers.utils.formatBytes32String('1'),
+      true
     );
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('WithdrawRecipes')),
       WithdrawRecipes.address,
-      abiCoder.encode(['uint256'], [1]),
-      abiCoder.encode(['bool'], [true])
+      hre.ethers.utils.formatBytes32String('1'),
+      true
     );
 
     PositionManager = (await getPositionManager(PositionManagerFactory, user)) as PositionManager;

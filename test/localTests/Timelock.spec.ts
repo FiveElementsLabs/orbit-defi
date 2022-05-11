@@ -90,13 +90,13 @@ describe('Timelock.sol', function () {
     it('Should correctly queue a transaction', async function () {
       const target = Registry.address;
       const value = 0;
-      const signature = 'addNewContract(bytes32,address,bytes,bool)';
+      const signature = 'addNewContract(bytes32,address,bytes32,bool)';
       const data = AbiCoder.encode(
-        ['bytes32', 'address', 'bytes', 'bool'],
+        ['bytes32', 'address', 'bytes32', 'bool'],
         [
           hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')),
           randomContractAddress,
-          AbiCoder.encode(['uint256'], [0]),
+          hre.ethers.utils.formatBytes32String('0'),
           false,
         ]
       );
@@ -128,13 +128,13 @@ describe('Timelock.sol', function () {
     it('Should correctly execute a queued transaction', async function () {
       const target = Registry.address;
       const value = 0;
-      const signature = 'addNewContract(bytes32,address,bytes,bool)';
+      const signature = 'addNewContract(bytes32,address,bytes32,bool)';
       const data = AbiCoder.encode(
-        ['bytes32', 'address', 'bytes', 'bool'],
+        ['bytes32', 'address', 'bytes32', 'bool'],
         [
           hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')),
           randomContractAddress,
-          AbiCoder.encode(['uint256'], [0]),
+          hre.ethers.utils.formatBytes32String('0'),
           false,
         ]
       );
@@ -161,13 +161,13 @@ describe('Timelock.sol', function () {
     it('Should revert if not enough time has passed', async function () {
       const target = Registry.address;
       const value = 0;
-      const signature = 'addNewContract(bytes32,address,bytes,bool)';
+      const signature = 'addNewContract(bytes32,address,bytes32,bool)';
       const data = AbiCoder.encode(
-        ['bytes32', 'address', 'bytes', 'bool'],
+        ['bytes32', 'address', 'bytes32', 'bool'],
         [
           hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')),
           randomContractAddress,
-          AbiCoder.encode(['uint256'], [0]),
+          hre.ethers.utils.formatBytes32String('0'),
           false,
         ]
       );

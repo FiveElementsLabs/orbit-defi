@@ -96,7 +96,7 @@ describe('PositionManagerFactory.sol', function () {
       await registry.addNewContract(
         hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('PositionManagerFactory')),
         PositionManagerFactoryInstance.address,
-        hre.ethers.utils.toUtf8Bytes('1'),
+        hre.ethers.utils.formatBytes32String('1'),
         true
       );
 

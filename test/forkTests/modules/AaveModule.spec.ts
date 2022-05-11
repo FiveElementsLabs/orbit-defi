@@ -131,20 +131,20 @@ describe('AaveModule.sol', function () {
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('AaveModule')),
       AaveModule.address,
-      hre.ethers.utils.toUtf8Bytes('10'),
+      hre.ethers.utils.formatBytes32String('10'),
       true
     );
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Factory')),
       PositionManagerFactory.address,
-      hre.ethers.utils.toUtf8Bytes('1'),
+      hre.ethers.utils.formatBytes32String('1'),
       true
     );
 
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')),
       user.address,
-      hre.ethers.utils.toUtf8Bytes('1'),
+      hre.ethers.utils.formatBytes32String('1'),
       true
     );
 
@@ -211,16 +211,13 @@ describe('AaveModule.sol', function () {
 
     abiCoder = ethers.utils.defaultAbiCoder;
 
-    const data = abiCoder.encode(['address'], [usdcMock.address]);
-    await PositionManager.setModuleData(tokenId, AaveModule.address, data);
-
     const aUsdcAddress = (await LendingPool.getReserveData(usdcMock.address)).aTokenAddress;
     aUsdc = await ethers.getContractAtFromArtifact(ATokenjson, aUsdcAddress);
   });
 
   describe('AaveModule - depositToAave', function () {
     it('should not deposit to aave if position is in range', async function () {
-      await AaveModule.connect(user).depositIfNeeded(PositionManager.address, tokenId);
+      await AaveModule.connect(user).depositIfNeeded(PositionManager.address, tokenId, usdcMock.address);
       expect(await NonFungiblePositionManager.ownerOf(tokenId)).to.equal(PositionManager.address);
     });
 
@@ -240,7 +237,7 @@ describe('AaveModule.sol', function () {
 
       expect((await Pool0.slot0()).tick).to.gt(tickUpper);
 
-      const tx = await AaveModule.connect(user).depositIfNeeded(PositionManager.address, tokenId);
+      const tx = await AaveModule.connect(user).depositIfNeeded(PositionManager.address, tokenId, usdcMock.address);
       const events = (await tx.wait()).events;
       aaveId = abiCoder.decode(['address', 'uint256', 'uint256'], events[events.length - 1].data)[1];
       expect(await aUsdc.balanceOf(PositionManager.address)).to.gt(0);
