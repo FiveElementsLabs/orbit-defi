@@ -1,9 +1,9 @@
 import '@nomiclabs/hardhat-ethers';
 import { expect } from 'chai';
 import { Contract } from 'ethers';
-import hre from 'hardhat';
-import { ethers } from 'hardhat';
+import hre, { ethers } from 'hardhat';
 import { RegistryFixture } from '../shared/fixtures';
+import { AbiCoder } from 'ethers/lib/utils';
 
 describe('Registry.sol', function () {
   let deployer: any;
@@ -11,6 +11,7 @@ describe('Registry.sol', function () {
   let Registry: Contract;
   let IdleLiquidityModule: Contract;
   let AutoCompoundModule: Contract;
+  let abiCoder: AbiCoder;
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
@@ -18,10 +19,11 @@ describe('Registry.sol', function () {
     const signers = await ethers.getSigners();
     deployer = signers[0];
     user = signers[1];
-    //deploy the registry
-    Registry = (await RegistryFixture(deployer.address, '0x0000000000000000000000000000000000000000')).registryFixture;
 
     const zeroAddress = ethers.constants.AddressZero;
+
+    //deploy the registry
+    Registry = (await RegistryFixture(deployer.address)).registryFixture;
 
     //Deploy modules
     const IdleLiquidityModuleFactory = await ethers.getContractFactory('IdleLiquidityModule');
@@ -35,6 +37,8 @@ describe('Registry.sol', function () {
       zeroAddress //we don't need this contract for this test
     )) as Contract;
     await AutoCompoundModule.deployed();
+
+    abiCoder = ethers.utils.defaultAbiCoder;
   });
 
   describe('Registry.sol - deployment ', function () {
@@ -46,30 +50,75 @@ describe('Registry.sol', function () {
   describe('Registry.sol - addNewContract() ', function () {
     it('Should add and activate new contract', async function () {
       const idIdle = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('IdleLiquidityModule'));
-      await Registry.connect(deployer).addNewContract(idIdle, IdleLiquidityModule.address);
+      await Registry.connect(deployer).addNewContract(
+        idIdle,
+        IdleLiquidityModule.address,
+        hre.ethers.utils.toUtf8Bytes('1'),
+        true
+      );
+      const moduleInfo = await Registry.getModuleInfo(idIdle);
 
-      expect(await Registry.isActive(idIdle)).to.be.equal(true);
+      expect(moduleInfo[1]).to.be.equal(true);
     });
 
     it('Should fail if it is not called by owner', async function () {
       try {
         const fakeId = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('ThisIsATest'));
 
-        await Registry.connect(user).addNewContract(fakeId, user.address);
+        await Registry.connect(user).addNewContract(fakeId, user.address, hre.ethers.utils.toUtf8Bytes('1'), true);
       } catch (err: any) {
         expect(err.toString()).to.have.string('Registry::onlyGovernance: Call must come from governance.');
       }
     });
-  });
+    it('Should set default activation', async function () {
+      const id = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Module'));
+      await Registry.connect(deployer).addNewContract(id, user.address, hre.ethers.utils.toUtf8Bytes('1'), true);
+      const moduleInfo = await Registry.getModuleInfo(id);
 
-  describe('Registry.sol - switchModuleState() ', function () {
-    it('Should be able to disactivate a contract', async function () {
-      const idAutoCompound = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('AutoCompoundModule'));
-      await Registry.connect(deployer).addNewContract(idAutoCompound, AutoCompoundModule.address);
+      expect(moduleInfo[3]).to.be.equal(true);
+      const newId = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Module2'));
+      await Registry.connect(deployer).addNewContract(
+        newId,
+        deployer.address,
+        hre.ethers.utils.toUtf8Bytes('1'),
+        false
+      );
+      const anotherModuleInfo = await Registry.getModuleInfo(newId);
 
-      await Registry.connect(deployer).switchModuleState(idAutoCompound, false);
+      expect(anotherModuleInfo[3]).to.be.equal(false);
+    });
 
-      expect(await Registry.isActive(idAutoCompound)).to.equal(false);
+    it('Should set default value for module', async function () {
+      const id = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Module3'));
+      await Registry.connect(deployer).addNewContract(id, user.address, abiCoder.encode(['uint256'], [10]), true);
+      const moduleInfo = await Registry.getModuleInfo(id);
+      console.log(abiCoder.encode(['uint256'], [10]));
+      expect(moduleInfo[2]).to.be.equal(abiCoder.encode(['uint256'], [10]));
+    });
+
+    it('Should not set default value for module', async function () {
+      const id = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Module4'));
+      await Registry.connect(deployer).addNewContract(id, user.address, abiCoder.encode(['uint256'], [0]), true);
+      const moduleInfo = await Registry.getModuleInfo(id);
+      expect(moduleInfo[2]).to.be.equal(abiCoder.encode(['uint256'], [0]));
+    });
+
+    describe('Registry.sol - switchModuleState() ', function () {
+      it('Should be able to deactivate a contract', async function () {
+        const idAutoCompound = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('AutoCompoundModule'));
+        await Registry.connect(deployer).addNewContract(
+          idAutoCompound,
+          AutoCompoundModule.address,
+          abiCoder.encode(['uint256'], [69]),
+          true
+        );
+
+        await Registry.connect(deployer).switchModuleState(idAutoCompound, false);
+
+        const moduleInfo = await Registry.getModuleInfo(idAutoCompound);
+
+        expect(moduleInfo[1]).to.equal(false);
+      });
     });
   });
 

@@ -40,7 +40,7 @@ contract DepositRecipes {
                 tokenIds[i],
                 '0x0'
             );
-            IPositionManager(positionManagerAddress).pushPositionId(tokenIds[i]);
+            IPositionManager(positionManagerAddress).middlewareDeposit(tokenIds[i]);
             emit PositionDeposited(positionManagerAddress, msg.sender, tokenIds[i]);
         }
     }
@@ -95,6 +95,5 @@ contract DepositRecipes {
         address positionManagerAddress = positionManagerFactory.userToPositionManager(msg.sender);
 
         (tokenId) = IZapIn(positionManagerAddress).zapIn(tokenIn, amountIn, token0, token1, tickLower, tickUpper, fee);
-        IPositionManager(positionManagerAddress).pushPositionId(tokenId);
     }
 }

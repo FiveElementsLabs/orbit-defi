@@ -12,13 +12,13 @@ import SwapRouterjson from '@uniswap/v3-periphery/artifacts/contracts/SwapRouter
 import UniswapV3Pooljson from '@uniswap/v3-core/artifacts/contracts/UniswapV3Pool.sol/UniswapV3Pool.json';
 import ATokenjson from '@aave/protocol-v2/artifacts/contracts/protocol/tokenization/AToken.sol/AToken.json';
 import {
-  NonFungiblePositionManagerDescriptorBytecode,
   tokensFixture,
-  poolFixture,
   mintSTDAmount,
-  getSelectors,
-  findbalanceSlot,
-  RegistryFixture,
+  deployContract,
+  deployPositionManagerFactoryAndActions,
+  mintForkedTokens,
+  getPositionManager,
+  doAllApprovals,
 } from '../../shared/fixtures';
 import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager } from '../../../typechain';
 
@@ -93,187 +93,79 @@ describe('AaveModule.sol', function () {
 
     //deploy SwapRouter
     swapRouter = await ethers.getContractAtFromArtifact(SwapRouterjson, '0xE592427A0AEce92De3Edee1F18E0157C05861564');
-
     //LendingPool contract
     LendingPool = await ethers.getContractAtFromArtifact(LendingPooljson, '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9');
 
-    //deploy uniswapAddressHolder
-    const uniswapAddressHolderFactory = await ethers.getContractFactory('UniswapAddressHolder');
-    const uniswapAddressHolder = await uniswapAddressHolderFactory.deploy(
+    //deploy our contracts
+    const uniswapAddressHolder = await deployContract('UniswapAddressHolder', [
       NonFungiblePositionManager.address,
       '0x1F98431c8aD98523631AE4a59f267346ea31F984',
-      swapRouter.address
-    );
-    await uniswapAddressHolder.deployed();
-
-    //deploy aaveAddressHolder
-    const aaveAddressHolderFactory = await ethers.getContractFactory('AaveAddressHolder');
-    const aaveAddressHolder = await aaveAddressHolderFactory.deploy(LendingPool.address);
-    await aaveAddressHolder.deployed();
-
-    // deploy DiamondCutFacet
-    const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet');
-    const diamondCutFacet = await DiamondCutFacet.deploy();
-    await diamondCutFacet.deployed();
+      swapRouter.address,
+    ]);
+    const aaveAddressHolder = await deployContract('AaveAddressHolder', [LendingPool.address]);
+    const diamondCutFacet = await deployContract('DiamondCutFacet');
+    const registry = await deployContract('Registry', [user.address]);
+    AaveModule = await deployContract('AaveModule', [aaveAddressHolder.address, uniswapAddressHolder.address]);
 
     //deploy the PositionManagerFactory => deploy PositionManager
-    const PositionManagerFactoryFactory = await ethers.getContractFactory('PositionManagerFactory');
-    const PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
-    await PositionManagerFactory.deployed();
-
-    // deploy Registry
-    const registry = (await RegistryFixture(user.address, PositionManagerFactory.address)).registryFixture;
-    await registry.deployed();
-
-    await PositionManagerFactory.create(
+    const PositionManagerFactory = await deployPositionManagerFactoryAndActions(
       user.address,
+      registry.address,
       diamondCutFacet.address,
       uniswapAddressHolder.address,
-      registry.address,
-      aaveAddressHolder.address
+      aaveAddressHolder.address,
+      [
+        'AaveDeposit',
+        'AaveWithdraw',
+        'DecreaseLiquidity',
+        'Swap',
+        'SwapToPositionRatio',
+        'IncreaseLiquidity',
+        'CollectFees',
+      ]
     );
 
-    const contractsDeployed = await PositionManagerFactory.positionManagers(0);
-    PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
+    //set registry
+    await registry.setPositionManagerFactory(PositionManagerFactory.address);
 
-    //Deploy Aave Deposit Action
-    const aaveDepositActionFactory = await ethers.getContractFactory('AaveDeposit');
-    const aaveDepositAction = (await aaveDepositActionFactory.deploy()) as Contract;
-    await aaveDepositAction.deployed();
+    await registry.addNewContract(
+      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('AaveModule')),
+      AaveModule.address,
+      hre.ethers.utils.toUtf8Bytes('10'),
+      true
+    );
+    await registry.addNewContract(
+      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Factory')),
+      PositionManagerFactory.address,
+      hre.ethers.utils.toUtf8Bytes('1'),
+      true
+    );
 
-    //Deploy Actions
-    const aaveWithdrawActionFactory = await ethers.getContractFactory('AaveWithdraw');
-    const aaveWithdrawAction = (await aaveWithdrawActionFactory.deploy()) as Contract;
-    await aaveWithdrawAction.deployed();
+    await registry.addNewContract(
+      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')),
+      user.address,
+      hre.ethers.utils.toUtf8Bytes('1'),
+      true
+    );
 
-    const decreaseLiquidityActionFactory = await ethers.getContractFactory('DecreaseLiquidity');
-    const decreaseLiquidityAction = (await decreaseLiquidityActionFactory.deploy()) as Contract;
-    await decreaseLiquidityAction.deployed();
-
-    const swapActionFactory = await ethers.getContractFactory('Swap');
-    const swapAction = (await swapActionFactory.deploy()) as Contract;
-    await swapAction.deployed();
-
-    const SwapToPositionRatioActionFactory = await ethers.getContractFactory('SwapToPositionRatio');
-    const SwapToPositionRatioAction = (await SwapToPositionRatioActionFactory.deploy()) as Contract;
-    await SwapToPositionRatioAction.deployed();
-
-    const increaseLiquidityActionFactory = await ethers.getContractFactory('IncreaseLiquidity');
-    const increaseLiquidityAction = (await increaseLiquidityActionFactory.deploy()) as Contract;
-    await increaseLiquidityAction.deployed();
-
-    const collectFeesActionFactory = await ethers.getContractFactory('CollectFees');
-    const collectFeesAction = (await collectFeesActionFactory.deploy()) as Contract;
-    await collectFeesAction.deployed();
-
-    const AaveModuleFactory = await ethers.getContractFactory('AaveModule');
-    AaveModule = await AaveModuleFactory.deploy(aaveAddressHolder.address, uniswapAddressHolder.address);
-    await AaveModule.deployed();
+    PositionManager = (await getPositionManager(PositionManagerFactory, user)) as PositionManager;
 
     //Get mock tokens. These need to be real Mainnet addresses
     usdcMock = (await ethers.getContractAt('MockToken', '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48')) as MockToken;
     wbtcMock = (await ethers.getContractAt('MockToken', '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599')) as MockToken;
-
-    //mint some wbtc
-    //for user
-    let slot = await findbalanceSlot(wbtcMock, user);
-    let encode = (types: any, values: any) => ethers.utils.defaultAbiCoder.encode(types, values);
-    let probedSlot = ethers.utils.keccak256(encode(['address', 'uint'], [user.address, slot]));
-    let value = encode(['uint'], [ethers.utils.parseEther('100000000')]);
-    await hre.network.provider.send('hardhat_setStorageAt', [wbtcMock.address, probedSlot, value]);
-    //for liquidityProvider
-    slot = await findbalanceSlot(wbtcMock, liquidityProvider);
-    probedSlot = ethers.utils.keccak256(encode(['address', 'uint'], [liquidityProvider.address, slot]));
-    value = encode(['uint'], [ethers.utils.parseEther('100000000')]);
-    await hre.network.provider.send('hardhat_setStorageAt', [wbtcMock.address, probedSlot, value]);
-    //for trader
-    slot = await findbalanceSlot(wbtcMock, trader);
-    probedSlot = ethers.utils.keccak256(encode(['address', 'uint'], [trader.address, slot]));
-    value = encode(['uint'], [ethers.utils.parseEther('100000000')]);
-    await hre.network.provider.send('hardhat_setStorageAt', [wbtcMock.address, probedSlot, value]);
-
-    //mint some usdc
-    //for user
-    slot = await findbalanceSlot(usdcMock, user);
-    probedSlot = ethers.utils.keccak256(encode(['address', 'uint'], [user.address, slot]));
-    value = encode(['uint'], [ethers.utils.parseEther('100000000')]);
-    await hre.network.provider.send('hardhat_setStorageAt', [usdcMock.address, probedSlot, value]);
-    //for liquidityProvider
-    slot = await findbalanceSlot(usdcMock, liquidityProvider);
-    probedSlot = ethers.utils.keccak256(encode(['address', 'uint'], [liquidityProvider.address, slot]));
-    value = encode(['uint'], [ethers.utils.parseEther('100000000')]);
-    await hre.network.provider.send('hardhat_setStorageAt', [usdcMock.address, probedSlot, value]);
-    //for trader
-    slot = await findbalanceSlot(usdcMock, trader);
-    probedSlot = ethers.utils.keccak256(encode(['address', 'uint'], [trader.address, slot]));
-    value = encode(['uint'], [ethers.utils.parseEther('100000000')]);
-    await hre.network.provider.send('hardhat_setStorageAt', [usdcMock.address, probedSlot, value]);
+    await mintForkedTokens([usdcMock, wbtcMock], [user, liquidityProvider, trader], 100000000);
 
     //approve NFPM
-    await usdcMock.connect(user).approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000'));
-    await wbtcMock.connect(user).approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000'));
-    await usdcMock
-      .connect(liquidityProvider)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000'));
-    await wbtcMock
-      .connect(liquidityProvider)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000'));
-
-    //approve swap router
-    await usdcMock.connect(trader).approve(swapRouter.address, ethers.utils.parseEther('1000000000'));
-    await wbtcMock.connect(trader).approve(swapRouter.address, ethers.utils.parseEther('1000000000'));
-
-    //approve user to registry (for testing)
-    await registry.addNewContract(
-      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('AaveModule')),
-      AaveModule.address
+    await doAllApprovals(
+      [user, liquidityProvider, trader],
+      [NonFungiblePositionManager.address, swapRouter.address],
+      [usdcMock, wbtcMock]
     );
-    await registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
-
-    //add actions to the position manager using the diamond pattern
-    const cut = [];
-    const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 };
-    cut.push({
-      facetAddress: aaveDepositAction.address,
-      action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(aaveDepositAction),
-    });
-    cut.push({
-      facetAddress: aaveWithdrawAction.address,
-      action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(aaveWithdrawAction),
-    });
-    cut.push({
-      facetAddress: increaseLiquidityAction.address,
-      action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(increaseLiquidityAction),
-    });
-    cut.push({
-      facetAddress: swapAction.address,
-      action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(swapAction),
-    });
-    cut.push({
-      facetAddress: SwapToPositionRatioAction.address,
-      action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(SwapToPositionRatioAction),
-    });
-    cut.push({
-      facetAddress: decreaseLiquidityAction.address,
-      action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(decreaseLiquidityAction),
-    });
-    cut.push({
-      facetAddress: collectFeesAction.address,
-      action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(collectFeesAction),
-    });
-    const diamondCut = await ethers.getContractAt('IDiamondCut', PositionManager.address);
-    await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
 
     let slot0 = await Pool0.slot0();
     tickLower = (Math.round(slot0.tick / 60) - 100) * 60;
     tickUpper = (Math.round(slot0.tick / 60) + 100) * 60;
+
     //mint a position
     const mintTx = await NonFungiblePositionManager.connect(user).mint(
       {

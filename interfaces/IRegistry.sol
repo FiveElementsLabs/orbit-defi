@@ -6,7 +6,8 @@ interface IRegistry {
     struct Entry {
         address contractAddress;
         bool activated;
-        bytes32 defaultData;
+        bytes defaultData;
+        bool activatedByDefault;
     }
 
     ///@notice return the address of PositionManagerFactory
@@ -21,11 +22,13 @@ interface IRegistry {
     ///@return address of Governance
     function getModuleKeys() external view returns (bytes32[] memory);
 
-    ///@notice return the address of Governance
-    ///@return address of Governance
-    function isActive(bytes32 _id) external view returns (bool);
-
-    ///@notice return the address of Governance
-    ///@return address of Governance
-    function moduleAddress(bytes32 _id) external view returns (address);
+    function getModuleInfo(bytes32 _id)
+        external
+        view
+        returns (
+            address,
+            bool,
+            bytes memory,
+            bool
+        );
 }

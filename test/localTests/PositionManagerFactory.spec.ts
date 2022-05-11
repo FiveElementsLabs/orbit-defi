@@ -9,6 +9,8 @@ import {
   routerFixture,
   RegistryFixture,
   getSelectors,
+  deployUniswapContracts,
+  deployContract,
 } from '../shared/fixtures';
 import { MockToken, INonfungiblePositionManager, ISwapRouter, UniswapAddressHolder, Registry } from '../../typechain';
 
@@ -21,7 +23,6 @@ import hre from 'hardhat';
 describe('PositionManagerFactory.sol', function () {
   let PositionManagerInstance: Contract;
   let PositionManagerFactoryInstance: Contract;
-
   let owner: any;
   let signers: any;
   let NonFungiblePositionManager: INonfungiblePositionManager;
@@ -44,60 +45,24 @@ describe('PositionManagerFactory.sol', function () {
     token1 = await tokensFixture('USDC', 6).then((tokenFix) => tokenFix.tokenFixture);
 
     //deploy factory, used for pools
-    const uniswapFactoryFactory = new ContractFactory(
-      UniswapV3Factoryjson['abi'],
-      UniswapV3Factoryjson['bytecode'],
-      user
-    );
-    const Factory = (await uniswapFactoryFactory.deploy().then((contract) => contract.deployed())) as Contract;
-    poolI = await poolFixture(token0, token1, 3000, Factory).then((poolFix) => poolFix.pool);
+    let Factory;
+    [Factory, NonFungiblePositionManager] = await deployUniswapContracts(token0);
 
     await token0.mint(user.address, ethers.utils.parseEther('1000000000000'));
     await token1.mint(user.address, ethers.utils.parseEther('1000000000000'));
-
-    //deploy NonFungiblePositionManagerDescriptor and NonFungiblePositionManager
-    const NonFungiblePositionManagerDescriptorFactory = new ContractFactory(
-      NonFungiblePositionManagerDescriptorjson['abi'],
-      NonFungiblePositionManagerDescriptorBytecode,
-      user
-    );
-    const NonFungiblePositionManagerDescriptor = await NonFungiblePositionManagerDescriptorFactory.deploy(
-      token0.address,
-      ethers.utils.formatBytes32String('www.google.com')
-    ).then((contract) => contract.deployed());
-
-    const NonFungiblePositionManagerFactory = new ContractFactory(
-      NonFungiblePositionManagerjson['abi'],
-      NonFungiblePositionManagerjson['bytecode'],
-      user
-    );
-    NonFungiblePositionManager = (await NonFungiblePositionManagerFactory.deploy(
-      Factory.address,
-      token0.address,
-      NonFungiblePositionManagerDescriptor.address
-    ).then((contract) => contract.deployed())) as INonfungiblePositionManager;
 
     //deploy router
     Router = await routerFixture().then((RFixture: any) => RFixture.ruoterDeployFixture);
 
     //deploy uniswapAddressHolder
-    const uniswapAddressHolderFactory = await ethers.getContractFactory('UniswapAddressHolder');
-    uniswapAddressHolder = (await uniswapAddressHolderFactory.deploy(
+    uniswapAddressHolder = (await deployContract('UniswapAddressHolder', [
       NonFungiblePositionManager.address,
       Factory.address,
-      Router.address
-    )) as UniswapAddressHolder;
-    await uniswapAddressHolder.deployed();
+      Router.address,
+    ])) as UniswapAddressHolder;
+    AaveAddressHolder = await deployContract('AaveAddressHolder', [NonFungiblePositionManager.address]);
+    diamondCutFacet = await deployContract('DiamondCutFacet');
 
-    //deploy aaveAddressHolder
-    const aaveAddressHolderFactory = await ethers.getContractFactory('AaveAddressHolder');
-    AaveAddressHolder = await aaveAddressHolderFactory.deploy(NonFungiblePositionManager.address); //random address because it is not used
-    await AaveAddressHolder.deployed();
-
-    // deploy DiamondCutFacet ----------------------------------------------------------------------
-    const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet');
-    diamondCutFacet = await DiamondCutFacet.deploy();
-    await diamondCutFacet.deployed();
     await token0
       .connect(signers[0])
       .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('1000000000000'));
@@ -130,7 +95,9 @@ describe('PositionManagerFactory.sol', function () {
 
       await registry.addNewContract(
         hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('PositionManagerFactory')),
-        PositionManagerFactoryInstance.address
+        PositionManagerFactoryInstance.address,
+        hre.ethers.utils.toUtf8Bytes('1'),
+        true
       );
 
       [owner] = await ethers.getSigners();
