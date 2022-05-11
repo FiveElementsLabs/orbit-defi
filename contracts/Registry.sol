@@ -104,6 +104,11 @@ contract Registry is IRegistry {
         modules[_id].defaultData = _defaultData;
     }
 
+    function setDefaultActivation(bytes32 _id, bool _activatedByDefault) external onlyGovernance {
+        require(modules[_id].contractAddress != address(0), 'Registry::setDefaultValue: Entry does not exist.');
+        modules[_id].activatedByDefault = _activatedByDefault;
+    }
+
     ///@notice Get the address of a module for a given key
     ///@param _id keccak256 of module id string
     ///@return address of the module
