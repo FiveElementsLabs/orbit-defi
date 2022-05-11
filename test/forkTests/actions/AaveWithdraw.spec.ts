@@ -74,9 +74,9 @@ describe('AaveWithdraw.sol', function () {
 
     //deploy uniswapAddressHolder
     const uniswapAddressHolder = await deployContract('UniswapAddressHolder', [
-      Factory.address,
-      Factory.address,
-      Factory.address,
+      Factory.address, //random address because we don't need it
+      Factory.address, //random address because we don't need it
+      Factory.address, //random address because we don't need it
     ]);
     const aaveAddressHolder = await deployContract('AaveAddressHolder', [LendingPool.address]);
     const diamondCutFacet = await deployContract('DiamondCutFacet');
