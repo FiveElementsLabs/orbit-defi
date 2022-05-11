@@ -4,7 +4,7 @@ pragma abicoder v2;
 
 import '../interfaces/IRegistry.sol';
 
-/// @title Stores all the modules addresses
+/// @title Stores all the contract addresses
 contract Registry is IRegistry {
     address public override governance;
     address public override positionManagerFactoryAddress;
@@ -24,7 +24,7 @@ contract Registry is IRegistry {
     ///@notice emitted when a contract address is updated
     ///@param oldContract address of the contract before update
     ///@param newContract address of the contract after update
-    ///@param moduleId keccak of module name
+    ///@param moduleId keccak of contract name
     event ContractChanged(address oldContract, address newContract, bytes32 moduleId);
 
     ///@notice emitted when a module is switched on/off
@@ -49,8 +49,8 @@ contract Registry is IRegistry {
         emit GovernanceChanged(_governance);
     }
 
-    ///@notice Register a module
-    ///@param _id keccak256 of module id string
+    ///@notice Register a contract
+    ///@param _id keccak256 of contract name
     ///@param _contractAddress address of the new module
     function addNewContract(bytes32 _id, address _contractAddress) external onlyGovernance {
         require(modules[_id].contractAddress == address(0), 'Registry::addNewContract: Entry already exists.');

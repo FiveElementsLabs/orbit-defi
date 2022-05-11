@@ -27,16 +27,16 @@ async function main() {
   const msgValue = 0;
   const signature = 'addNewContract(bytes, address)';
   const data = AbiCoder.encode(['bytes32', 'address'], [contractIdKeccak, DepositRecipesAddress]);
-  const eta = Math.floor(Date.now() / 1000) + 21750;
+  const eta = 1652279150;
 
-  console.log(`ETA: ${new Date(eta * 1000)}`);
-  console.log('ETA TIMESTAMP: KEEP THIS TO EXECUTE CALL: ', eta);
+  await (
+    await Timelock.executeTransaction(target, msgValue, signature, data, eta, {
+      gasPrice: Config.gasPrice,
+      gasLimit: Config.gasLimit,
+    })
+  ).wait();
 
-  await Timelock.queueTransaction(target, msgValue, signature, data, eta, {
-    gasPrice: Config.gasPrice,
-    gasLimit: Config.gasLimit,
-  });
-  console.log('Transaction queued');
+  console.log('Transaction executed');
 }
 
 main()
