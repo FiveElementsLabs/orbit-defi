@@ -15,6 +15,11 @@ import {
   mintSTDAmount,
   RegistryFixture,
   getSelectors,
+  deployUniswapContracts,
+  deployContract,
+  deployPositionManagerFactoryAndActions,
+  doAllApprovals,
+  getPositionManager,
 } from '../../shared/fixtures';
 import {
   MockToken,
@@ -71,13 +76,7 @@ describe('WithdrawRecipes.sol', function () {
     tokenUsdt = (await tokensFixture('USDT', 18)).tokenFixture;
 
     //deploy factory, used for pools
-    const uniswapFactoryFactory = new ContractFactory(
-      UniswapV3Factoryjson['abi'],
-      UniswapV3Factoryjson['bytecode'],
-      user
-    );
-    Factory = await uniswapFactoryFactory.deploy();
-    await Factory.deployed();
+    [Factory, NonFungiblePositionManager, SwapRouter] = await deployUniswapContracts(tokenEth);
 
     //deploy some pools
     PoolEthUsdc3000 = (await poolFixture(tokenEth, tokenUsdc, 3000, Factory)).pool;
@@ -92,90 +91,57 @@ describe('WithdrawRecipes.sol', function () {
     await mintSTDAmount(tokenUsdc);
     await mintSTDAmount(tokenDai);
 
-    //deploy NonFungiblePositionManagerDescriptor and NonFungiblePositionManager
-    const NonFungiblePositionManagerDescriptorFactory = new ContractFactory(
-      NonFungiblePositionManagerDescriptorjson['abi'],
-      NonFungiblePositionManagerDescriptorBytecode,
-      user
-    );
-    const NonFungiblePositionManagerDescriptor = await NonFungiblePositionManagerDescriptorFactory.deploy(
-      tokenEth.address,
-      ethers.utils.formatBytes32String('www.google.com')
-    );
-    await NonFungiblePositionManagerDescriptor.deployed();
-
-    const NonFungiblePositionManagerFactory = new ContractFactory(
-      NonFungiblePositionManagerjson['abi'],
-      NonFungiblePositionManagerjson['bytecode'],
-      user
-    );
-    NonFungiblePositionManager = (await NonFungiblePositionManagerFactory.deploy(
-      Factory.address,
-      tokenEth.address,
-      NonFungiblePositionManagerDescriptor.address
-    )) as INonfungiblePositionManager;
-    await NonFungiblePositionManager.deployed();
-
-    //deploy router
-    const SwapRouterFactory = new ContractFactory(SwapRouterjson['abi'], SwapRouterjson['bytecode'], user);
-    SwapRouter = await SwapRouterFactory.deploy(Factory.address, tokenEth.address);
-    await SwapRouter.deployed();
-
-    //deploy uniswapAddressHolder
-    const UniswapAddressHolderFactory = await ethers.getContractFactory('UniswapAddressHolder');
-    UniswapAddressHolder = await UniswapAddressHolderFactory.deploy(
+    //deploy our contracts
+    UniswapAddressHolder = await deployContract('UniswapAddressHolder', [
       NonFungiblePositionManager.address,
       Factory.address,
-      SwapRouter.address
+      SwapRouter.address,
+    ]);
+    DiamondCutFacet = await deployContract('DiamondCutFacet');
+    registry = await deployContract('Registry', [user.address]);
+
+    //deploy PositionManagerFactory
+    PositionManagerFactory = await deployPositionManagerFactoryAndActions(
+      user.address,
+      registry.address,
+      DiamondCutFacet.address,
+      UniswapAddressHolder.address,
+      '0x0000000000000000000000000000000000000000',
+      ['ClosePosition', 'DecreaseLiquidity', 'CollectFees', 'ZapOut']
     );
-    await UniswapAddressHolder.deployed();
 
-    const DiamondCutFacetFactory = await ethers.getContractFactory('DiamondCutFacet');
-    DiamondCutFacet = await DiamondCutFacetFactory.deploy();
-    await DiamondCutFacet.deployed();
+    DepositRecipes = (await deployContract('DepositRecipes', [
+      UniswapAddressHolder.address,
+      PositionManagerFactory.address,
+    ])) as DepositRecipes;
+    WithdrawRecipes = (await deployContract('WithdrawRecipes', [
+      PositionManagerFactory.address,
+      UniswapAddressHolder.address,
+    ])) as WithdrawRecipes;
 
-    //deploy mint contract
-    const ClosePositionFactory = await ethers.getContractFactory('ClosePosition');
-    const closePositionAction = await ClosePositionFactory.deploy();
-    await closePositionAction.deployed();
+    await registry.setPositionManagerFactory(PositionManagerFactory.address);
+    await registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
+    await registry.addNewContract(
+      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Factory')),
+      PositionManagerFactory.address
+    );
+    await registry.addNewContract(
+      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('DepositRecipes')),
+      DepositRecipes.address
+    );
+    await registry.addNewContract(
+      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('WithdrawRecipes')),
+      WithdrawRecipes.address
+    );
 
-    //deploy decreaseLiquidity contract
-    const DecreaseLiquidityFactory = await ethers.getContractFactory('DecreaseLiquidity');
-    const decreaseLiquidityAction = await DecreaseLiquidityFactory.deploy();
-    await decreaseLiquidityAction.deployed();
-
-    //deploy collectFees contract+
-    const CollectFeesFactory = await ethers.getContractFactory('CollectFees');
-    const collectFeesAction = await CollectFeesFactory.deploy();
-    await collectFeesAction.deployed();
-
-    //deploy zapIn contract
-    const ZapOutFactory = await ethers.getContractFactory('ZapOut');
-    const zapOutAction = await ZapOutFactory.deploy();
-    await zapOutAction.deployed();
+    PositionManager = (await getPositionManager(PositionManagerFactory, user)) as PositionManager;
 
     //APPROVE
-
-    //recipient: NonFungiblePositionManager - spender: liquidityProvider
-    await tokenEth
-      .connect(liquidityProvider)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
-    await tokenUsdc
-      .connect(liquidityProvider)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
-    await tokenDai
-      .connect(liquidityProvider)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
-    //recipient: NonfungiblePositionManager - spender: user
-    await tokenEth
-      .connect(user)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
-    await tokenUsdc
-      .connect(user)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
-    await tokenDai
-      .connect(user)
-      .approve(NonFungiblePositionManager.address, ethers.utils.parseEther('100000000000000'));
+    await doAllApprovals(
+      [user, liquidityProvider],
+      [NonFungiblePositionManager.address, DepositRecipes.address],
+      [tokenDai, tokenEth, tokenUsdc]
+    );
 
     // give pools some liquidity
     await NonFungiblePositionManager.connect(liquidityProvider).mint(
@@ -281,89 +247,9 @@ describe('WithdrawRecipes.sol', function () {
     );
 
     //deploy the PositionManagerFactory => deploy PositionManager
-    PositionManagerFactoryFactory = (await ethers.getContractFactory('PositionManagerFactory')) as ContractFactory;
-    PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
-    await PositionManagerFactory.deployed();
-
-    // deploy Registry
-    registry = (await RegistryFixture(user.address, PositionManagerFactory.address)).registryFixture;
-    await registry.deployed();
-
-    //deploy the PositionManagerFactory => deploy PositionManager
-    await PositionManagerFactory.create(
-      user.address,
-      DiamondCutFacet.address,
-      UniswapAddressHolder.address,
-      registry.address,
-      '0x0000000000000000000000000000000000000000'
-    );
-
-    let contractsDeployed = await PositionManagerFactory.positionManagers(0);
-    PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
-
-    await registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
-
-    // add actions to position manager using diamond pattern
-    const cut = [];
-    const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 };
-
-    cut.push({
-      facetAddress: closePositionAction.address,
-      action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(closePositionAction),
-    });
-    cut.push({
-      facetAddress: zapOutAction.address,
-      action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(zapOutAction),
-    });
-    cut.push({
-      facetAddress: decreaseLiquidityAction.address,
-      action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(decreaseLiquidityAction),
-    });
-    cut.push({
-      facetAddress: collectFeesAction.address,
-      action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(collectFeesAction),
-    });
-
-    const diamondCut = await ethers.getContractAt('IDiamondCut', PositionManager.address);
-
-    const tx = await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
-
-    //deploy WithdrawRecipes contract
-    let WithdrawRecipesFactory = await ethers.getContractFactory('WithdrawRecipes');
-    WithdrawRecipes = (await WithdrawRecipesFactory.deploy(
-      PositionManagerFactory.address,
-      UniswapAddressHolder.address
-    )) as WithdrawRecipes;
-    await WithdrawRecipes.deployed();
-
-    let DepositRecipesFactory = await ethers.getContractFactory('DepositRecipes');
-    DepositRecipes = (await DepositRecipesFactory.deploy(
-      NonFungiblePositionManager.address,
-      PositionManagerFactory.address
-    )) as DepositRecipes;
-    await DepositRecipes.deployed();
-
     let MockUniswapNFTHelperFactory = await ethers.getContractFactory('MockUniswapNFTHelper');
     MockUniswapNFTHelper = (await MockUniswapNFTHelperFactory.deploy()) as MockUniswapNFTHelper;
     await MockUniswapNFTHelper.deployed();
-
-    await registry.addNewContract(
-      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('DepositRecipes')),
-      DepositRecipes.address
-    );
-    await registry.addNewContract(
-      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('WithdrawRecipes')),
-      WithdrawRecipes.address
-    );
-
-    //recipient: positionManager - spender: user
-    await tokenEth.connect(user).approve(DepositRecipes.address, ethers.utils.parseEther('100000000000000'));
-    await tokenUsdc.connect(user).approve(DepositRecipes.address, ethers.utils.parseEther('100000000000000'));
-    await tokenDai.connect(user).approve(DepositRecipes.address, ethers.utils.parseEther('100000000000000'));
   });
 
   beforeEach(async function () {
@@ -387,7 +273,8 @@ describe('WithdrawRecipes.sol', function () {
     const events: any = (await mintTx.wait()).events;
     tokenId = await events[events.length - 1].args.tokenId.toNumber();
 
-    await NonFungiblePositionManager.setApprovalForAll(DepositRecipes.address, true);
+    await NonFungiblePositionManager.connect(user).setApprovalForAll(DepositRecipes.address, true);
+
     await DepositRecipes.connect(user).depositUniNft([tokenId]);
   });
 

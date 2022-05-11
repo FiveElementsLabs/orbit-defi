@@ -37,7 +37,7 @@ describe('Timelock.sol', function () {
     Timelock2 = (await TimelockFixture(deployer4.address, delay)).timelockFixture;
 
     //deploy the registry - we need it to test the timelock features
-    Registry = (await RegistryFixture(Timelock.address, '0x0000000000000000000000000000000000000000')).registryFixture;
+    Registry = (await RegistryFixture(Timelock.address)).registryFixture;
   });
 
   describe('Deployment ', function () {

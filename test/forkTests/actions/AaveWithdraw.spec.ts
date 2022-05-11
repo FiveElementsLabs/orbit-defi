@@ -8,13 +8,13 @@ import UniswapV3Factoryjson from '@uniswap/v3-core/artifacts/contracts/UniswapV3
 import PositionManagerjson from '../../../artifacts/contracts/PositionManager.sol/PositionManager.json';
 import LendingPooljson from '@aave/protocol-v2/artifacts/contracts/protocol/lendingpool/LendingPool.sol/LendingPool.json';
 import {
-  NonFungiblePositionManagerDescriptorBytecode,
   tokensFixture,
   poolFixture,
   mintSTDAmount,
-  getSelectors,
-  findbalanceSlot,
-  RegistryFixture,
+  deployContract,
+  deployPositionManagerFactoryAndActions,
+  mintForkedTokens,
+  getPositionManager,
 } from '../../shared/fixtures';
 import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager } from '../../../typechain';
 
@@ -73,93 +73,43 @@ describe('AaveWithdraw.sol', function () {
     LendingPool = await ethers.getContractAtFromArtifact(LendingPooljson, '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9');
 
     //deploy uniswapAddressHolder
-    const uniswapAddressHolderFactory = await ethers.getContractFactory('UniswapAddressHolder');
-    const uniswapAddressHolder = await uniswapAddressHolderFactory.deploy(
-      Factory.address, //random address because we don't need it
-      Factory.address, //random address because we don't need it
-      Factory.address //random address because we don't need it
-    );
-    await uniswapAddressHolder.deployed();
-
-    //deploy aaveAddressHolder
-    const aaveAddressHolderFactory = await ethers.getContractFactory('AaveAddressHolder');
-    const aaveAddressHolder = await aaveAddressHolderFactory.deploy(LendingPool.address);
-    await aaveAddressHolder.deployed();
-
-    // deploy DiamondCutFacet ----------------------------------------------------------------------
-    const DiamondCutFacet = await ethers.getContractFactory('DiamondCutFacet');
-    const diamondCutFacet = await DiamondCutFacet.deploy();
-    await diamondCutFacet.deployed();
+    const uniswapAddressHolder = await deployContract('UniswapAddressHolder', [
+      Factory.address,
+      Factory.address,
+      Factory.address,
+    ]);
+    const aaveAddressHolder = await deployContract('AaveAddressHolder', [LendingPool.address]);
+    const diamondCutFacet = await deployContract('DiamondCutFacet');
+    const registry = await deployContract('Registry', [user.address]);
 
     //deploy the PositionManagerFactory => deploy PositionManager
-    const PositionManagerFactoryFactory = await ethers.getContractFactory('PositionManagerFactory');
-    const PositionManagerFactory = (await PositionManagerFactoryFactory.deploy()) as Contract;
-    await PositionManagerFactory.deployed();
-
-    // deploy Registry
-    const registry = (await RegistryFixture(user.address, PositionManagerFactory.address)).registryFixture;
-    await registry.deployed();
-
-    await PositionManagerFactory.create(
+    const PositionManagerFactory = await deployPositionManagerFactoryAndActions(
       user.address,
+      registry.address,
       diamondCutFacet.address,
       uniswapAddressHolder.address,
-      registry.address,
-      aaveAddressHolder.address
+      aaveAddressHolder.address,
+      ['AaveDeposit', 'AaveWithdraw']
+    );
+    await registry.setPositionManagerFactory(PositionManagerFactory.address);
+
+    //approval user to registry for test
+    await registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
+    await registry.addNewContract(
+      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Factory')),
+      PositionManagerFactory.address
     );
 
-    const contractsDeployed = await PositionManagerFactory.positionManagers(0);
-    PositionManager = (await ethers.getContractAt(PositionManagerjson['abi'], contractsDeployed)) as PositionManager;
-
-    //Deploy Aave Deposit Action
-    const AaveDepositActionFactory = await ethers.getContractFactory('AaveDeposit');
-    const AaveDepositAction = (await AaveDepositActionFactory.deploy()) as Contract;
-    await AaveDepositAction.deployed();
-
-    //Deploy Aave Withdraw Action
-    const AaveWithdrawActionFactory = await ethers.getContractFactory('AaveWithdraw');
-    const AaveWithdrawAction = (await AaveWithdrawActionFactory.deploy()) as Contract;
-    await AaveWithdrawAction.deployed();
+    PositionManager = (await getPositionManager(PositionManagerFactory, user)) as PositionManager;
 
     //Get mock token
     usdcMock = await ethers.getContractAt('MockToken', '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48');
-
-    //mint some token
-
-    const slot = await findbalanceSlot(usdcMock, user);
-
-    const encode = (types: any, values: any) => ethers.utils.defaultAbiCoder.encode(types, values);
-
-    let probedSlot = ethers.utils.keccak256(encode(['address', 'uint'], [user.address, slot]));
-    let value = encode(['uint'], [ethers.utils.parseEther('100000000')]);
-
-    await hre.network.provider.send('hardhat_setStorageAt', [usdcMock.address, probedSlot, value]);
+    await mintForkedTokens([usdcMock], [user], 1000000000);
 
     //pass to PM some token
     await usdcMock.connect(user).approve(PositionManager.address, ethers.utils.parseEther('1000000000'));
     await usdcMock.connect(user).transfer(PositionManager.address, ethers.utils.parseEther('10000000'));
 
-    //approval user to registry for test
-    await registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
-
-    // add actions to position manager using diamond pattern
-    const cut = [];
-    const FacetCutAction = { Add: 0, Replace: 1, Remove: 2 };
-
-    cut.push({
-      facetAddress: AaveDepositAction.address,
-      action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(AaveDepositAction),
-    });
-    cut.push({
-      facetAddress: AaveWithdrawAction.address,
-      action: FacetCutAction.Add,
-      functionSelectors: await getSelectors(AaveWithdrawAction),
-    });
-
-    const diamondCut = await ethers.getContractAt('IDiamondCut', PositionManager.address);
-
-    const tx = await diamondCut.diamondCut(cut, '0x0000000000000000000000000000000000000000', []);
     AaveDepositFallback = (await ethers.getContractAt('IAaveDeposit', PositionManager.address)) as Contract;
     AaveWithdrawFallback = (await ethers.getContractAt('IAaveWithdraw', PositionManager.address)) as Contract;
 

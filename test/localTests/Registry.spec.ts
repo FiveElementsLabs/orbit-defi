@@ -18,10 +18,11 @@ describe('Registry.sol', function () {
     const signers = await ethers.getSigners();
     deployer = signers[0];
     user = signers[1];
-    //deploy the registry
-    Registry = (await RegistryFixture(deployer.address, '0x0000000000000000000000000000000000000000')).registryFixture;
 
     const zeroAddress = ethers.constants.AddressZero;
+
+    //deploy the registry
+    Registry = (await RegistryFixture(deployer.address)).registryFixture;
 
     //Deploy modules
     const IdleLiquidityModuleFactory = await ethers.getContractFactory('IdleLiquidityModule');
