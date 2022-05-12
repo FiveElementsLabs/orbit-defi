@@ -8,7 +8,7 @@ import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.s
 interface IPositionManager {
     struct ModuleInfo {
         bool isActive;
-        bytes data;
+        bytes32 data;
     }
 
     struct AaveReserve {
@@ -16,8 +16,6 @@ interface IPositionManager {
         mapping(uint256 => uint256) tokenIds;
         uint256 sharesEmitted;
     }
-
-    function getModuleState(uint256 tokenId, address moduleAddress) external view returns (bool);
 
     function toggleModule(
         uint256 tokenId,
@@ -28,12 +26,17 @@ interface IPositionManager {
     function setModuleData(
         uint256 tokenId,
         address moduleAddress,
-        bytes memory data
+        bytes32 data
     ) external;
 
-    function getModuleData(uint256 tokenId, address moduleAddress) external view returns (bytes memory);
+    function getModuleInfo(uint256 _tokenId, address _moduleAddress)
+        external
+        view
+        returns (bool isActive, bytes32 data);
 
     function withdrawERC20(address tokenAddress) external;
+
+    function middlewareDeposit(uint256 tokenId) external;
 
     function getAllUniPositions() external view returns (uint256[] memory);
 

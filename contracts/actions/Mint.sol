@@ -61,7 +61,7 @@ contract Mint is IMint {
             Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()
         ).mint(params);
 
-        IPositionManager(address(this)).pushPositionId(tokenId);
+        IPositionManager(address(this)).middlewareDeposit(tokenId);
         emit PositionMinted(address(this), tokenId);
     }
 }

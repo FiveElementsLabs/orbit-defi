@@ -115,6 +115,13 @@ contract PositionManager is IPositionManager, ERC721Holder {
         Storage.aaveAddressHolder = IAaveAddressHolder(_aaveAddressHolder);
     }
 
+    ///@notice middleware to manage the deposit of the position
+    ///@param tokenId ID of the position
+    function middlewareDeposit(uint256 tokenId) public override onlyOwnedPosition(tokenId) {
+        _setDefaultDataOfPosition(tokenId);
+        pushPositionId(tokenId);
+    }
+
     ///@notice remove awareness of tokenId UniswapV3 NFT
     ///@param tokenId ID of the NFT to remove
     function removePositionId(uint256 tokenId) public override onlyWhitelisted {
@@ -144,6 +151,23 @@ contract PositionManager is IPositionManager, ERC721Holder {
         return uniswapNFTsMemory;
     }
 
+    ///@notice set default data for every module
+    ///@param tokenId ID of the position
+    function _setDefaultDataOfPosition(uint256 tokenId) internal {
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+
+        bytes32[] memory moduleKeys = Storage.registry.getModuleKeys();
+
+        for (uint32 i = 0; i < moduleKeys.length; i++) {
+            (address moduleAddress, , bytes32 defaultData, bool activatedByDefault) = Storage.registry.getModuleInfo(
+                moduleKeys[i]
+            );
+
+            activatedModules[tokenId][moduleAddress].isActive = activatedByDefault;
+            activatedModules[tokenId][moduleAddress].data = defaultData;
+        }
+    }
+
     ///@notice toggle module state, activated (true) or not (false)
     ///@param tokenId ID of the NFT
     ///@param moduleAddress address of the module
@@ -157,19 +181,6 @@ contract PositionManager is IPositionManager, ERC721Holder {
         emit ModuleStateChanged(moduleAddress, tokenId, activated);
     }
 
-    ///@notice return the state of the module for tokenId position
-    ///@param tokenId ID of the position
-    ///@param moduleAddress address of the module
-    function getModuleState(uint256 tokenId, address moduleAddress)
-        external
-        view
-        override
-        onlyOwnedPosition(tokenId)
-        returns (bool)
-    {
-        return activatedModules[tokenId][moduleAddress].isActive;
-    }
-
     ///@notice sets the data of a module strategy for tokenId position
     ///@param tokenId ID of the position
     ///@param moduleAddress address of the module
@@ -177,22 +188,25 @@ contract PositionManager is IPositionManager, ERC721Holder {
     function setModuleData(
         uint256 tokenId,
         address moduleAddress,
-        bytes memory data
+        bytes32 data
     ) external override onlyOwner onlyOwnedPosition(tokenId) {
+        uint256 moduleData = uint256(data);
+        require(moduleData > 0, 'PositionManager::setModuleData: moduleData must be greater than 0%');
         activatedModules[tokenId][moduleAddress].data = data;
     }
 
-    ///@notice returns the data of a module strategy for tokenId position
-    ///@param tokenId ID of the position
-    ///@param moduleAddress address of the module
-    function getModuleData(uint256 tokenId, address moduleAddress)
+    ///@notice get info for a module strategy for tokenId position
+    ///@param _tokenId ID of the position
+    ///@param _moduleAddress address of the module
+    ///@return isActive is module activated
+    ///@return data of the module
+    function getModuleInfo(uint256 _tokenId, address _moduleAddress)
         external
         view
         override
-        onlyOwnedPosition(tokenId)
-        returns (bytes memory)
+        returns (bool isActive, bytes32 data)
     {
-        return activatedModules[tokenId][moduleAddress].data;
+        return (activatedModules[_tokenId][_moduleAddress].isActive, activatedModules[_tokenId][_moduleAddress].data);
     }
 
     ///@notice stores old position data when liquidity is moved to aave
@@ -255,7 +269,8 @@ contract PositionManager is IPositionManager, ERC721Holder {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         bytes32[] memory keys = Storage.registry.getModuleKeys();
         for (uint256 i = 0; i < keys.length; i++) {
-            if (Storage.registry.moduleAddress(keys[i]) == _address && Storage.registry.isActive(keys[i]) == true) {
+            (address moduleAddress, bool isActive, , ) = Storage.registry.getModuleInfo(keys[i]);
+            if (moduleAddress == _address && isActive == true) {
                 isCalledFromActiveModule = true;
                 break;
             }
@@ -267,7 +282,8 @@ contract PositionManager is IPositionManager, ERC721Holder {
         bytes32[] memory recipeKeys = PositionManagerStorage.getRecipesKeys();
 
         for (uint256 i = 0; i < recipeKeys.length; i++) {
-            if (Storage.registry.moduleAddress(recipeKeys[i]) == _address) {
+            (address moduleAddress, , , ) = Storage.registry.getModuleInfo(recipeKeys[i]);
+            if (moduleAddress == _address) {
                 isCalledFromRecipe = true;
                 break;
             }

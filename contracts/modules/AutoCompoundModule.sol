@@ -3,7 +3,9 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
+import './BaseModule.sol';
 import '../../interfaces/IPositionManager.sol';
+import '../../interfaces/IRegistry.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
 import '../../interfaces/actions/ICollectFees.sol';
 import '../../interfaces/actions/IIncreaseLiquidity.sol';
@@ -11,30 +13,33 @@ import '../../interfaces/actions/IUpdateUncollectedFees.sol';
 import '../helpers/UniswapNFTHelper.sol';
 import '../utils/Storage.sol';
 
-contract AutoCompoundModule {
+contract AutoCompoundModule is BaseModule {
     IUniswapAddressHolder addressHolder;
 
     ///@notice constructor of autoCompoundModule
     ///@param _addressHolder the address of the uniswap address holder contract
-    constructor(address _addressHolder) {
+    ///@param _registry the address of the registry contract
+    constructor(address _addressHolder, address _registry) BaseModule(_registry) {
         addressHolder = IUniswapAddressHolder(_addressHolder);
+        registry = IRegistry(_registry);
     }
 
     ///@notice executes our recipe for autocompounding
     ///@param positionManager address of the position manager
     ///@param tokenId id of the token to autocompound
-    function autoCompoundFees(IPositionManager positionManager, uint256 tokenId) public {
-        ///@dev check if autocompound is active
-        if (positionManager.getModuleState(tokenId, address(this))) {
-            ///@dev check if compound need to be done
-            if (_checkIfCompoundIsNeeded(address(positionManager), tokenId)) {
-                (uint256 amount0Desired, uint256 amount1Desired) = ICollectFees(address(positionManager)).collectFees(
-                    tokenId,
-                    false
-                );
+    function autoCompoundFees(IPositionManager positionManager, uint256 tokenId)
+        public
+        onlyWhitelistedKeeper
+        activeModule(address(positionManager), tokenId)
+    {
+        ///@dev check if compound need to be done
+        if (_checkIfCompoundIsNeeded(address(positionManager), tokenId)) {
+            (uint256 amount0Desired, uint256 amount1Desired) = ICollectFees(address(positionManager)).collectFees(
+                tokenId,
+                false
+            );
 
-                IIncreaseLiquidity(address(positionManager)).increaseLiquidity(tokenId, amount0Desired, amount1Desired);
-            }
+            IIncreaseLiquidity(address(positionManager)).increaseLiquidity(tokenId, amount0Desired, amount1Desired);
         }
     }
 
@@ -52,10 +57,9 @@ contract AutoCompoundModule {
             addressHolder.uniswapV3FactoryAddress()
         );
 
-        uint256 feesThreshold = abi.decode(
-            IPositionManager(positionManagerAddress).getModuleData(tokenId, address(this)),
-            (uint256)
-        );
+        (, bytes32 data) = IPositionManager(positionManagerAddress).getModuleInfo(tokenId, address(this));
+
+        uint256 feesThreshold = uint256(data);
 
         (uint160 sqrtPriceX96, , , , , , ) = IUniswapV3Pool(
             UniswapNFTHelper._getPoolFromTokenId(

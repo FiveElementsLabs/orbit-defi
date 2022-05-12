@@ -5,10 +5,10 @@ pragma abicoder v2;
 
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
+import './BaseModule.sol';
 import '../helpers/UniswapNFTHelper.sol';
 import '../../interfaces/IAaveAddressHolder.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
-import '../../interfaces/IPositionManager.sol';
 import '../../interfaces/actions/IAaveDeposit.sol';
 import '../../interfaces/actions/IAaveWithdraw.sol';
 import '../../interfaces/actions/IDecreaseLiquidity.sol';
@@ -17,19 +17,15 @@ import '../../interfaces/actions/ISwap.sol';
 import '../../interfaces/actions/ISwapToPositionRatio.sol';
 import '../../interfaces/actions/IIncreaseLiquidity.sol';
 
-contract AaveModule {
+contract AaveModule is BaseModule {
     IAaveAddressHolder public aaveAddressHolder;
-    IUniswapAddressHolder uniswapAddressHolder;
+    IUniswapAddressHolder public uniswapAddressHolder;
 
-    modifier activeModule(address positionManager, uint256 tokenId) {
-        require(
-            IPositionManager(positionManager).getModuleState(tokenId, address(this)),
-            'AaveModule::activeModule: Module is inactive.'
-        );
-        _;
-    }
-
-    constructor(address _aaveAddressHolder, address _uniswapAddressHolder) {
+    constructor(
+        address _aaveAddressHolder,
+        address _uniswapAddressHolder,
+        address _registry
+    ) BaseModule(_registry) {
         aaveAddressHolder = IAaveAddressHolder(_aaveAddressHolder);
         uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
     }
@@ -37,13 +33,17 @@ contract AaveModule {
     ///@notice deposit a position in an Aave lending pool
     ///@param positionManager address of the position manager
     ///@param tokenId id of the Uniswap position to deposit
-    function depositIfNeeded(address positionManager, uint256 tokenId) public activeModule(positionManager, tokenId) {
-        address toAaveToken = abi.decode(
-            IPositionManager(positionManager).getModuleData(tokenId, address(this)),
-            (address)
-        );
+    ///@param toAaveToken address of the Aave token to deposit
+    function depositIfNeeded(
+        address positionManager,
+        uint256 tokenId,
+        address toAaveToken
+    ) public activeModule(positionManager, tokenId) {
+        (, bytes32 data) = IPositionManager(positionManager).getModuleInfo(tokenId, address(this));
+
+        uint24 rebalanceDistance = uint24(uint256(data));
         ///@dev move token to aave only if the position's range is outside of the tick of the pool
-        if (_checkDistanceFromRange(tokenId) > 0) {
+        if (_checkDistanceFromRange(tokenId) > 0 && rebalanceDistance <= _checkDistanceFromRange(tokenId)) {
             _depositToAave(positionManager, tokenId, toAaveToken);
         }
     }
@@ -56,7 +56,7 @@ contract AaveModule {
         address positionManager,
         address token,
         uint256 id
-    ) public {
+    ) public onlyWhitelistedKeeper {
         uint256 tokenId = IPositionManager(positionManager).getTokenIdFromAavePosition(token, id);
         (, int24 tickPool, , , , , ) = IUniswapV3Pool(
             UniswapNFTHelper._getPoolFromTokenId(
