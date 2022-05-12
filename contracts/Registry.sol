@@ -78,6 +78,13 @@ contract Registry is IRegistry {
         emit ModuleSwitched(_id, _activated);
     }
 
+    ///@notice adds a new whitelisted keeper
+    ///@param _keeper address of the new keeper
+    function addKeeperToWhitelist(address _keeper) external override onlyGovernance {
+        require(!isWhitelistedKeeper(_keeper), 'Registry::addKeeperToWhitelist: Keeper is already whitelisted.');
+        whitelistedKeepers.push(_keeper);
+    }
+
     ///@notice Get the keys for all modules
     ///@return bytes32[] all module keys
     function getModuleKeys() external view override returns (bytes32[] memory) {
@@ -101,7 +108,7 @@ contract Registry is IRegistry {
     ///@notice checks if an address is whitelisted as a keeper
     ///@param _keeper address to check
     ///@return bool true if whitelisted, false otherwise
-    function isWhitelistedKeeper(address _keeper) external view override returns (bool) {
+    function isWhitelistedKeeper(address _keeper) public view override returns (bool) {
         for (uint256 i = 0; i < whitelistedKeepers.length; i++) {
             if (whitelistedKeepers[i] == _keeper) {
                 return true;

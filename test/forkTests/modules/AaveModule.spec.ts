@@ -105,7 +105,11 @@ describe('AaveModule.sol', function () {
     const aaveAddressHolder = await deployContract('AaveAddressHolder', [LendingPool.address]);
     const diamondCutFacet = await deployContract('DiamondCutFacet');
     const registry = await deployContract('Registry', [user.address]);
-    AaveModule = await deployContract('AaveModule', [aaveAddressHolder.address, uniswapAddressHolder.address]);
+    AaveModule = await deployContract('AaveModule', [
+      aaveAddressHolder.address,
+      uniswapAddressHolder.address,
+      registry.address,
+    ]);
 
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactory = await deployPositionManagerFactoryAndActions(
@@ -135,6 +139,7 @@ describe('AaveModule.sol', function () {
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Factory')),
       PositionManagerFactory.address
     );
+    await registry.addKeeperToWhitelist(user.address);
 
     await registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
 

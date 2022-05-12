@@ -83,7 +83,7 @@ describe('IdleLiquidityModule.sol', function () {
     ]);
     const diamondCutFacet = await deployContract('DiamondCutFacet');
     const registry = await deployContract('Registry', [user.address]);
-    IdleLiquidityModule = await deployContract('IdleLiquidityModule', [uniswapAddressHolder.address]);
+    IdleLiquidityModule = await deployContract('IdleLiquidityModule', [uniswapAddressHolder.address, registry.address]);
 
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactory = await deployPositionManagerFactoryAndActions(
@@ -106,6 +106,7 @@ describe('IdleLiquidityModule.sol', function () {
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('IdleLiquidityModule')),
       IdleLiquidityModule.address
     );
+    await registry.addKeeperToWhitelist(user.address);
 
     PositionManager = (await getPositionManager(PositionManagerFactory, user)) as PositionManager;
 

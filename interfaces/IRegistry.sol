@@ -28,6 +28,10 @@ interface IRegistry {
     ///@return address of Governance
     function moduleAddress(bytes32 _id) external view returns (address);
 
+    ///@notice adds a new whitelisted keeper
+    ///@param _keeper address of the new keeper
+    function addKeeperToWhitelist(address _keeper) external;
+
     ///@notice checks if the address is whitelisted as a keeper
     ///@param _keeper address to check
     ///@return bool true if the address is withelisted, false otherwise

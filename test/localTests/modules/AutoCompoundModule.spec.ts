@@ -97,7 +97,7 @@ describe('AutoCompoundModule.sol', function () {
     ]);
     const diamondCutFacet = await deployContract('DiamondCutFacet');
     const registry = await deployContract('Registry', [user.address]);
-    autoCompound = await deployContract('AutoCompoundModule', [uniswapAddressHolder.address]);
+    autoCompound = await deployContract('AutoCompoundModule', [uniswapAddressHolder.address, registry.address]);
 
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactory = await deployPositionManagerFactoryAndActions(
@@ -119,6 +119,7 @@ describe('AutoCompoundModule.sol', function () {
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('AutoCompoundModule')),
       autoCompound.address
     );
+    await registry.addKeeperToWhitelist(user.address);
 
     PositionManager = (await getPositionManager(PositionManagerFactory, user)) as PositionManager;
 
