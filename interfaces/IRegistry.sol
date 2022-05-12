@@ -22,6 +22,15 @@ interface IRegistry {
     ///@return address of Governance
     function getModuleKeys() external view returns (bytes32[] memory);
 
+    ///@notice adds a new whitelisted keeper
+    ///@param _keeper address of the new keeper
+    function addKeeperToWhitelist(address _keeper) external;
+
+    ///@notice checks if the address is whitelisted as a keeper
+    ///@param _keeper address to check
+    ///@return bool true if the address is withelisted, false otherwise
+    function isWhitelistedKeeper(address _keeper) external view returns (bool);
+
     function getModuleInfo(bytes32 _id)
         external
         view

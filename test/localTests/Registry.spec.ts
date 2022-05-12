@@ -28,13 +28,15 @@ describe('Registry.sol', function () {
     //Deploy modules
     const IdleLiquidityModuleFactory = await ethers.getContractFactory('IdleLiquidityModule');
     IdleLiquidityModule = (await IdleLiquidityModuleFactory.deploy(
-      zeroAddress //we don't need this contract for this test
+      zeroAddress, //we don't need this contract for this test
+      Registry.address
     )) as Contract;
     await IdleLiquidityModule.deployed();
 
     const AutoCompoundModuleFactory = await ethers.getContractFactory('AutoCompoundModule');
     AutoCompoundModule = (await AutoCompoundModuleFactory.deploy(
-      zeroAddress //we don't need this contract for this test
+      zeroAddress, //we don't need this contract for this test
+      Registry.address
     )) as Contract;
     await AutoCompoundModule.deployed();
 
@@ -146,6 +148,13 @@ describe('Registry.sol', function () {
       const idIdle = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('IdleLiquidityModule'));
       await Registry.changeContract(idIdle, user.address);
       expect((await Registry.modules(idIdle)).contractAddress).to.equal(user.address);
+    });
+  });
+
+  describe('Registry.sol - keeperWhitelist', function () {
+    it('Should be able to add a keeper', async function () {
+      await Registry.addKeeperToWhitelist(user.address);
+      expect(await Registry.isWhitelistedKeeper(user.address)).to.be.true;
     });
   });
 });

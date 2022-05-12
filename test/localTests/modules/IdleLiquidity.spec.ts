@@ -83,7 +83,7 @@ describe('IdleLiquidityModule.sol', function () {
     ]);
     const diamondCutFacet = await deployContract('DiamondCutFacet');
     const registry = await deployContract('Registry', [user.address]);
-    IdleLiquidityModule = await deployContract('IdleLiquidityModule', [uniswapAddressHolder.address]);
+    IdleLiquidityModule = await deployContract('IdleLiquidityModule', [uniswapAddressHolder.address, registry.address]);
 
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactory = await deployPositionManagerFactoryAndActions(
@@ -118,6 +118,7 @@ describe('IdleLiquidityModule.sol', function () {
       hre.ethers.utils.formatBytes32String('2'),
       true
     );
+    await registry.addKeeperToWhitelist(user.address);
 
     PositionManager = (await getPositionManager(PositionManagerFactory, user)) as PositionManager;
 
@@ -208,11 +209,7 @@ describe('IdleLiquidityModule.sol', function () {
         IdleLiquidityModule.address,
         abiCoder.encode(['uint24'], [100])
       );
-      try {
-        await IdleLiquidityModule.rebalance(tokenId.add(1), PositionManager.address);
-      } catch (error: any) {
-        expect(error.message).to.include('Invalid token ID');
-      }
+      await expect(IdleLiquidityModule.rebalance(tokenId.add(1), PositionManager.address)).to.be.reverted;
     });
   });
 });

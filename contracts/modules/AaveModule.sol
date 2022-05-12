@@ -5,10 +5,10 @@ pragma abicoder v2;
 
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
+import './BaseModule.sol';
 import '../helpers/UniswapNFTHelper.sol';
 import '../../interfaces/IAaveAddressHolder.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
-import '../../interfaces/IPositionManager.sol';
 import '../../interfaces/actions/IAaveDeposit.sol';
 import '../../interfaces/actions/IAaveWithdraw.sol';
 import '../../interfaces/actions/IDecreaseLiquidity.sol';
@@ -17,17 +17,15 @@ import '../../interfaces/actions/ISwap.sol';
 import '../../interfaces/actions/ISwapToPositionRatio.sol';
 import '../../interfaces/actions/IIncreaseLiquidity.sol';
 
-contract AaveModule {
+contract AaveModule is BaseModule {
     IAaveAddressHolder public aaveAddressHolder;
-    IUniswapAddressHolder uniswapAddressHolder;
+    IUniswapAddressHolder public uniswapAddressHolder;
 
-    modifier activeModule(address positionManager, uint256 tokenId) {
-        (bool isActive, ) = IPositionManager(positionManager).getModuleInfo(tokenId, address(this));
-        require(isActive, 'AaveModule::activeModule: Module is inactive.');
-        _;
-    }
-
-    constructor(address _aaveAddressHolder, address _uniswapAddressHolder) {
+    constructor(
+        address _aaveAddressHolder,
+        address _uniswapAddressHolder,
+        address _registry
+    ) BaseModule(_registry) {
         aaveAddressHolder = IAaveAddressHolder(_aaveAddressHolder);
         uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
     }
@@ -35,6 +33,7 @@ contract AaveModule {
     ///@notice deposit a position in an Aave lending pool
     ///@param positionManager address of the position manager
     ///@param tokenId id of the Uniswap position to deposit
+    ///@param toAaveToken address of the Aave token to deposit
     function depositIfNeeded(
         address positionManager,
         uint256 tokenId,
@@ -57,7 +56,7 @@ contract AaveModule {
         address positionManager,
         address token,
         uint256 id
-    ) public {
+    ) public onlyWhitelistedKeeper {
         uint256 tokenId = IPositionManager(positionManager).getTokenIdFromAavePosition(token, id);
         (, int24 tickPool, , , , , ) = IUniswapV3Pool(
             UniswapNFTHelper._getPoolFromTokenId(
