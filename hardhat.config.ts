@@ -67,7 +67,7 @@ export default {
     hardhat: {
       forking: {
         enabled: true,
-        url: process.env.INFURA_MAINNET,
+        url: process.env.INFURA_MAINNET || '',
         chainId: 31337,
       },
       mining: {
@@ -83,21 +83,21 @@ export default {
       timeout: 1800000,
     },
     mumbai: {
-      url: process.env.ALCHEMY_MUMBAI,
-      accounts: [process.env.TEST_PRIVATE_KEY],
+      url: process.env.ALCHEMY_MUMBAI || '',
+      accounts: [process.env.TEST_PRIVATE_KEY || ''],
       verify: {
         etherscan: {
-          apiKey: process.env.ETHERSCAN_API_KEY,
+          apiKey: process.env.ETHERSCAN_API_KEY || '',
           apiUrl: 'https://mumbai.polygonscan.com/',
         },
       },
     },
     polygon: {
-      url: process.env.ALCHEMY_POLYGON,
-      accounts: [process.env.POLYGON_PRIVATE_KEY],
+      url: process.env.ALCHEMY_POLYGON || '',
+      accounts: [process.env.POLYGON_PRIVATE_KEY || ''],
       verify: {
         etherscan: {
-          apiKey: process.env.ETHERSCAN_API_KEY,
+          apiKey: process.env.ETHERSCAN_API_KEY || '',
           apiUrl: 'https://api.polygonscan.com/',
         },
       },
