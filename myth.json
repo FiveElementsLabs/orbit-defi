@@ -1,0 +1,14 @@
+{
+  "remappings": [
+    "@openzeppelin/contracts/math/=./node_modules/@openzeppelin/contracts/math/",
+    "@openzeppelin/contracts/token/ERC721/=./node_modules/@openzeppelin/contracts/token/ERC721/",
+    "@openzeppelin/contracts/token/ERC20/=./node_modules/@openzeppelin/contracts/token/ERC20/",
+    "@uniswap/v3-core/contracts/interfaces/=./node_modules/@uniswap/v3-core/contracts/interfaces/",
+    "@uniswap/v3-core/contracts/libraries/=./node_modules/@uniswap/v3-core/contracts/libraries/",
+    "@uniswap/v3-periphery/contracts/interfaces/=./node_modules/@uniswap/v3-periphery/contracts/interfaces/",
+    "@uniswap/v3-periphery/contracts/libraries/=./node_modules/@uniswap/v3-periphery/contracts/libraries/"
+  ],
+  "optimizer": {
+    "enabled": true
+  }
+}
