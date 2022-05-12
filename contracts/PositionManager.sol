@@ -191,7 +191,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
         bytes32 data
     ) external override onlyOwner onlyOwnedPosition(tokenId) {
         uint256 moduleData = uint256(data);
-        require(moduleData > 0, 'PositionManager::setModuleData: moduleData must be greater than 2%');
+        require(moduleData > 0, 'PositionManager::setModuleData: moduleData must be greater than 0%');
         activatedModules[tokenId][moduleAddress].data = data;
     }
 

@@ -63,7 +63,7 @@ contract WithdrawRecipes {
     modifier onlyOwner(uint256 tokenId) {
         require(
             positionManagerFactory.userToPositionManager(msg.sender) ==
-                INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(tokenId)
+                INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(tokenId), "WithdrawRecipes::onlyOwner: Only owner can call this function"
         );
         _;
     }
