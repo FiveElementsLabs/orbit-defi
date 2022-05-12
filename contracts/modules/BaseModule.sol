@@ -15,10 +15,8 @@ contract BaseModule {
     }
 
     modifier activeModule(address positionManager, uint256 tokenId) {
-        require(
-            IPositionManager(positionManager).getModuleState(tokenId, address(this)),
-            'AaveModule::activeModule: Module is inactive.'
-        );
+        (bool isActive, ) = IPositionManager(positionManager).getModuleInfo(tokenId, address(this));
+        require(isActive, 'AaveModule::activeModule: Module is inactive.');
         _;
     }
 

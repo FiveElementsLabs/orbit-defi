@@ -32,18 +32,14 @@ contract AutoCompoundModule is BaseModule {
         onlyWhitelistedKeeper
         activeModule(address(positionManager), tokenId)
     {
-        ///@dev check if autocompound is active
-        (bool isActive, ) = positionManager.getModuleInfo(tokenId, address(this));
-        if (isActive) {
-            ///@dev check if compound need to be done
-            if (_checkIfCompoundIsNeeded(address(positionManager), tokenId)) {
-                (uint256 amount0Desired, uint256 amount1Desired) = ICollectFees(address(positionManager)).collectFees(
-                    tokenId,
-                    false
-                );
+        ///@dev check if compound need to be done
+        if (_checkIfCompoundIsNeeded(address(positionManager), tokenId)) {
+            (uint256 amount0Desired, uint256 amount1Desired) = ICollectFees(address(positionManager)).collectFees(
+                tokenId,
+                false
+            );
 
-                IIncreaseLiquidity(address(positionManager)).increaseLiquidity(tokenId, amount0Desired, amount1Desired);
-            }
+            IIncreaseLiquidity(address(positionManager)).increaseLiquidity(tokenId, amount0Desired, amount1Desired);
         }
     }
 
