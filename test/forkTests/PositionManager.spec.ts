@@ -21,6 +21,7 @@ import {
   deployUniswapContracts,
   deployPositionManagerFactoryAndActions,
   mintForkedTokens,
+  deployContract,
 } from '../shared/fixtures';
 import {
   MockToken,
@@ -79,7 +80,7 @@ describe('PositionManager.sol', function () {
     tokenUsdc = (await tokensFixture('USDC', 6)).tokenFixture;
     tokenDai = (await tokensFixture('DAI', 18)).tokenFixture;
 
-    //deploy factory, used for pools
+    //deploy uniswap contracts needed
     [Factory, NonFungiblePositionManager, SwapRouter] = await deployUniswapContracts(tokenEth);
 
     //deploy first 2 pools
@@ -94,28 +95,15 @@ describe('PositionManager.sol', function () {
     //LendingPool contract
     LendingPool = await ethers.getContractAtFromArtifact(LendingPooljson, '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9');
 
-    //deploy uniswapAddressHolder
-    const uniswapAddressHolderFactory = await ethers.getContractFactory('UniswapAddressHolder');
-    UniswapAddressHolder = await uniswapAddressHolderFactory.deploy(
+    //deploy our contracts
+    UniswapAddressHolder = await deployContract('UniswapAddressHolder', [
       NonFungiblePositionManager.address,
       Factory.address,
-      SwapRouter.address
-    );
-    await UniswapAddressHolder.deployed();
-
-    //deploy aaveAddressHolder
-    const aaveAddressHolderFactory = await ethers.getContractFactory('AaveAddressHolder');
-    AaveAddressHolder = await aaveAddressHolderFactory.deploy(LendingPool.address);
-    await AaveAddressHolder.deployed();
-
-    // deploy DiamondCutFacet ----------------------------------------------------------------------
-    const DiamondCutFacetFactory = await ethers.getContractFactory('DiamondCutFacet');
-    DiamondCutFacet = await DiamondCutFacetFactory.deploy();
-    await DiamondCutFacet.deployed();
-
-    // deploy Registry
-    Registry = (await RegistryFixture(user.address)).registryFixture;
-    await Registry.deployed();
+      SwapRouter.address,
+    ]);
+    AaveAddressHolder = await deployContract('AaveAddressHolder', [LendingPool.address]);
+    DiamondCutFacet = await deployContract('DiamondCutFacet');
+    Registry = await deployContract('Registry', [user.address]);
 
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactory = await deployPositionManagerFactoryAndActions(
@@ -128,10 +116,17 @@ describe('PositionManager.sol', function () {
     );
 
     await Registry.setPositionManagerFactory(PositionManagerFactory.address);
-    await Registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
+    await Registry.addNewContract(
+      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')),
+      user.address,
+      hre.ethers.utils.formatBytes32String('1'),
+      true
+    );
     await Registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Factory')),
-      PositionManagerFactory.address
+      PositionManagerFactory.address,
+      hre.ethers.utils.formatBytes32String('1'),
+      true
     );
 
     PositionManager = await getPositionManager(PositionManagerFactory, user);

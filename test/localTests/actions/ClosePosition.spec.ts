@@ -13,9 +13,6 @@ import {
   tokensFixture,
   poolFixture,
   mintSTDAmount,
-  getSelectors,
-  NonFungiblePositionManagerDescriptorBytecode,
-  RegistryFixture,
   deployUniswapContracts,
   deployContract,
   deployPositionManagerFactoryAndActions,
@@ -59,6 +56,7 @@ describe('ClosePosition.sol', function () {
     tokenEth = (await tokensFixture('ETH', 18)).tokenFixture;
     tokenUsdc = (await tokensFixture('USDC', 6)).tokenFixture;
 
+    //deploy uniswap contracts needed
     [Factory, NonFungiblePositionManager, SwapRouter] = await deployUniswapContracts(tokenEth);
 
     //deploy first pool
@@ -68,7 +66,7 @@ describe('ClosePosition.sol', function () {
     await mintSTDAmount(tokenEth);
     await mintSTDAmount(tokenUsdc);
 
-    //deploy uniswapAddressHolder
+    //deploy our contracts
     const uniswapAddressHolder = await deployContract('UniswapAddressHolder', [
       NonFungiblePositionManager.address,
       Factory.address,
@@ -87,11 +85,19 @@ describe('ClosePosition.sol', function () {
       ['ClosePosition']
     );
 
+    //registry setup
     await registry.setPositionManagerFactory(PositionManagerFactory.address);
-    await registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
+    await registry.addNewContract(
+      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')),
+      user.address,
+      hre.ethers.utils.formatBytes32String('1'),
+      true
+    );
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Factory')),
-      PositionManagerFactory.address
+      PositionManagerFactory.address,
+      hre.ethers.utils.formatBytes32String('1'),
+      true
     );
 
     PositionManager = (await getPositionManager(PositionManagerFactory, user)) as PositionManager;

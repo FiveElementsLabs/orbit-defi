@@ -10,12 +10,9 @@ import NonFungiblePositionManagerDescriptorjson from '@uniswap/v3-periphery/arti
 import PositionManagerjson from '../../../artifacts/contracts/PositionManager.sol/PositionManager.json';
 import SwapRouterjson from '@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json';
 import {
-  NonFungiblePositionManagerDescriptorBytecode,
   tokensFixture,
   poolFixture,
   mintSTDAmount,
-  getSelectors,
-  RegistryFixture,
   deployUniswapContracts,
   deployContract,
   deployPositionManagerFactoryAndActions,
@@ -61,7 +58,7 @@ describe('CollectFees.sol', function () {
     tokenEth = (await tokensFixture('ETH', 18)).tokenFixture;
     tokenUsdc = (await tokensFixture('USDC', 6)).tokenFixture;
 
-    //deploy factory, used for pools
+    //deploy uniswap contracts needed
     [Factory, NonFungiblePositionManager, swapRouter] = await deployUniswapContracts(tokenEth);
 
     //deploy first pool
@@ -90,11 +87,19 @@ describe('CollectFees.sol', function () {
       ['Mint', 'CollectFees']
     );
 
+    //registry setup
     await registry.setPositionManagerFactory(PositionManagerFactory.address);
-    await registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
+    await registry.addNewContract(
+      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')),
+      user.address,
+      hre.ethers.utils.formatBytes32String('1'),
+      true
+    );
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Factory')),
-      PositionManagerFactory.address
+      PositionManagerFactory.address,
+      hre.ethers.utils.formatBytes32String('1'),
+      true
     );
 
     PositionManager = (await getPositionManager(PositionManagerFactory, user)) as PositionManager;

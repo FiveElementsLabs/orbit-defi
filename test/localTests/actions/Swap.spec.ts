@@ -58,7 +58,7 @@ describe('Swap.sol', function () {
     tokenUsdc = (await tokensFixture('USDC', 6)).tokenFixture;
     tokenDai = (await tokensFixture('DAI', 18)).tokenFixture;
 
-    //deploy factory, used for pools
+    //deploy uniswap contracts needed
     [Factory, NonFungiblePositionManager, SwapRouter] = await deployUniswapContracts(tokenEth);
 
     //deploy first pool
@@ -69,7 +69,7 @@ describe('Swap.sol', function () {
     await mintSTDAmount(tokenUsdc);
     await mintSTDAmount(tokenDai);
 
-    //deploy uniswapAddressHolder
+    //deploy our contracts
     const UniswapAddressHolder = await deployContract('UniswapAddressHolder', [
       NonFungiblePositionManager.address,
       Factory.address,
@@ -88,11 +88,19 @@ describe('Swap.sol', function () {
       ['Swap']
     );
 
+    //registry setup
     await registry.setPositionManagerFactory(PositionManagerFactory.address);
-    await registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
+    await registry.addNewContract(
+      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')),
+      user.address,
+      hre.ethers.utils.formatBytes32String('1'),
+      true
+    );
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Factory')),
-      PositionManagerFactory.address
+      PositionManagerFactory.address,
+      hre.ethers.utils.formatBytes32String('1'),
+      true
     );
 
     PositionManager = (await getPositionManager(PositionManagerFactory, user)) as PositionManager;

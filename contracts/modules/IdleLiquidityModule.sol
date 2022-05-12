@@ -34,8 +34,10 @@ contract IdleLiquidityModule is BaseModule {
         activeModule(address(positionManager), tokenId)
     {
         uint24 tickDistance = _checkDistanceFromRange(tokenId);
-        if (positionManager.getModuleState(tokenId, address(this))) {
-            uint24 rebalanceDistance = abi.decode(positionManager.getModuleData(tokenId, address(this)), (uint24));
+        (bool isActive, bytes32 data) = positionManager.getModuleInfo(tokenId, address(this));
+
+        if (isActive) {
+            uint24 rebalanceDistance = uint24(uint256(data));
             ///@dev rebalance only if the position's range is outside of the tick of the pool (tickDistance < 0) and the position is far enough from tick of the pool
             if (tickDistance > 0 && rebalanceDistance <= tickDistance) {
                 (, , address token0, address token1, uint24 fee, , , , , , , ) = INonfungiblePositionManager(

@@ -29,6 +29,7 @@ import {
   DepositRecipes,
   PositionManager,
   MockUniswapNFTHelper,
+  AaveAddressHolder,
 } from '../../../typechain';
 import { DepositRecipesInterface } from '../../../typechain/DepositRecipes';
 
@@ -119,19 +120,33 @@ describe('WithdrawRecipes.sol', function () {
       UniswapAddressHolder.address,
     ])) as WithdrawRecipes;
 
+    //get AbiCoder
+    const abiCoder = ethers.utils.defaultAbiCoder;
+
     await registry.setPositionManagerFactory(PositionManagerFactory.address);
-    await registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
+    await registry.addNewContract(
+      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')),
+      user.address,
+      hre.ethers.utils.formatBytes32String('1'),
+      true
+    );
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Factory')),
-      PositionManagerFactory.address
+      PositionManagerFactory.address,
+      hre.ethers.utils.formatBytes32String('1'),
+      true
     );
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('DepositRecipes')),
-      DepositRecipes.address
+      DepositRecipes.address,
+      hre.ethers.utils.formatBytes32String('1'),
+      true
     );
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('WithdrawRecipes')),
-      WithdrawRecipes.address
+      WithdrawRecipes.address,
+      hre.ethers.utils.formatBytes32String('1'),
+      true
     );
 
     PositionManager = (await getPositionManager(PositionManagerFactory, user)) as PositionManager;
@@ -246,7 +261,6 @@ describe('WithdrawRecipes.sol', function () {
       { gasLimit: 670000 }
     );
 
-    //deploy the PositionManagerFactory => deploy PositionManager
     let MockUniswapNFTHelperFactory = await ethers.getContractFactory('MockUniswapNFTHelper');
     MockUniswapNFTHelper = (await MockUniswapNFTHelperFactory.deploy()) as MockUniswapNFTHelper;
     await MockUniswapNFTHelper.deployed();
@@ -321,6 +335,10 @@ describe('WithdrawRecipes.sol', function () {
       await WithdrawRecipes.connect(user).zapOutUniNft(tokenId, tokenDai.address);
       expect(await tokenDai.balanceOf(user.address)).to.be.gt(balanceBefore);
       await expect(NonFungiblePositionManager.ownerOf(tokenId)).to.be.reverted;
+    });
+    it('should revert if im not the owner of nft', async function () {
+      expect(await NonFungiblePositionManager.ownerOf(tokenId)).to.be.equal(PositionManager.address);
+      await expect(WithdrawRecipes.connect(liquidityProvider).withdrawUniNft(tokenId, 10000)).to.be.reverted;
     });
   });
 });

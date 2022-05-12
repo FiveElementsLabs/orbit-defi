@@ -95,23 +95,32 @@ describe('IdleLiquidityModule.sol', function () {
       ['ClosePosition', 'Mint', 'SwapToPositionRatio']
     );
 
+    //get AbiCoder
+    abiCoder = ethers.utils.defaultAbiCoder;
+
     await registry.setPositionManagerFactory(PositionManagerFactory.address);
-    await registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
+    await registry.addNewContract(
+      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')),
+      user.address,
+      hre.ethers.utils.formatBytes32String('2'),
+      true
+    );
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Factory')),
-      PositionManagerFactory.address
+      PositionManagerFactory.address,
+      hre.ethers.utils.formatBytes32String('2'),
+      true
     );
 
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('IdleLiquidityModule')),
-      IdleLiquidityModule.address
+      IdleLiquidityModule.address,
+      hre.ethers.utils.formatBytes32String('2'),
+      true
     );
     await registry.addKeeperToWhitelist(user.address);
 
     PositionManager = (await getPositionManager(PositionManagerFactory, user)) as PositionManager;
-
-    //get AbiCoder
-    abiCoder = ethers.utils.defaultAbiCoder;
 
     //APPROVE
     await doAllApprovals(
@@ -169,7 +178,7 @@ describe('IdleLiquidityModule.sol', function () {
 
   describe('IdleLiquidityModule - rebalance', function () {
     it('should rebalance a uni position that is out of range', async function () {
-      while ((await Pool0.slot0()).tick <= 120) {
+      while ((await Pool0.slot0()).tick <= 125) {
         // Do a trade to change tick
         await Router.connect(liquidityProvider).swap(Pool0.address, false, '0x' + (1e22).toString(16));
       }
@@ -183,7 +192,7 @@ describe('IdleLiquidityModule.sol', function () {
       await PositionManager.connect(user).setModuleData(
         tokenId,
         IdleLiquidityModule.address,
-        abiCoder.encode(['uint24'], [0])
+        abiCoder.encode(['uint24'], [2])
       );
       // rebalance
       await IdleLiquidityModule.rebalance(tokenId, PositionManager.address);

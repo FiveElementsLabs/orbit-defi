@@ -147,7 +147,7 @@ contract ZapIn is IZapIn {
             Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()
         ).mint(params);
 
-        IPositionManager(address(this)).pushPositionId(tokenId);
+        IPositionManager(address(this)).middlewareDeposit(tokenId);
     }
 
     ///@notice orders token addresses

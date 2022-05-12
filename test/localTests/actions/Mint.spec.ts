@@ -56,7 +56,7 @@ describe('Mint.sol', function () {
     tokenEth = (await tokensFixture('ETH', 18)).tokenFixture;
     tokenUsdc = (await tokensFixture('USDC', 6)).tokenFixture;
 
-    //deploy factory, used for pools
+    //deploy uniswap contracts needed
     [Factory, NonFungiblePositionManager, SwapRouter] = await deployUniswapContracts(tokenEth);
 
     //deploy first pool
@@ -66,7 +66,7 @@ describe('Mint.sol', function () {
     await mintSTDAmount(tokenEth);
     await mintSTDAmount(tokenUsdc);
 
-    //deploy uniswapAddressHolder
+    //deploy our contracts
     const uniswapAddressHolder = await deployContract('UniswapAddressHolder', [
       NonFungiblePositionManager.address,
       Factory.address,
@@ -74,11 +74,6 @@ describe('Mint.sol', function () {
     ]);
     const diamondCutFacet = await deployContract('DiamondCutFacet');
     const registry = await deployContract('Registry', [user.address]);
-
-    //Deploy Mint Action
-    const mintActionFactory = await ethers.getContractFactory('Mint');
-    MintAction = (await mintActionFactory.deploy()) as Mint;
-    await MintAction.deployed();
 
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactory = await deployPositionManagerFactoryAndActions(
@@ -90,11 +85,19 @@ describe('Mint.sol', function () {
       ['Mint']
     );
 
+    //registry setup
     await registry.setPositionManagerFactory(PositionManagerFactory.address);
-    await registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
+    await registry.addNewContract(
+      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')),
+      user.address,
+      hre.ethers.utils.formatBytes32String('1'),
+      true
+    );
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Factory')),
-      PositionManagerFactory.address
+      PositionManagerFactory.address,
+      hre.ethers.utils.formatBytes32String('1'),
+      true
     );
 
     PositionManager = (await getPositionManager(PositionManagerFactory, user)) as PositionManager;
@@ -105,7 +108,7 @@ describe('Mint.sol', function () {
     //APPROVE
     await doAllApprovals(
       [user, liquidityProvider],
-      [MintAction.address, NonFungiblePositionManager.address, PositionManager.address],
+      [NonFungiblePositionManager.address, PositionManager.address],
       [tokenEth, tokenUsdc]
     );
 

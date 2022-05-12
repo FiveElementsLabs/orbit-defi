@@ -63,9 +63,9 @@ describe('AaveDeposit.sol', function () {
 
     //deploy our contracts
     const uniswapAddressHolder = await deployContract('UniswapAddressHolder', [
-      Factory.address,
-      Factory.address,
-      Factory.address,
+      Factory.address, //random address because we don't need it
+      Factory.address, //random address because we don't need it
+      Factory.address, //random address because we don't need it
     ]);
     const aaveAddressHolder = await deployContract('AaveAddressHolder', [LendingPool.address]);
     const diamondCutFacet = await deployContract('DiamondCutFacet');
@@ -83,10 +83,17 @@ describe('AaveDeposit.sol', function () {
     await registry.setPositionManagerFactory(PositionManagerFactory.address);
 
     //approval user to registry for test
-    await registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
+    await registry.addNewContract(
+      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')),
+      user.address,
+      hre.ethers.utils.formatBytes32String('1'),
+      true
+    );
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Factory')),
-      PositionManagerFactory.address
+      PositionManagerFactory.address,
+      hre.ethers.utils.formatBytes32String('1'),
+      true
     );
 
     PositionManager = (await getPositionManager(PositionManagerFactory, user)) as PositionManager;

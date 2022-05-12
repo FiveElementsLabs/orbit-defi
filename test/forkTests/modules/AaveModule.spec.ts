@@ -96,7 +96,7 @@ describe('AaveModule.sol', function () {
     //LendingPool contract
     LendingPool = await ethers.getContractAtFromArtifact(LendingPooljson, '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9');
 
-    //deploy uniswapAddressHolder
+    //deploy our contracts
     const uniswapAddressHolder = await deployContract('UniswapAddressHolder', [
       NonFungiblePositionManager.address,
       '0x1F98431c8aD98523631AE4a59f267346ea31F984',
@@ -129,19 +129,29 @@ describe('AaveModule.sol', function () {
       ]
     );
 
+    //set registry
     await registry.setPositionManagerFactory(PositionManagerFactory.address);
 
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('AaveModule')),
-      AaveModule.address
+      AaveModule.address,
+      hre.ethers.utils.formatBytes32String('10'),
+      true
     );
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Factory')),
-      PositionManagerFactory.address
+      PositionManagerFactory.address,
+      hre.ethers.utils.formatBytes32String('1'),
+      true
     );
     await registry.addKeeperToWhitelist(user.address);
 
-    await registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
+    await registry.addNewContract(
+      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')),
+      user.address,
+      hre.ethers.utils.formatBytes32String('1'),
+      true
+    );
 
     PositionManager = (await getPositionManager(PositionManagerFactory, user)) as PositionManager;
 
@@ -160,6 +170,7 @@ describe('AaveModule.sol', function () {
     let slot0 = await Pool0.slot0();
     tickLower = (Math.round(slot0.tick / 60) - 100) * 60;
     tickUpper = (Math.round(slot0.tick / 60) + 100) * 60;
+
     //mint a position
     const mintTx = await NonFungiblePositionManager.connect(user).mint(
       {
@@ -205,16 +216,13 @@ describe('AaveModule.sol', function () {
 
     abiCoder = ethers.utils.defaultAbiCoder;
 
-    const data = abiCoder.encode(['address'], [usdcMock.address]);
-    await PositionManager.setModuleData(tokenId, AaveModule.address, data);
-
     const aUsdcAddress = (await LendingPool.getReserveData(usdcMock.address)).aTokenAddress;
     aUsdc = await ethers.getContractAtFromArtifact(ATokenjson, aUsdcAddress);
   });
 
   describe('AaveModule - depositToAave', function () {
     it('should not deposit to aave if position is in range', async function () {
-      await AaveModule.connect(user).depositIfNeeded(PositionManager.address, tokenId);
+      await AaveModule.connect(user).depositIfNeeded(PositionManager.address, tokenId, usdcMock.address);
       expect(await NonFungiblePositionManager.ownerOf(tokenId)).to.equal(PositionManager.address);
     });
 
@@ -234,7 +242,7 @@ describe('AaveModule.sol', function () {
 
       expect((await Pool0.slot0()).tick).to.gt(tickUpper);
 
-      const tx = await AaveModule.connect(user).depositIfNeeded(PositionManager.address, tokenId);
+      const tx = await AaveModule.connect(user).depositIfNeeded(PositionManager.address, tokenId, usdcMock.address);
       const events = (await tx.wait()).events;
       aaveId = abiCoder.decode(['address', 'uint256', 'uint256'], events[events.length - 1].data)[1];
       expect(await aUsdc.balanceOf(PositionManager.address)).to.gt(0);

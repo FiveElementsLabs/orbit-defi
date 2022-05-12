@@ -3,32 +3,17 @@ import { expect } from 'chai';
 import { ContractFactory, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import hre from 'hardhat';
-import UniswapV3Factoryjson from '@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json';
-import NonFungiblePositionManagerjson from '@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json';
-import NonFungiblePositionManagerDescriptorjson from '@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json';
-import SwapRouterjson from '@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json';
-import PositionManagerjson from '../../../artifacts/contracts/PositionManager.sol/PositionManager.json';
 import {
-  NonFungiblePositionManagerDescriptorBytecode,
   tokensFixture,
   poolFixture,
   mintSTDAmount,
-  RegistryFixture,
-  getSelectors,
   deployUniswapContracts,
   deployContract,
   doAllApprovals,
   deployPositionManagerFactoryAndActions,
   getPositionManager,
 } from '../../shared/fixtures';
-import {
-  MockToken,
-  IUniswapV3Pool,
-  INonfungiblePositionManager,
-  DepositRecipes,
-  PositionManager,
-  PositionManagerStorage,
-} from '../../../typechain';
+import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, DepositRecipes } from '../../../typechain';
 
 describe('DepositRecipes.sol', function () {
   //GLOBAL VARIABLE - USE THIS
@@ -59,6 +44,7 @@ describe('DepositRecipes.sol', function () {
   let ZapInAction: Contract; // ZapInAction contract
   let PositionManager: Contract;
   let abiCoder: any;
+  let AutoCompoundModule: Contract;
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
@@ -106,9 +92,14 @@ describe('DepositRecipes.sol', function () {
       '0x754386E5abd9f4ab41E68788b7eC402Ec527f06e',
       ['Mint', 'ZapIn']
     );
+
+    abiCoder = ethers.utils.defaultAbiCoder;
+
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('PositionManagerFactory')),
-      PositionManagerFactory.address
+      PositionManagerFactory.address,
+      hre.ethers.utils.formatBytes32String('1'),
+      true
     );
     await registry.setPositionManagerFactory(PositionManagerFactory.address);
 
@@ -119,13 +110,28 @@ describe('DepositRecipes.sol', function () {
       UniswapAddressHolder.address,
       PositionManagerFactory.address,
     ])) as DepositRecipes;
+    AutoCompoundModule = await deployContract('AutoCompoundModule', [UniswapAddressHolder.address]);
 
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('DepositRecipes')),
-      DepositRecipes.address
+      DepositRecipes.address,
+      hre.ethers.utils.formatBytes32String('1'),
+      true
     );
 
-    await registry.addNewContract(hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')), user.address);
+    await registry.addNewContract(
+      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')),
+      user.address,
+      hre.ethers.utils.formatBytes32String('1'),
+      true
+    );
+
+    await registry.addNewContract(
+      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('AutoCompoundModule')),
+      AutoCompoundModule.address,
+      hre.ethers.utils.formatBytes32String('5'),
+      true
+    );
 
     await doAllApprovals([user], [DepositRecipes.address, PositionManager.address], [tokenDai, tokenEth, tokenUsdc]);
 
@@ -241,8 +247,6 @@ describe('DepositRecipes.sol', function () {
       },
       { gasLimit: 670000 }
     );
-
-    abiCoder = ethers.utils.defaultAbiCoder;
   });
 
   describe('DepositRecipes.depositUniNFT()', function () {
@@ -369,6 +373,35 @@ describe('DepositRecipes.sol', function () {
 
       await NonFungiblePositionManager.setApprovalForAll(DepositRecipes.address, true);
       await expect(DepositRecipes.connect(user).depositUniNft([tokenId])).to.be.reverted;
+    });
+
+    it('Should deposit and check if autocompoud is 5% and activated', async function () {
+      const mintTx = await NonFungiblePositionManager.connect(user).mint(
+        {
+          token0: tokenUsdc.address,
+          token1: tokenDai.address,
+          fee: 500,
+          tickLower: 0 - 60 * 1000,
+          tickUpper: 0 + 60 * 1000,
+          amount0Desired: '0x' + (1e15).toString(16),
+          amount1Desired: '0x' + (1e15).toString(16),
+          amount0Min: 0,
+          amount1Min: 0,
+          recipient: user.address,
+          deadline: Date.now() + 1000,
+        },
+        { gasLimit: 670000 }
+      );
+
+      const events: any = (await mintTx.wait()).events;
+      const tokenId = await events[events.length - 1].args.tokenId.toNumber();
+
+      await DepositRecipes.connect(user).depositUniNft([tokenId]);
+      const moduleData = await PositionManager.getModuleInfo(tokenId, AutoCompoundModule.address);
+
+      console.log('autocompound address: ', AutoCompoundModule.address);
+      expect(moduleData[0]).to.be.equal(true);
+      expect(moduleData[1]).to.be.equal(hre.ethers.utils.formatBytes32String('5'));
     });
   });
 

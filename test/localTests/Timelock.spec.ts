@@ -90,9 +90,17 @@ describe('Timelock.sol', function () {
     it('Should correctly queue a transaction', async function () {
       const target = Registry.address;
       const value = 0;
-      const signature = 'addNewContract(address)';
-      const data = AbiCoder.encode(['address'], [randomContractAddress]);
-      const eta = (await ethers.provider.getBlock('latest')).timestamp + 21700;
+      const signature = 'addNewContract(bytes32,address,bytes32,bool)';
+      const data = AbiCoder.encode(
+        ['bytes32', 'address', 'bytes32', 'bool'],
+        [
+          hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')),
+          randomContractAddress,
+          hre.ethers.utils.formatBytes32String('0'),
+          false,
+        ]
+      );
+      const eta = (await ethers.provider.getBlock('latest')).timestamp + 21800;
 
       const txReceipt = await (
         await Timelock.connect(deployer).queueTransaction(target, value, signature, data, eta)
@@ -120,9 +128,16 @@ describe('Timelock.sol', function () {
     it('Should correctly execute a queued transaction', async function () {
       const target = Registry.address;
       const value = 0;
-      const signature = 'addNewContract(bytes32,address)';
-      const fakeId = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('ThisIsATest'));
-      const data = AbiCoder.encode(['bytes32', 'address'], [fakeId, randomContractAddress]);
+      const signature = 'addNewContract(bytes32,address,bytes32,bool)';
+      const data = AbiCoder.encode(
+        ['bytes32', 'address', 'bytes32', 'bool'],
+        [
+          hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')),
+          randomContractAddress,
+          hre.ethers.utils.formatBytes32String('0'),
+          false,
+        ]
+      );
       const eta = (await ethers.provider.getBlock('latest')).timestamp + 21700;
 
       const queueTxReceipt = await (await Timelock.queueTransaction(target, value, signature, data, eta)).wait();
@@ -146,9 +161,16 @@ describe('Timelock.sol', function () {
     it('Should revert if not enough time has passed', async function () {
       const target = Registry.address;
       const value = 0;
-      const signature = 'addNewContract(bytes32, address)';
-      const fakeId = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('ThisIsATest'));
-      const data = AbiCoder.encode(['bytes32', 'address'], [fakeId, randomContractAddress]);
+      const signature = 'addNewContract(bytes32,address,bytes32,bool)';
+      const data = AbiCoder.encode(
+        ['bytes32', 'address', 'bytes32', 'bool'],
+        [
+          hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')),
+          randomContractAddress,
+          hre.ethers.utils.formatBytes32String('0'),
+          false,
+        ]
+      );
       const eta = (await ethers.provider.getBlock('latest')).timestamp + 21700;
 
       const queueTxReceipt = await (

@@ -52,9 +52,21 @@ contract Registry is IRegistry {
     ///@notice Register a contract
     ///@param _id keccak256 of contract name
     ///@param _contractAddress address of the new module
-    function addNewContract(bytes32 _id, address _contractAddress) external onlyGovernance {
+    ///@param _defaultValue default value of the module
+    ///@param _activatedByDefault true if the module is activated by default, false otherwise
+    function addNewContract(
+        bytes32 _id,
+        address _contractAddress,
+        bytes32 _defaultValue,
+        bool _activatedByDefault
+    ) external onlyGovernance {
         require(modules[_id].contractAddress == address(0), 'Registry::addNewContract: Entry already exists.');
-        modules[_id] = Entry({contractAddress: _contractAddress, activated: true});
+        modules[_id] = Entry({
+            contractAddress: _contractAddress,
+            activated: true,
+            defaultData: _defaultValue,
+            activatedByDefault: _activatedByDefault
+        });
         moduleKeys.push(_id);
         emit ContractCreated(_contractAddress, _id);
     }
@@ -91,18 +103,45 @@ contract Registry is IRegistry {
         return moduleKeys;
     }
 
+    ///@notice Set default value for a module
+    ///@param _id keccak256 of module id string
+    ///@param _defaultData default data for the module
+    function setDefaultValue(bytes32 _id, bytes32 _defaultData) external onlyGovernance {
+        require(modules[_id].contractAddress != address(0), 'Registry::setDefaultValue: Entry does not exist.');
+        modules[_id].defaultData = _defaultData;
+    }
+    
+    ///@notice Set default activation for a module
+    ///@param _id keccak256 of module id string
+    ///@param _activatedByDefault default activation bool for the module
+    function setDefaultActivation(bytes32 _id, bool _activatedByDefault) external onlyGovernance {
+        require(modules[_id].contractAddress != address(0), 'Registry::setDefaultValue: Entry does not exist.');
+        modules[_id].activatedByDefault = _activatedByDefault;
+    }
+
     ///@notice Get the address of a module for a given key
     ///@param _id keccak256 of module id string
     ///@return address of the module
-    function moduleAddress(bytes32 _id) external view override returns (address) {
-        return modules[_id].contractAddress;
-    }
-
-    ///@notice Get the state of a module
-    ///@param _id keccak256 of module id string
-    ///@return bool activated
-    function isActive(bytes32 _id) public view override returns (bool) {
-        return modules[_id].activated;
+    ///@return bool true if module is activated, false otherwise
+    ///@return bytes memory default data for the module
+    ///@return bool true if module is activated by default, false otherwise
+    function getModuleInfo(bytes32 _id)
+        external
+        view
+        override
+        returns (
+            address,
+            bool,
+            bytes32,
+            bool
+        )
+    {
+        return (
+            modules[_id].contractAddress,
+            modules[_id].activated,
+            modules[_id].defaultData,
+            modules[_id].activatedByDefault
+        );
     }
 
     ///@notice checks if an address is whitelisted as a keeper
