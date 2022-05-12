@@ -3,7 +3,9 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
+import './BaseModule.sol';
 import '../../interfaces/IPositionManager.sol';
+import '../../interfaces/IRegistry.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
 import '../../interfaces/actions/ICollectFees.sol';
 import '../../interfaces/actions/IIncreaseLiquidity.sol';
@@ -11,19 +13,25 @@ import '../../interfaces/actions/IUpdateUncollectedFees.sol';
 import '../helpers/UniswapNFTHelper.sol';
 import '../utils/Storage.sol';
 
-contract AutoCompoundModule {
+contract AutoCompoundModule is BaseModule {
     IUniswapAddressHolder addressHolder;
 
     ///@notice constructor of autoCompoundModule
     ///@param _addressHolder the address of the uniswap address holder contract
-    constructor(address _addressHolder) {
+    ///@param _registry the address of the registry contract
+    constructor(address _addressHolder, address _registry) BaseModule(_registry) {
         addressHolder = IUniswapAddressHolder(_addressHolder);
+        registry = IRegistry(_registry);
     }
 
     ///@notice executes our recipe for autocompounding
     ///@param positionManager address of the position manager
     ///@param tokenId id of the token to autocompound
-    function autoCompoundFees(IPositionManager positionManager, uint256 tokenId) public {
+    function autoCompoundFees(IPositionManager positionManager, uint256 tokenId)
+        public
+        onlyWhitelistedKeeper
+        activeModule(address(positionManager), tokenId)
+    {
         ///@dev check if autocompound is active
         if (positionManager.getModuleState(tokenId, address(this))) {
             ///@dev check if compound need to be done

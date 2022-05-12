@@ -8,7 +8,7 @@ import '../interfaces/IRegistry.sol';
 contract Registry is IRegistry {
     address public override governance;
     address public override positionManagerFactoryAddress;
-
+    address[] public whitelistedKeepers;
     mapping(bytes32 => Entry) public modules;
     bytes32[] public moduleKeys;
 
@@ -96,6 +96,18 @@ contract Registry is IRegistry {
     ///@return bool activated
     function isActive(bytes32 _id) public view override returns (bool) {
         return modules[_id].activated;
+    }
+
+    ///@notice checks if an address is whitelisted as a keeper
+    ///@param _keeper address to check
+    ///@return bool true if whitelisted, false otherwise
+    function isWhitelistedKeeper(address _keeper) external view override returns (bool) {
+        for (uint256 i = 0; i < whitelistedKeepers.length; i++) {
+            if (whitelistedKeepers[i] == _keeper) {
+                return true;
+            }
+        }
+        return false;
     }
 
     ///@notice modifier to check if the sender is the governance contract

@@ -5,6 +5,7 @@ pragma abicoder v2;
 
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
+import './BaseModule.sol';
 import '../helpers/UniswapNFTHelper.sol';
 import '../../interfaces/IPositionManager.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
@@ -13,20 +14,25 @@ import '../../interfaces/actions/ISwapToPositionRatio.sol';
 import '../../interfaces/actions/IMint.sol';
 
 ///@title Idle Liquidity Module to manage liquidity for a user position
-contract IdleLiquidityModule {
+contract IdleLiquidityModule is BaseModule {
     ///@notice uniswap address holder
     IUniswapAddressHolder public uniswapAddressHolder;
 
     ///@notice assing the uniswap address holder to the contract
     ///@param _uniswapAddressHolder address of the uniswap address holder
-    constructor(address _uniswapAddressHolder) {
+    ///@param _registry address of the registry
+    constructor(address _uniswapAddressHolder, address _registry) BaseModule(_registry) {
         uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
     }
 
     ///@notice check if the position is in the range of the pools and return rebalance the position swapping the tokens
     ///@param tokenId tokenId of the position
     ///@param positionManager address of the position manager
-    function rebalance(uint256 tokenId, IPositionManager positionManager) public {
+    function rebalance(uint256 tokenId, IPositionManager positionManager)
+        public
+        onlyWhitelistedKeeper
+        activeModule(address(positionManager), tokenId)
+    {
         uint24 tickDistance = _checkDistanceFromRange(tokenId);
         if (positionManager.getModuleState(tokenId, address(this))) {
             uint24 rebalanceDistance = abi.decode(positionManager.getModuleData(tokenId, address(this)), (uint24));
