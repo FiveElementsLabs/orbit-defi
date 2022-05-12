@@ -200,11 +200,7 @@ describe('IdleLiquidityModule.sol', function () {
         IdleLiquidityModule.address,
         abiCoder.encode(['uint24'], [100])
       );
-      try {
-        await IdleLiquidityModule.rebalance(tokenId.add(1), PositionManager.address);
-      } catch (error: any) {
-        expect(error.message).to.include('Invalid token ID');
-      }
+      await expect(IdleLiquidityModule.rebalance(tokenId.add(1), PositionManager.address)).to.be.reverted;
     });
   });
 });
