@@ -26,13 +26,30 @@ jobs:
       - run: npx hardhat typechain
         env:
           INFURA_MAINNET: ${{ secrets.INFURA_MAINNET }}
+          ALCHEMY_MUMBAI: ${{ secrets.ALCHEMY_MUMBAI }}
+          ALCHEMY_POLYGON: ${{ secrets.ALCHEMY_POLYGON }}
+          ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+          POLYGON_PRIVATE_KEY: ${{ secrets.POLYGON_PRIVATE_KEY }}
+          TEST_PRIVATE_KEY: ${{ secrets.TEST_PRIVATE_KEY }}
+
       - run: echo "🎉 Hardhat Typechain passed."
 
       - run: npx hardhat test
         env:
           INFURA_MAINNET: ${{ secrets.INFURA_MAINNET }}
+          ALCHEMY_MUMBAI: ${{ secrets.ALCHEMY_MUMBAI }}
+          ALCHEMY_POLYGON: ${{ secrets.ALCHEMY_POLYGON }}
+          ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+          POLYGON_PRIVATE_KEY: ${{ secrets.POLYGON_PRIVATE_KEY }}
+          TEST_PRIVATE_KEY: ${{ secrets.TEST_PRIVATE_KEY }}
+
       - run: echo "🎉 Hardhat Test passed."
 
       - run: npx hardhat coverage
         env:
           INFURA_MAINNET: ${{ secrets.INFURA_MAINNET }}
+          ALCHEMY_MUMBAI: ${{ secrets.ALCHEMY_MUMBAI }}
+          ALCHEMY_POLYGON: ${{ secrets.ALCHEMY_POLYGON }}
+          ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+          POLYGON_PRIVATE_KEY: ${{ secrets.POLYGON_PRIVATE_KEY }}
+          TEST_PRIVATE_KEY: ${{ secrets.TEST_PRIVATE_KEY }}
