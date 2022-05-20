@@ -224,6 +224,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
             'PositionManager::pushOldPositionData: positionShares does not exist'
         );
 
+        Storage.aavePositionsArray.push(AavePositions({id: id, tokenToAave: token}));
         Storage.aaveUserReserves[token].tokenIds[id] = tokenId;
     }
 
@@ -245,6 +246,32 @@ contract PositionManager is IPositionManager, ERC721Holder {
         );
 
         return Storage.aaveUserReserves[token].tokenIds[id];
+    }
+
+    ///@notice removes position data from aave positions array
+    ///@param token address of the token
+    ///@param id ID of the position
+    function removeTokenIdFromAave(address token, uint256 id) public override onlyWhitelisted {
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+
+        for (uint256 i = 0; i < Storage.aavePositionsArray.length; i++) {
+            if (Storage.aavePositionsArray[i].id == id && Storage.aavePositionsArray[i].tokenToAave == token) {
+                if (Storage.aavePositionsArray.length > 1) {
+                    Storage.aavePositionsArray[i] = Storage.aavePositionsArray[Storage.aavePositionsArray.length - 1];
+                    Storage.aavePositionsArray.pop();
+                } else {
+                    delete Storage.aavePositionsArray;
+                }
+                break;
+            }
+        }
+    }
+
+    ///@notice returns array of positions moved to aave
+    ///@return Storage.AavePositions return the array of positions moved on aave
+    function getAavePositionsArray() public view override returns (AavePositions[] memory) {
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+        return Storage.aavePositionsArray;
     }
 
     ///@notice return the address of this position manager owner

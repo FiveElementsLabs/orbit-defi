@@ -55,6 +55,7 @@ describe('AaveModule.sol', function () {
   let abiCoder: AbiCoder;
   let swapRouter: Contract;
   let aUsdc: Contract;
+  let aWbtc: Contract;
   let tickLower: number;
   let tickUpper: number;
   let aaveId: any;
@@ -218,11 +219,13 @@ describe('AaveModule.sol', function () {
 
     const aUsdcAddress = (await LendingPool.getReserveData(usdcMock.address)).aTokenAddress;
     aUsdc = await ethers.getContractAtFromArtifact(ATokenjson, aUsdcAddress);
+    const aWbtcAddress = (await LendingPool.getReserveData(wbtcMock.address)).aTokenAddress;
+    aWbtc = await ethers.getContractAtFromArtifact(ATokenjson, aWbtcAddress);
   });
 
   describe('AaveModule - depositToAave', function () {
     it('should not deposit to aave if position is in range', async function () {
-      await AaveModule.connect(user).depositIfNeeded(PositionManager.address, tokenId, usdcMock.address);
+      await AaveModule.connect(user).depositIfNeeded(PositionManager.address, tokenId);
       expect(await NonFungiblePositionManager.ownerOf(tokenId)).to.equal(PositionManager.address);
     });
 
@@ -234,7 +237,7 @@ describe('AaveModule.sol', function () {
           fee: 3000,
           recipient: trader.address,
           deadline: Date.now() + 1000,
-          amountIn: '0x' + (1e16).toString(16),
+          amountIn: '0x' + (1e18).toString(16),
           amountOutMinimum: 0,
           sqrtPriceLimitX96: 0,
         });
@@ -242,18 +245,19 @@ describe('AaveModule.sol', function () {
 
       expect((await Pool0.slot0()).tick).to.gt(tickUpper);
 
-      const tx = await AaveModule.connect(user).depositIfNeeded(PositionManager.address, tokenId, usdcMock.address);
+      const tx = await AaveModule.connect(user).depositIfNeeded(PositionManager.address, tokenId);
       const events = (await tx.wait()).events;
       aaveId = abiCoder.decode(['address', 'uint256', 'uint256'], events[events.length - 1].data)[1];
-      expect(await aUsdc.balanceOf(PositionManager.address)).to.gt(0);
+
+      expect(await aWbtc.balanceOf(PositionManager.address)).to.gt(0);
     });
 
     it('should not return to position if still out of range', async function () {
-      await AaveModule.connect(user).withdrawIfNeeded(PositionManager.address, usdcMock.address, aaveId);
-      expect(await aUsdc.balanceOf(PositionManager.address)).to.gt(0);
+      await AaveModule.connect(user).withdrawIfNeeded(PositionManager.address, wbtcMock.address, aaveId);
+      expect(await aWbtc.balanceOf(PositionManager.address)).to.gt(0);
     });
 
-    it('should retrun to position if returns in range', async function () {
+    it('should return to position if returns in range', async function () {
       while ((await Pool0.slot0()).tick >= tickUpper) {
         await swapRouter.connect(trader).exactInputSingle({
           tokenIn: wbtcMock.address,
@@ -270,8 +274,15 @@ describe('AaveModule.sol', function () {
       expect(slot0.tick).to.gt(tickLower);
       expect(slot0.tick).to.lt(tickUpper);
 
-      const tx = await AaveModule.connect(user).withdrawIfNeeded(PositionManager.address, usdcMock.address, aaveId);
-      expect(await aUsdc.balanceOf(PositionManager.address)).to.equal(0);
+      const positions = await PositionManager.connect(user).getAavePositionsArray();
+
+      const tx = await AaveModule.connect(user).withdrawIfNeeded(
+        PositionManager.address,
+        positions[0].tokenToAave,
+        positions[0].id
+      );
+      await tx.wait();
+      expect(await wbtcMock.balanceOf(PositionManager.address)).to.equal(0);
     });
   });
 });

@@ -152,21 +152,20 @@ contract AaveModule is BaseModule {
             INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress())
         );
 
-        uint256 amount0In = ISwap(positionManager).swap(token, token0, fee, amountWithdrawn);
-
         (uint256 amount0Out, uint256 amount1Out) = ISwapToPositionRatio(positionManager).swapToPositionRatio(
             ISwapToPositionRatio.SwapToPositionInput({
                 token0Address: token0,
                 token1Address: token1,
                 fee: fee,
-                amount0In: amount0In,
-                amount1In: 0,
+                amount0In: token == token0 ? amountWithdrawn : 0,
+                amount1In: token == token1 ? amountWithdrawn : 0,
                 tickLower: tickLower,
                 tickUpper: tickUpper
             })
         );
 
         IIncreaseLiquidity(positionManager).increaseLiquidity(tokenId, amount0Out, amount1Out);
+        IPositionManager(positionManager).removeTokenIdFromAave(token, id);
         IPositionManager(positionManager).pushPositionId(tokenId);
     }
 

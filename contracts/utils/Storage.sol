@@ -18,6 +18,11 @@ struct FacetFunctionSelectors {
     uint256 facetAddressPosition; // position of facetAddress in facetAddresses array
 }
 
+struct AavePositions {
+    uint256 id;
+    address tokenToAave;
+}
+
 struct StorageStruct {
     // maps function selector to the facet address and
     // the position of the selector in the facetFunctionSelectors.selectors array
@@ -32,6 +37,7 @@ struct StorageStruct {
     IAaveAddressHolder aaveAddressHolder;
     uint256 aaveIdCounter;
     mapping(address => IPositionManager.AaveReserve) aaveUserReserves;
+    AavePositions[] aavePositionsArray;
 }
 
 library PositionManagerStorage {
