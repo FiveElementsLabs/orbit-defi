@@ -158,6 +158,30 @@ describe('Mint.sol', function () {
       expect(await NonFungiblePositionManager.balanceOf(PositionManager.address)).to.gt(balancePre);
     });
 
+    it('should successfully mint a UNIV3 position out of range', async function () {
+      const balancePre = await NonFungiblePositionManager.balanceOf(PositionManager.address);
+      const amount0In = 5e5;
+      const amount1In = 5e5;
+      const tickLower = -7200;
+      const tickUpper = -3600;
+      const tick = (await Pool0.slot0()).tick;
+
+      expect(tickLower).to.be.lt(tick);
+      expect(tickUpper).to.be.lt(tick);
+
+      await MintFallback.mint({
+        token0Address: tokenEth.address,
+        token1Address: tokenUsdc.address,
+        fee: 3000,
+        tickLower: tickLower,
+        tickUpper: tickUpper,
+        amount0Desired: amount0In,
+        amount1Desired: amount1In,
+      });
+
+      expect(await NonFungiblePositionManager.balanceOf(PositionManager.address)).to.gt(balancePre);
+    });
+
     it('should revert if pool does not exist', async function () {
       const amount0In = 7e5;
       const amount1In = 5e5;
