@@ -13,5 +13,5 @@ interface IAaveAddressHolder {
 
     ///@notice Set the address of the registry
     ///@param newAddress The address of the registry
-    function setGovernance(address newAddress) external;
+    function setRegistry(address newAddress) external;
 }

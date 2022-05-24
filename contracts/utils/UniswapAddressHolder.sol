@@ -44,7 +44,7 @@ contract UniswapAddressHolder is IUniswapAddressHolder {
 
     ///@notice Set the address of the registry
     ///@param newAddress The address of the registry
-    function setGovernance(address newAddress) external override onlyGovernance {
+    function setRegistry(address newAddress) external override onlyGovernance {
         registry = IRegistry(newAddress);
     }
 
@@ -52,7 +52,7 @@ contract UniswapAddressHolder is IUniswapAddressHolder {
     modifier onlyGovernance() {
         require(
             msg.sender == registry.governance(),
-            'AaveAddressHolder::onlyGovernance: Only governance can add actions'
+            'AaveAddressHolder::onlyGovernance:  Only governance can call this function'
         );
         _;
     }
