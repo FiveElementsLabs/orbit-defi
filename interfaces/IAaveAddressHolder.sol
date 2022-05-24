@@ -10,4 +10,8 @@ interface IAaveAddressHolder {
     ///@notice Set the address of lending pool
     ///@param newAddress new address of the lending pool from aave
     function setLendingPoolAddress(address newAddress) external;
+
+    ///@notice Set the address of the registry
+    ///@param newAddress The address of the registry
+    function setRegistry(address newAddress) external;
 }

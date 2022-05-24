@@ -98,14 +98,15 @@ describe('AaveModule.sol', function () {
     LendingPool = await ethers.getContractAtFromArtifact(LendingPooljson, '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9');
 
     //deploy our contracts
+    const registry = await deployContract('Registry', [user.address]);
     const uniswapAddressHolder = await deployContract('UniswapAddressHolder', [
       NonFungiblePositionManager.address,
       '0x1F98431c8aD98523631AE4a59f267346ea31F984',
       swapRouter.address,
+      registry.address,
     ]);
-    const aaveAddressHolder = await deployContract('AaveAddressHolder', [LendingPool.address]);
+    const aaveAddressHolder = await deployContract('AaveAddressHolder', [LendingPool.address, registry.address]);
     const diamondCutFacet = await deployContract('DiamondCutFacet');
-    const registry = await deployContract('Registry', [user.address]);
     AaveModule = await deployContract('AaveModule', [
       aaveAddressHolder.address,
       uniswapAddressHolder.address,

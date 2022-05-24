@@ -76,13 +76,14 @@ describe('SwapToPositionRatio.sol', function () {
     await mintSTDAmount(tokenDai);
 
     //deploy our contracts
+    const registry = await deployContract('Registry', [user.address]);
     const UniswapAddressHolder = await deployContract('UniswapAddressHolder', [
       NonFungiblePositionManager.address,
       Factory.address,
       SwapRouter.address,
+      registry.address,
     ]);
     const diamondCutFacet = await deployContract('DiamondCutFacet');
-    const registry = await deployContract('Registry', [user.address]);
 
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactory = await deployPositionManagerFactoryAndActions(

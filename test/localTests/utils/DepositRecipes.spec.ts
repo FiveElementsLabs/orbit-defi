@@ -75,13 +75,14 @@ describe('DepositRecipes.sol', function () {
     await mintSTDAmount(tokenDai);
 
     //deploy our contracts
+    registry = await deployContract('Registry', [user.address]);
     UniswapAddressHolder = await deployContract('UniswapAddressHolder', [
       NonFungiblePositionManager.address,
       Factory.address,
       SwapRouter.address,
+      registry.address,
     ]);
     DiamondCutFacet = await deployContract('DiamondCutFacet');
-    registry = await deployContract('Registry', [user.address]);
 
     //deploy the PositionManagerFactory => deploy PositionManager
     PositionManagerFactory = await deployPositionManagerFactoryAndActions(

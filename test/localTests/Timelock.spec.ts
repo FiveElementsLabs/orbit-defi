@@ -3,7 +3,7 @@ import hre from 'hardhat';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { AbiCoder } from 'ethers/lib/utils';
-import { RegistryFixture, TimelockFixture } from '../shared/fixtures';
+import { RegistryFixture, TimelockFixture, deployContract } from '../shared/fixtures';
 import { Registry, Timelock } from '../../typechain';
 
 describe('Timelock.sol', function () {
@@ -14,6 +14,7 @@ describe('Timelock.sol', function () {
   let Registry: Registry;
   let Timelock: Timelock;
   let Timelock2: Timelock;
+  let AaveAddressHolder: any;
   let AbiCoder: AbiCoder;
   const randomContractAddress = '0x29D7d1dd5B6f9C864d9db560D72a247c178aE86B';
 
@@ -38,6 +39,8 @@ describe('Timelock.sol', function () {
 
     //deploy the registry - we need it to test the timelock features
     Registry = (await RegistryFixture(Timelock.address)).registryFixture;
+
+    AaveAddressHolder = await deployContract('AaveAddressHolder', [randomContractAddress, Registry.address]);
   });
 
   describe('Deployment ', function () {
@@ -156,6 +159,30 @@ describe('Timelock.sol', function () {
 
       const executeEvents = executeTxReceipt.events!;
       expect(executeEvents[1].event).to.be.equal('ExecuteTransaction');
+    });
+    it('Should correctly execute a queued transaction of a set new address', async function () {
+      const target = AaveAddressHolder.address;
+      const value = 0;
+      const signature = 'setLendingPoolAddress(address)';
+      const data = AbiCoder.encode(['address'], [randomContractAddress]);
+      const eta = (await ethers.provider.getBlock('latest')).timestamp + 21700;
+
+      const queueTxReceipt = await (await Timelock.queueTransaction(target, value, signature, data, eta)).wait();
+
+      const queueEvents = queueTxReceipt.events!;
+      expect(queueEvents[0].event).to.be.equal('QueueTransaction');
+
+      // Increase timestamp to satisfy timelock delay
+      // We must increase it by at least eta amount (21700 in this case)
+      const forwardInTime = 30000;
+      await ethers.provider.send('evm_increaseTime', [forwardInTime]);
+
+      const executeTxReceipt = await (
+        await Timelock.connect(deployer).executeTransaction(target, value, signature, data, eta)
+      ).wait();
+
+      const executeEvents = executeTxReceipt.events!;
+      expect(executeEvents[0].event).to.be.equal('ExecuteTransaction');
     });
 
     it('Should revert if not enough time has passed', async function () {
