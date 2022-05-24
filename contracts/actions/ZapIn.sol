@@ -12,8 +12,6 @@ import '../utils/Storage.sol';
 import '../../interfaces/IPositionManager.sol';
 import '../../interfaces/actions/IZapIn.sol';
 
-import 'hardhat/console.sol';
-
 contract ZapIn is IZapIn {
     ///@notice emitted when a UniswapNFT is zapped in
     ///@param positionManager address of PositionManager
