@@ -96,14 +96,15 @@ describe('PositionManager.sol', function () {
     LendingPool = await ethers.getContractAtFromArtifact(LendingPooljson, '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9');
 
     //deploy our contracts
+    Registry = await deployContract('Registry', [user.address]);
     UniswapAddressHolder = await deployContract('UniswapAddressHolder', [
       NonFungiblePositionManager.address,
       Factory.address,
       SwapRouter.address,
+      Registry.address,
     ]);
-    AaveAddressHolder = await deployContract('AaveAddressHolder', [LendingPool.address]);
+    AaveAddressHolder = await deployContract('AaveAddressHolder', [LendingPool.address, Registry.address]);
     DiamondCutFacet = await deployContract('DiamondCutFacet');
-    Registry = await deployContract('Registry', [user.address]);
 
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactory = await deployPositionManagerFactoryAndActions(
