@@ -102,10 +102,6 @@ contract ZapIn is IZapIn {
             );
         }
 
-        (, tickPool, , , , , ) = IUniswapV3Pool(
-            UniswapNFTHelper._getPool(Storage.uniswapAddressHolder.uniswapV3FactoryAddress(), token0, token1, fee)
-        ).slot0();
-
         (tokenId, , ) = _mint(token0, token1, fee, tickLower, tickUpper, amountInTo0, amountInTo1);
 
         emit ZappedIn(address(this), tokenId, tokenIn, amountIn);
