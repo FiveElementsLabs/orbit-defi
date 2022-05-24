@@ -40,10 +40,7 @@ describe('Timelock.sol', function () {
     //deploy the registry - we need it to test the timelock features
     Registry = (await RegistryFixture(Timelock.address)).registryFixture;
 
-    AaveAddressHolder = await deployContract('AaveAddressHolder', [
-      '0x29D7d1dd5B6f9C864d9db560D72a247c178aE86B',
-      Registry.address,
-    ]);
+    AaveAddressHolder = await deployContract('AaveAddressHolder', [randomContractAddress, Registry.address]);
   });
 
   describe('Deployment ', function () {
