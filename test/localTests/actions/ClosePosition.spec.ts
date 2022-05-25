@@ -67,13 +67,14 @@ describe('ClosePosition.sol', function () {
     await mintSTDAmount(tokenUsdc);
 
     //deploy our contracts
+    const registry = await deployContract('Registry', [user.address]);
     const uniswapAddressHolder = await deployContract('UniswapAddressHolder', [
       NonFungiblePositionManager.address,
       Factory.address,
       NonFungiblePositionManager.address,
+      registry.address,
     ]);
     const diamondCutFacet = await deployContract('DiamondCutFacet');
-    const registry = await deployContract('Registry', [user.address]);
 
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactory = await deployPositionManagerFactoryAndActions(

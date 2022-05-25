@@ -30,6 +30,7 @@ describe('PositionManagerFactory.sol', function () {
   let uniswapAddressHolder: UniswapAddressHolder;
   let Router: ISwapRouter;
   let poolI: any;
+  let Factory: any;
   let diamondCutFacet: any;
   let registry: any;
   let mintAction: any;
@@ -45,7 +46,6 @@ describe('PositionManagerFactory.sol', function () {
     token1 = await tokensFixture('USDC', 6).then((tokenFix) => tokenFix.tokenFixture);
 
     //deploy factory, used for pools
-    let Factory;
     [Factory, NonFungiblePositionManager] = await deployUniswapContracts(token0);
 
     await token0.mint(user.address, ethers.utils.parseEther('1000000000000'));
@@ -54,13 +54,6 @@ describe('PositionManagerFactory.sol', function () {
     //deploy router
     Router = await routerFixture().then((RFixture: any) => RFixture.ruoterDeployFixture);
 
-    //deploy uniswapAddressHolder
-    uniswapAddressHolder = (await deployContract('UniswapAddressHolder', [
-      NonFungiblePositionManager.address,
-      Factory.address,
-      Router.address,
-    ])) as UniswapAddressHolder;
-    AaveAddressHolder = await deployContract('AaveAddressHolder', [NonFungiblePositionManager.address]);
     diamondCutFacet = await deployContract('DiamondCutFacet');
 
     await token0
@@ -83,6 +76,17 @@ describe('PositionManagerFactory.sol', function () {
       // deploy Registry
       registry = (await RegistryFixture(owner.address)).registryFixture;
       await registry.deployed();
+      AaveAddressHolder = await deployContract('AaveAddressHolder', [
+        NonFungiblePositionManager.address,
+        registry.address,
+      ]);
+      //deploy uniswapAddressHolder
+      uniswapAddressHolder = (await deployContract('UniswapAddressHolder', [
+        NonFungiblePositionManager.address,
+        Factory.address,
+        Router.address,
+        registry.address,
+      ])) as UniswapAddressHolder;
 
       PositionManagerFactoryInstance = await PositionManagerFactory.deploy(
         owner.address,

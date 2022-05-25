@@ -6,6 +6,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
 
   const { deployer } = await getNamedAccounts();
+  const Registry = await ethers.getContract('Registry');
 
   const chainId = await getChainId();
   let lendingPoolAddress;
@@ -16,7 +17,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   await deploy('AaveAddressHolder', {
     from: deployer,
     args: [
-      lendingPoolAddress, // Aave lendingPool
+      lendingPoolAddress, // Aave lendingPool,
+      Registry.address,
     ],
     log: true,
     autoMine: true,
@@ -25,3 +27,4 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 export default func;
 func.tags = ['AddressHolder'];
+func.dependencies = ['Registry'];

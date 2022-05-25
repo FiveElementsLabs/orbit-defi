@@ -76,13 +76,14 @@ describe('IdleLiquidityModule.sol', function () {
     await mintSTDAmount(tokenUsdc);
 
     //deploy our contracts
+    const registry = await deployContract('Registry', [user.address]);
     const uniswapAddressHolder = await deployContract('UniswapAddressHolder', [
       NonFungiblePositionManager.address,
       Factory.address,
       SwapRouter.address,
+      registry.address,
     ]);
     const diamondCutFacet = await deployContract('DiamondCutFacet');
-    const registry = await deployContract('Registry', [user.address]);
     IdleLiquidityModule = await deployContract('IdleLiquidityModule', [uniswapAddressHolder.address, registry.address]);
 
     //deploy the PositionManagerFactory => deploy PositionManager

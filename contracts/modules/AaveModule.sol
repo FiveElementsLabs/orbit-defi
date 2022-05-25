@@ -16,6 +16,7 @@ import '../../interfaces/actions/ICollectFees.sol';
 import '../../interfaces/actions/ISwap.sol';
 import '../../interfaces/actions/ISwapToPositionRatio.sol';
 import '../../interfaces/actions/IIncreaseLiquidity.sol';
+import '../../interfaces/ILendingPool.sol';
 
 contract AaveModule is BaseModule {
     IAaveAddressHolder public aaveAddressHolder;
@@ -33,18 +34,13 @@ contract AaveModule is BaseModule {
     ///@notice deposit a position in an Aave lending pool
     ///@param positionManager address of the position manager
     ///@param tokenId id of the Uniswap position to deposit
-    ///@param toAaveToken address of the Aave token to deposit
-    function depositIfNeeded(
-        address positionManager,
-        uint256 tokenId,
-        address toAaveToken
-    ) public activeModule(positionManager, tokenId) {
+    function depositIfNeeded(address positionManager, uint256 tokenId) public activeModule(positionManager, tokenId) {
         (, bytes32 data) = IPositionManager(positionManager).getModuleInfo(tokenId, address(this));
 
         uint24 rebalanceDistance = uint24(uint256(data));
         ///@dev move token to aave only if the position's range is outside of the tick of the pool
         if (_checkDistanceFromRange(tokenId) > 0 && rebalanceDistance <= _checkDistanceFromRange(tokenId)) {
-            _depositToAave(positionManager, tokenId, toAaveToken);
+            _depositToAave(positionManager, tokenId);
         }
     }
 
@@ -78,15 +74,35 @@ contract AaveModule is BaseModule {
     ///@notice deposit a uni v3 position to an Aave lending pool
     ///@param positionManager address of the position manager
     ///@param tokenId id of the Uniswap position to deposit
-    ///@param toAaveToken address of the token to deposit to Aave
-    function _depositToAave(
-        address positionManager,
-        uint256 tokenId,
-        address toAaveToken
-    ) internal {
+    function _depositToAave(address positionManager, uint256 tokenId) internal {
         (, , address token0, address token1, , , , , , , , ) = INonfungiblePositionManager(
             uniswapAddressHolder.nonfungiblePositionManagerAddress()
         ).positions(tokenId);
+
+        (, int24 tickPool, , , , , ) = IUniswapV3Pool(
+            UniswapNFTHelper._getPoolFromTokenId(
+                tokenId,
+                INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()),
+                uniswapAddressHolder.uniswapV3FactoryAddress()
+            )
+        ).slot0();
+
+        (, , , int24 tickLower, int24 tickUpper) = UniswapNFTHelper._getTokens(
+            tokenId,
+            INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress())
+        );
+
+        address toAaveToken = address(0);
+        if (tickPool > tickLower && tickPool > tickUpper) toAaveToken = token0;
+        else if (tickPool < tickLower && tickPool < tickUpper) toAaveToken = token1;
+
+        require(toAaveToken != address(0), 'AaveModule::_depositToAave: position is in range.');
+
+        require(
+            ILendingPool(aaveAddressHolder.lendingPoolAddress()).getReserveData(toAaveToken).aTokenAddress !=
+                address(0),
+            'AaveModule::_depositToAave: Aave token not found.'
+        );
 
         (uint256 amount0ToDecrease, uint256 amount1ToDecrease) = UniswapNFTHelper._getAmountsfromTokenId(
             tokenId,
@@ -100,34 +116,21 @@ contract AaveModule is BaseModule {
             false
         );
 
-        uint256 amountToAave = 0;
-        if (amount0Collected > 0) {
-            if (token0 == toAaveToken) {
-                amountToAave += amount0Collected;
-            } else {
-                amountToAave += ISwap(positionManager).swap(
-                    token0,
-                    toAaveToken,
-                    _findBestFee(token0, toAaveToken),
-                    amount0Collected
-                );
-            }
-        }
+        toAaveToken == token0
+            ? amount0Collected += ISwap(positionManager).swap(
+                token1,
+                toAaveToken,
+                _findBestFee(token1, toAaveToken),
+                amount1Collected
+            )
+            : amount1Collected += ISwap(positionManager).swap(
+            token0,
+            toAaveToken,
+            _findBestFee(token0, toAaveToken),
+            amount0Collected
+        );
 
-        if (amount1Collected > 0) {
-            if (token1 == toAaveToken) {
-                amountToAave += amount1Collected;
-            } else {
-                amountToAave += ISwap(positionManager).swap(
-                    token1,
-                    toAaveToken,
-                    _findBestFee(token1, toAaveToken),
-                    amount1Collected
-                );
-            }
-        }
-
-        (uint256 id, ) = IAaveDeposit(positionManager).depositToAave(toAaveToken, amountToAave);
+        (uint256 id, ) = IAaveDeposit(positionManager).depositToAave(token0, amount0Collected);
 
         IPositionManager(positionManager).pushTokenIdToAave(toAaveToken, id, tokenId);
         IPositionManager(positionManager).removePositionId(tokenId);
@@ -149,21 +152,20 @@ contract AaveModule is BaseModule {
             INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress())
         );
 
-        uint256 amount0In = ISwap(positionManager).swap(token, token0, fee, amountWithdrawn);
-
         (uint256 amount0Out, uint256 amount1Out) = ISwapToPositionRatio(positionManager).swapToPositionRatio(
             ISwapToPositionRatio.SwapToPositionInput({
                 token0Address: token0,
                 token1Address: token1,
                 fee: fee,
-                amount0In: amount0In,
-                amount1In: 0,
+                amount0In: token == token0 ? amountWithdrawn : 0,
+                amount1In: token == token1 ? amountWithdrawn : 0,
                 tickLower: tickLower,
                 tickUpper: tickUpper
             })
         );
 
         IIncreaseLiquidity(positionManager).increaseLiquidity(tokenId, amount0Out, amount1Out);
+        IPositionManager(positionManager).removeTokenIdFromAave(token, id);
         IPositionManager(positionManager).pushPositionId(tokenId);
     }
 

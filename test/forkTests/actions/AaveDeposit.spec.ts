@@ -62,14 +62,15 @@ describe('AaveDeposit.sol', function () {
     await mintSTDAmount(tokenUsdc);
 
     //deploy our contracts
+    const registry = await deployContract('Registry', [user.address]);
     const uniswapAddressHolder = await deployContract('UniswapAddressHolder', [
       Factory.address, //random address because we don't need it
       Factory.address, //random address because we don't need it
-      Factory.address, //random address because we don't need it
+      Factory.address, //random address because we don't need it,
+      registry.address,
     ]);
-    const aaveAddressHolder = await deployContract('AaveAddressHolder', [LendingPool.address]);
+    const aaveAddressHolder = await deployContract('AaveAddressHolder', [LendingPool.address, registry.address]);
     const diamondCutFacet = await deployContract('DiamondCutFacet');
-    const registry = await deployContract('Registry', [user.address]);
 
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactory = await deployPositionManagerFactoryAndActions(
