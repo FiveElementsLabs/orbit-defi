@@ -65,6 +65,10 @@ npx hardhat test
 npx hardhat test ./test/actions/Mint.spec.tx
 ```
 
+## Basic Flowchart
+
+![contracts_flow](https://user-images.githubusercontent.com/48695862/170303316-23948c2c-24e1-4591-ad2c-3a1d0f1a9d07.png)
+
 ## Security
 
 If you find bugs, please [contact us on Discord](https://discord.gg/WVpsDphE).
