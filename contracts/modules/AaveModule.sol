@@ -6,6 +6,7 @@ pragma abicoder v2;
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import './BaseModule.sol';
+import '../helpers/SafeInt24Math.sol';
 import '../helpers/UniswapNFTHelper.sol';
 import '../../interfaces/IAaveAddressHolder.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
@@ -21,6 +22,7 @@ import '../../interfaces/ILendingPool.sol';
 contract AaveModule is BaseModule {
     IAaveAddressHolder public aaveAddressHolder;
     IUniswapAddressHolder public uniswapAddressHolder;
+    using SignedSafeMath for int24;
 
     constructor(
         address _aaveAddressHolder,
@@ -196,9 +198,9 @@ contract AaveModule is BaseModule {
         (, int24 tick, , , , , ) = pool.slot0();
 
         if (tick > tickUpper) {
-            return uint24(tick - tickUpper);
+            return uint24(tick.sub(tickUpper));
         } else if (tick < tickLower) {
-            return uint24(tickLower - tick);
+            return uint24(tickLower.sub(tick));
         } else {
             return 0;
         }
