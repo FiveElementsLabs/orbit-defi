@@ -26,19 +26,19 @@ contract UniswapAddressHolder is IUniswapAddressHolder {
 
     ///@notice Set the address of the non fungible position manager
     ///@param newAddress The address of the non fungible position manager
-    function setNonFungibleAddress(address newAddress) external override {
+    function setNonFungibleAddress(address newAddress) external override onlyGovernance {
         nonfungiblePositionManagerAddress = newAddress;
     }
 
     ///@notice Set the address of the Uniswap V3 factory
     ///@param newAddress The address of the Uniswap V3 factory
-    function setFactoryAddress(address newAddress) external override {
+    function setFactoryAddress(address newAddress) external override onlyGovernance {
         uniswapV3FactoryAddress = newAddress;
     }
 
     ///@notice Set the address of the swap router
     ///@param newAddress The address of the swap router
-    function setSwapRouterAddress(address newAddress) external override {
+    function setSwapRouterAddress(address newAddress) external override onlyGovernance {
         swapRouterAddress = newAddress;
     }
 
