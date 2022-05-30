@@ -150,11 +150,28 @@ describe('SwapToPositionRatio.sol', function () {
   });
 
   describe('doAction', function () {
-    it('should correctly swap to exact position ratio', async function () {
+    it('should correctly swap to exact position ratio amount0In', async function () {
       const tickLower = -300;
       const tickUpper = 600;
       const amount0In = 1e5;
       const amount1In = 2e5;
+
+      await SwapToPositionRatioFallback.connect(user).swapToPositionRatio({
+        token0Address: tokenEth.address,
+        token1Address: tokenUsdc.address,
+        fee: 3000,
+        amount0In: amount0In,
+        amount1In: amount1In,
+        tickLower: tickLower,
+        tickUpper: tickUpper,
+      });
+    });
+
+    it('should correctly swap to exact position ratio amount1In', async function () {
+      const tickLower = -600;
+      const tickUpper = 300;
+      const amount0In = 2e5;
+      const amount1In = 1e5;
 
       await SwapToPositionRatioFallback.connect(user).swapToPositionRatio({
         token0Address: tokenEth.address,
