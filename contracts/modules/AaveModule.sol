@@ -34,7 +34,11 @@ contract AaveModule is BaseModule {
     ///@notice deposit a position in an Aave lending pool
     ///@param positionManager address of the position manager
     ///@param tokenId id of the Uniswap position to deposit
-    function depositIfNeeded(address positionManager, uint256 tokenId) public activeModule(positionManager, tokenId) {
+    function depositIfNeeded(address positionManager, uint256 tokenId)
+        public
+        activeModule(positionManager, tokenId)
+        onlyWhitelistedKeeper
+    {
         (, bytes32 data) = IPositionManager(positionManager).getModuleInfo(tokenId, address(this));
 
         uint24 rebalanceDistance = uint24(uint256(data));
