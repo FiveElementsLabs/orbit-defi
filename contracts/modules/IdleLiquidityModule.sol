@@ -17,7 +17,7 @@ import '../../interfaces/actions/IMint.sol';
 ///@title Idle Liquidity Module to manage liquidity for a user position
 contract IdleLiquidityModule is BaseModule {
     ///@notice uniswap address holder
-    IUniswapAddressHolder public uniswapAddressHolder;
+    IUniswapAddressHolder public immutable uniswapAddressHolder;
 
     ///@notice assing the uniswap address holder to the contract
     ///@param _uniswapAddressHolder address of the uniswap address holder

@@ -14,8 +14,8 @@ import '../../interfaces/IUniswapAddressHolder.sol';
 ///@notice DepositRecipes allows user to fill their position manager with UniswapV3 positions
 ///        by depositing an already minted NFT or by minting directly a new one
 contract DepositRecipes {
-    IUniswapAddressHolder uniswapAddressHolder;
-    IPositionManagerFactory positionManagerFactory;
+    IUniswapAddressHolder public immutable uniswapAddressHolder;
+    IPositionManagerFactory public immutable positionManagerFactory;
 
     constructor(address _uniswapAddressHolder, address _positionManagerFactory) {
         uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);

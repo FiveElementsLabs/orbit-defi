@@ -14,7 +14,7 @@ import '../helpers/UniswapNFTHelper.sol';
 import '../utils/Storage.sol';
 
 contract AutoCompoundModule is BaseModule {
-    IUniswapAddressHolder addressHolder;
+    IUniswapAddressHolder public immutable addressHolder;
 
     ///@notice constructor of autoCompoundModule
     ///@param _addressHolder the address of the uniswap address holder contract

@@ -20,8 +20,8 @@ import '../../interfaces/actions/IIncreaseLiquidity.sol';
 import '../../interfaces/ILendingPool.sol';
 
 contract AaveModule is BaseModule {
-    IAaveAddressHolder public aaveAddressHolder;
-    IUniswapAddressHolder public uniswapAddressHolder;
+    IAaveAddressHolder public immutable aaveAddressHolder;
+    IUniswapAddressHolder public immutable uniswapAddressHolder;
 
     constructor(
         address _aaveAddressHolder,

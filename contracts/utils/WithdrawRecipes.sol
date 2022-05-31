@@ -15,8 +15,8 @@ import '../../interfaces/actions/IZapOut.sol';
 
 ///@notice WithdrawRecipes allows user to withdraw positions from PositionManager
 contract WithdrawRecipes {
-    IPositionManagerFactory positionManagerFactory;
-    IUniswapAddressHolder uniswapAddressHolder;
+    IPositionManagerFactory public immutable positionManagerFactory;
+    IUniswapAddressHolder public immutable uniswapAddressHolder;
 
     constructor(address _positionManagerFactory, address _uniswapAddressHolder) {
         positionManagerFactory = IPositionManagerFactory(_positionManagerFactory);
@@ -63,7 +63,8 @@ contract WithdrawRecipes {
     modifier onlyOwner(uint256 tokenId) {
         require(
             positionManagerFactory.userToPositionManager(msg.sender) ==
-                INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(tokenId), "WithdrawRecipes::onlyOwner: Only owner can call this function"
+                INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(tokenId),
+            'WithdrawRecipes::onlyOwner: Only owner can call this function'
         );
         _;
     }
