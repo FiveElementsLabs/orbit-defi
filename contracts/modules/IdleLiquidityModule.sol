@@ -3,6 +3,7 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
+import '@openzeppelin/contracts/math/SafeMath.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import './BaseModule.sol';
@@ -16,6 +17,8 @@ import '../../interfaces/actions/IMint.sol';
 
 ///@title Idle Liquidity Module to manage liquidity for a user position
 contract IdleLiquidityModule is BaseModule {
+    using SafeMath for int24;
+
     ///@notice uniswap address holder
     IUniswapAddressHolder public uniswapAddressHolder;
 

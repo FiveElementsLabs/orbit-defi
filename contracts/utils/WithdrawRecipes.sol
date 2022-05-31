@@ -3,6 +3,7 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
+import '@openzeppelin/contracts/math/SafeMath.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '../helpers/UniswapNFTHelper.sol';
 import '../../interfaces/IPositionManager.sol';
@@ -15,6 +16,8 @@ import '../../interfaces/actions/IZapOut.sol';
 
 ///@notice WithdrawRecipes allows user to withdraw positions from PositionManager
 contract WithdrawRecipes {
+    using SafeMath for uint256;
+
     IPositionManagerFactory positionManagerFactory;
     IUniswapAddressHolder uniswapAddressHolder;
 
@@ -63,7 +66,8 @@ contract WithdrawRecipes {
     modifier onlyOwner(uint256 tokenId) {
         require(
             positionManagerFactory.userToPositionManager(msg.sender) ==
-                INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(tokenId), "WithdrawRecipes::onlyOwner: Only owner can call this function"
+                INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(tokenId),
+            'WithdrawRecipes::onlyOwner: Only owner can call this function'
         );
         _;
     }
