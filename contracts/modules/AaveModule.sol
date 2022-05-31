@@ -6,7 +6,9 @@ pragma abicoder v2;
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import './BaseModule.sol';
+import '../helpers/SafeInt24Math.sol';
 import '../helpers/UniswapNFTHelper.sol';
+import '../helpers/MathHelper.sol';
 import '../../interfaces/IAaveAddressHolder.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
 import '../../interfaces/actions/IAaveDeposit.sol';
@@ -21,6 +23,7 @@ import '../../interfaces/ILendingPool.sol';
 contract AaveModule is BaseModule {
     IAaveAddressHolder public aaveAddressHolder;
     IUniswapAddressHolder public uniswapAddressHolder;
+    using SignedSafeMath for int24;
 
     constructor(
         address _aaveAddressHolder,
@@ -44,7 +47,7 @@ contract AaveModule is BaseModule {
 
         require(data != bytes32(0), 'AaveModule::depositIfNeeded: module data cannot be empty');
 
-        uint24 rebalanceDistance = uint24(uint256(data));
+        uint24 rebalanceDistance = MathHelper.fromUint256ToUint24(uint256(data));
         ///@dev move token to aave only if the position's range is outside of the tick of the pool
         if (_checkDistanceFromRange(tokenId) > 0 && rebalanceDistance <= _checkDistanceFromRange(tokenId)) {
             _depositToAave(positionManager, tokenId);
@@ -205,9 +208,9 @@ contract AaveModule is BaseModule {
         (, int24 tick, , , , , ) = pool.slot0();
 
         if (tick > tickUpper) {
-            return uint24(tick - tickUpper);
+            return MathHelper.fromInt24ToUint24(tick.sub(tickUpper));
         } else if (tick < tickLower) {
-            return uint24(tickLower - tick);
+            return MathHelper.fromInt24ToUint24(tickLower.sub(tick));
         } else {
             return 0;
         }
@@ -221,7 +224,7 @@ contract AaveModule is BaseModule {
         uint128 bestLiquidity = 0;
         uint16[4] memory fees = [100, 500, 3000, 10000];
 
-        for (uint8 i = 0; i < 4; i++) {
+        for (uint256 i = 0; i < 4; i++) {
             try this.getPoolLiquidity(token0, token1, uint24(fees[i])) returns (uint128 nextLiquidity) {
                 if (nextLiquidity > bestLiquidity) {
                     bestLiquidity = nextLiquidity;

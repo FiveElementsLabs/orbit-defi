@@ -127,7 +127,7 @@ describe('AaveDeposit.sol', function () {
       const [, id, shares] = abiCoder.decode(['address', 'uint256', 'uint256'], depositEvent.data);
 
       expect(id).to.equal(0);
-      expect(shares.toNumber()).to.be.closeTo(9309, 10);
+      expect(shares.toNumber()).to.be.closeTo(9309, 50);
     });
   });
 });
