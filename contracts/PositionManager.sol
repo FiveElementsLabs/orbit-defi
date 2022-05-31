@@ -158,7 +158,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
 
         bytes32[] memory moduleKeys = Storage.registry.getModuleKeys();
 
-        for (uint32 i = 0; i < moduleKeys.length; i++) {
+        for (uint256 i = 0; i < moduleKeys.length; i++) {
             (address moduleAddress, , bytes32 defaultData, bool activatedByDefault) = Storage.registry.getModuleInfo(
                 moduleKeys[i]
             );
