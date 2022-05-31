@@ -72,17 +72,18 @@ contract AutoCompoundModule is BaseModule {
             )
         ).slot0();
 
-        //returns true if the value of uncollected fees * 100 is greater than amount in the position * threshold
-        // (((tick - tickDelta) / tickSpacing) * tickSpacing, ((tick + tickDelta) / tickSpacing) * tickSpacing);
+        //returns true if the value of uncollected fees * 100 is greater than amount in the position * threshold:
+        //  (((uncollectedFees0 * sqrtPriceX96) / 2**96 + (uncollectedFees1 * 2**96) / sqrtPriceX96) * 100 >
+        //  ((amount0 * sqrtPriceX96) / 2**96 + (amount1 * 2**96) / sqrtPriceX96) * feesThreshold)
         return ((
-            (uncollectedFees0.mul(uint256(sqrtPriceX96)))
-                .div(uint256(2**96).add(uncollectedFees1.mul(uint256(2**96))).div(uint256(sqrtPriceX96)))
-                .mul(100)
+            (uncollectedFees0.mul(uint256(sqrtPriceX96))).div(2**96).add(
+                uncollectedFees1.mul(2**96).div(uint256(sqrtPriceX96)).mul(100)
+            )
         ) >
             (
-                (amount0.mul(uint256(sqrtPriceX96))).div(uint256(2**96)).add(amount1.mul(uint256(2**96))).div(
-                    uint256(sqrtPriceX96)
+                amount0.mul(uint256(sqrtPriceX96)).div(2**96).add(amount1.mul(2**96).div(uint256(sqrtPriceX96))).mul(
+                    feesThreshold
                 )
-            ).mul(feesThreshold));
+            ));
     }
 }
