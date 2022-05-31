@@ -108,9 +108,11 @@ contract Registry is IRegistry {
     ///@param _defaultData default data for the module
     function setDefaultValue(bytes32 _id, bytes32 _defaultData) external onlyGovernance {
         require(modules[_id].contractAddress != address(0), 'Registry::setDefaultValue: Entry does not exist.');
+        require(_defaultData != bytes32(0), 'Registry::setDefaultValue: Default data cannot be empty.');
+
         modules[_id].defaultData = _defaultData;
     }
-    
+
     ///@notice Set default activation for a module
     ///@param _id keccak256 of module id string
     ///@param _activatedByDefault default activation bool for the module

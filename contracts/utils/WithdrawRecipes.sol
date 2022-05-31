@@ -3,6 +3,7 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
+import '@openzeppelin/contracts/math/SafeMath.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '../helpers/UniswapNFTHelper.sol';
 import '../../interfaces/IPositionManager.sol';
@@ -15,6 +16,8 @@ import '../../interfaces/actions/IZapOut.sol';
 
 ///@notice WithdrawRecipes allows user to withdraw positions from PositionManager
 contract WithdrawRecipes {
+    using SafeMath for uint256;
+
     IPositionManagerFactory positionManagerFactory;
     IUniswapAddressHolder uniswapAddressHolder;
 
@@ -46,8 +49,8 @@ contract WithdrawRecipes {
             );
             IDecreaseLiquidity(positionManagerFactory.userToPositionManager(msg.sender)).decreaseLiquidity(
                 tokenId,
-                (amount0 * partToWithdraw) / 10_000,
-                (amount1 * partToWithdraw) / 10_000
+                (amount0.mul(partToWithdraw)).div(10_000),
+                (amount1.mul(partToWithdraw)).div(10_000)
             );
             ICollectFees(positionManagerFactory.userToPositionManager(msg.sender)).collectFees(tokenId, true);
         }

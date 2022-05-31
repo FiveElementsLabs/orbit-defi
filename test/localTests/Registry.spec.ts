@@ -28,14 +28,15 @@ describe('Registry.sol', function () {
     //Deploy modules
     const IdleLiquidityModuleFactory = await ethers.getContractFactory('IdleLiquidityModule');
     IdleLiquidityModule = (await IdleLiquidityModuleFactory.deploy(
-      zeroAddress, //we don't need this contract for this test
+      '0x0000000000000000000000000000000000000001', //we don't need this contract for this test
       Registry.address
     )) as Contract;
     await IdleLiquidityModule.deployed();
 
     const AutoCompoundModuleFactory = await ethers.getContractFactory('AutoCompoundModule');
     AutoCompoundModule = (await AutoCompoundModuleFactory.deploy(
-      zeroAddress, //we don't need this contract for this test
+      '0x0000000000000000000000000000000000000001',
+      //we don't need this contract for this test
       Registry.address
     )) as Contract;
     await AutoCompoundModule.deployed();
