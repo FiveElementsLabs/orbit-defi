@@ -30,10 +30,6 @@ contract AaveModule is BaseModule {
         address _uniswapAddressHolder,
         address _registry
     ) BaseModule(_registry) {
-        require(_aaveAddressHolder != address(0), 'AaveModule::Constructor:aaveAddressHolder cannot be 0');
-        require(_uniswapAddressHolder != address(0), 'AaveModule::Constructor:uniswapAddressHolder cannot be 0');
-        require(_registry != address(0), 'AaveModule::Constructor:registry cannot be 0');
-
         aaveAddressHolder = IAaveAddressHolder(_aaveAddressHolder);
         uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
     }
