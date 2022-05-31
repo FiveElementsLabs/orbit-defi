@@ -15,6 +15,8 @@ import '../../interfaces/actions/IMint.sol';
 
 ///@title Idle Liquidity Module to manage liquidity for a user position
 contract IdleLiquidityModule is BaseModule {
+    ///@dev delta of the amount because its not precise the returned amount swapped
+    uint256 constant deltaAmountSwapped = 10;
     ///@notice uniswap address holder
     IUniswapAddressHolder public uniswapAddressHolder;
 
@@ -67,7 +69,15 @@ contract IdleLiquidityModule is BaseModule {
 
             ///@dev call mintAction
             IMint(address(positionManager)).mint(
-                IMint.MintInput(token0, token1, fee, tickLower, tickUpper, token0Swapped - 10, token1Swapped - 10)
+                IMint.MintInput(
+                    token0,
+                    token1,
+                    fee,
+                    tickLower,
+                    tickUpper,
+                    token0Swapped - deltaAmountSwapped,
+                    token1Swapped - deltaAmountSwapped
+                )
             );
         }
     }

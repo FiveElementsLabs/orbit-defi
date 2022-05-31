@@ -173,22 +173,10 @@ contract AaveModule is BaseModule {
     ///@param tokenId tokenId of the position
     ///@return int24 distance from ticklower tickupper from tick of the pools and return the minimum distance
     function _checkDistanceFromRange(uint256 tokenId) internal view returns (uint24) {
-        (
-            ,
-            ,
-            address token0,
-            address token1,
-            uint24 fee,
-            int24 tickLower,
-            int24 tickUpper,
-            ,
-            ,
-            ,
-            ,
-
-        ) = INonfungiblePositionManager(address(uniswapAddressHolder.nonfungiblePositionManagerAddress())).positions(
-                tokenId
-            );
+        (address token0, address token1, uint24 fee, int24 tickLower, int24 tickUpper) = UniswapNFTHelper._getTokens(
+            tokenId,
+            uniswapAddressHolder.nonfungiblePositionManagerAddress()
+        );
 
         IUniswapV3Pool pool = IUniswapV3Pool(
             UniswapNFTHelper._getPool(address(uniswapAddressHolder.uniswapV3FactoryAddress()), token0, token1, fee)

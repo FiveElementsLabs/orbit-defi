@@ -28,7 +28,7 @@ contract WithdrawRecipes {
     ///@param partToWithdraw percentage of token to withdraw in base points
     function withdrawUniNft(uint256 tokenId, uint256 partToWithdraw) external onlyOwner(tokenId) {
         require(
-            partToWithdraw > 0 && partToWithdraw <= 10000,
+            partToWithdraw > 0 && partToWithdraw <= 10_000,
             'WithdrawRecipes::withdrawUniNft: part to withdraw must be between 0 and 10000'
         );
         if (partToWithdraw == 10000) {
@@ -46,8 +46,8 @@ contract WithdrawRecipes {
             );
             IDecreaseLiquidity(positionManagerFactory.userToPositionManager(msg.sender)).decreaseLiquidity(
                 tokenId,
-                (amount0 * partToWithdraw) / 10000,
-                (amount1 * partToWithdraw) / 10000
+                (amount0 * partToWithdraw) / 10_000,
+                (amount1 * partToWithdraw) / 10_000
             );
             ICollectFees(positionManagerFactory.userToPositionManager(msg.sender)).collectFees(tokenId, true);
         }
@@ -63,7 +63,8 @@ contract WithdrawRecipes {
     modifier onlyOwner(uint256 tokenId) {
         require(
             positionManagerFactory.userToPositionManager(msg.sender) ==
-                INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(tokenId), "WithdrawRecipes::onlyOwner: Only owner can call this function"
+                INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(tokenId),
+            'WithdrawRecipes::onlyOwner: Only owner can call this function'
         );
         _;
     }
