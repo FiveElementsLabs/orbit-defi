@@ -44,7 +44,7 @@ contract AaveDeposit is IAaveDeposit {
 
         if (IERC20(token).allowance(address(this), address(lendingPool)) < amount) {
             IERC20(token).safeApprove(address(lendingPool), 0);
-            IERC20(token).safeApprove(address(lendingPool), amount);
+            IERC20(token).safeApprove(address(lendingPool), type(uint256).max);
         }
 
         lendingPool.deposit(token, amount, address(this), 0);
