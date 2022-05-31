@@ -8,6 +8,7 @@ import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import './BaseModule.sol';
 import '../helpers/SafeInt24Math.sol';
 import '../helpers/UniswapNFTHelper.sol';
+import '../helpers/MathHelper.sol';
 import '../../interfaces/IPositionManager.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
 import '../../interfaces/actions/IClosePosition.sol';
@@ -39,7 +40,7 @@ contract IdleLiquidityModule is BaseModule {
         (, bytes32 rebalanceDistance) = positionManager.getModuleInfo(tokenId, address(this));
 
         ///@dev rebalance only if the position's range is outside of the tick of the pool (tickDistance < 0) and the position is far enough from tick of the pool
-        if (tickDistance > 0 && uint24(uint256(rebalanceDistance)) <= tickDistance) {
+        if (tickDistance > 0 && MathHelper.fromUint256ToUint24(uint256(rebalanceDistance)) <= tickDistance) {
             (, , address token0, address token1, uint24 fee, , , , , , , ) = INonfungiblePositionManager(
                 uniswapAddressHolder.nonfungiblePositionManagerAddress()
             ).positions(tokenId);

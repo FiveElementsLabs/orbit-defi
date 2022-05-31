@@ -8,6 +8,7 @@ import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import './BaseModule.sol';
 import '../helpers/SafeInt24Math.sol';
 import '../helpers/UniswapNFTHelper.sol';
+import '../helpers/MathHelper.sol';
 import '../../interfaces/IAaveAddressHolder.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
 import '../../interfaces/actions/IAaveDeposit.sol';
@@ -39,7 +40,7 @@ contract AaveModule is BaseModule {
     function depositIfNeeded(address positionManager, uint256 tokenId) public activeModule(positionManager, tokenId) {
         (, bytes32 data) = IPositionManager(positionManager).getModuleInfo(tokenId, address(this));
 
-        uint24 rebalanceDistance = uint24(uint256(data));
+        uint24 rebalanceDistance = MathHelper.fromUint256ToUint24(uint256(data));
         ///@dev move token to aave only if the position's range is outside of the tick of the pool
         if (_checkDistanceFromRange(tokenId) > 0 && rebalanceDistance <= _checkDistanceFromRange(tokenId)) {
             _depositToAave(positionManager, tokenId);
