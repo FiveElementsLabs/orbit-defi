@@ -37,8 +37,11 @@ contract AaveModule is BaseModule {
     ///@notice deposit a position in an Aave lending pool
     ///@param positionManager address of the position manager
     ///@param tokenId id of the Uniswap position to deposit
+
     function depositIfNeeded(address positionManager, uint256 tokenId) public activeModule(positionManager, tokenId) {
         (, bytes32 data) = IPositionManager(positionManager).getModuleInfo(tokenId, address(this));
+
+        require(data != bytes32(0), 'AaveModule::depositIfNeeded: module data cannot be empty');
 
         uint24 rebalanceDistance = MathHelper.fromUint256ToUint24(uint256(data));
         ///@dev move token to aave only if the position's range is outside of the tick of the pool
@@ -56,6 +59,8 @@ contract AaveModule is BaseModule {
         address token,
         uint256 id
     ) public onlyWhitelistedKeeper {
+        require(token != address(0), 'AaveModule::withdrawIfNeeded: token cannot be address 0');
+
         uint256 tokenId = IPositionManager(positionManager).getTokenIdFromAavePosition(token, id);
         (, int24 tickPool, , , , , ) = IUniswapV3Pool(
             UniswapNFTHelper._getPoolFromTokenId(
