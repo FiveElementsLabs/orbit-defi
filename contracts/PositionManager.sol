@@ -297,6 +297,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
     function _calledFromActiveModule(address _address) internal view returns (bool isCalledFromActiveModule) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         bytes32[] memory keys = Storage.registry.getModuleKeys();
+
         for (uint256 i = 0; i < keys.length; i++) {
             (address moduleAddress, bool isActive, , ) = Storage.registry.getModuleInfo(keys[i]);
             if (moduleAddress == _address && isActive == true) {
