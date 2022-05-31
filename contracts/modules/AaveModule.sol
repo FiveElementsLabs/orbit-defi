@@ -213,7 +213,7 @@ contract AaveModule is BaseModule {
         uint128 bestLiquidity = 0;
         uint16[4] memory fees = [100, 500, 3000, 10000];
 
-        for (uint8 i = 0; i < 4; i++) {
+        for (uint256 i = 0; i < 4; i++) {
             try this.getPoolLiquidity(token0, token1, uint24(fees[i])) returns (uint128 nextLiquidity) {
                 if (nextLiquidity > bestLiquidity) {
                     bestLiquidity = nextLiquidity;

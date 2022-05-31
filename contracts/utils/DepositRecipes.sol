@@ -33,7 +33,7 @@ contract DepositRecipes {
     function depositUniNft(uint256[] calldata tokenIds) external {
         address positionManagerAddress = positionManagerFactory.userToPositionManager(msg.sender);
 
-        for (uint32 i = 0; i < tokenIds.length; i++) {
+        for (uint256 i = 0; i < tokenIds.length; i++) {
             INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).safeTransferFrom(
                 msg.sender,
                 positionManagerAddress,
