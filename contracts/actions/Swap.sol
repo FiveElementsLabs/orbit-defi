@@ -37,8 +37,8 @@ contract Swap is ISwap {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         ISwapRouter swapRouter = ISwapRouter(Storage.uniswapAddressHolder.swapRouterAddress());
 
-        ERC20Helper._approveToken(token0Address, address(swapRouter), 2**256 - 1);
-        ERC20Helper._approveToken(token1Address, address(swapRouter), 2**256 - 1);
+        ERC20Helper._approveToken(token0Address, address(swapRouter), type(uint256).max);
+        ERC20Helper._approveToken(token1Address, address(swapRouter), type(uint256).max);
 
         ISwapRouter.ExactInputSingleParams memory swapParams = ISwapRouter.ExactInputSingleParams({
             tokenIn: token0Address,
