@@ -4,6 +4,7 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import '@openzeppelin/contracts/token/ERC721/ERC721Holder.sol';
+import '@openzeppelin/contracts/proxy/Initializable.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import './helpers/ERC20Helper.sol';
 import './utils/Storage.sol';
@@ -24,7 +25,7 @@ import '../interfaces/ILendingPool.sol';
  * @notice  vault works for multiple positions
  */
 
-contract PositionManager is IPositionManager, ERC721Holder {
+contract PositionManager is IPositionManager, ERC721Holder, Initializable {
     uint256[] private uniswapNFTs;
     mapping(uint256 => mapping(address => ModuleInfo)) public activatedModules;
 
@@ -63,9 +64,11 @@ contract PositionManager is IPositionManager, ERC721Holder {
     }
 
     ///@notice modifier to check if the msg.sender is the PositionManagerFactory
-    modifier onlyFactory(address _registry) {
+    modifier onlyFactory() {
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+
         require(
-            IRegistry(_registry).positionManagerFactoryAddress() == msg.sender,
+            IRegistry(Storage.registry).positionManagerFactoryAddress() == msg.sender,
             'PositionManager::init: Only PositionManagerFactory can init this contract'
         );
         _;
@@ -87,7 +90,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
         address _owner,
         address _diamondCutFacet,
         address _registry
-    ) payable onlyFactory(_registry) {
+    ) payable {
         PositionManagerStorage.setContractOwner(_owner);
 
         // Add the diamondCut external function from the diamondCutFacet
@@ -100,18 +103,18 @@ contract PositionManager is IPositionManager, ERC721Holder {
             functionSelectors: functionSelectors
         });
         PositionManagerStorage.diamondCut(cut, address(0), '');
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+        Storage.registry = IRegistry(_registry);
     }
 
     function init(
         address _owner,
         address _uniswapAddressHolder,
-        address _registry,
         address _aaveAddressHolder
-    ) public onlyFactory(_registry) {
+    ) public onlyFactory initializer {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         Storage.owner = _owner;
         Storage.uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
-        Storage.registry = IRegistry(_registry);
         Storage.aaveAddressHolder = IAaveAddressHolder(_aaveAddressHolder);
     }
 

@@ -302,19 +302,7 @@ describe('PositionManager.sol', function () {
         PositionManager.connect(liquidityProvider).init(
           user.address,
           UniswapAddressHolder.address,
-          Registry.address,
-          AaveAddressHolder.address,
-          user.address //governance
-        )
-      ).to.be.reverted;
-    });
-    it('should revert if deployed not by the factory', async function () {
-      const PositionManagerFactory = await ethers.getContractFactory('PositionManager');
-      await expect(
-        PositionManagerFactory.connect(liquidityProvider).deploy(
-          liquidityProvider.address,
-          DiamondCutFacet.address,
-          Registry.address
+          AaveAddressHolder.address
         )
       ).to.be.reverted;
     });
