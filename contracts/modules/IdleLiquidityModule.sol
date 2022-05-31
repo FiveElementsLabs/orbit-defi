@@ -37,7 +37,7 @@ contract IdleLiquidityModule is BaseModule {
         uint24 tickDistance = _checkDistanceFromRange(tokenId);
         (, bytes32 rebalanceDistance) = positionManager.getModuleInfo(tokenId, address(this));
 
-        ///@dev can rebalance only if the position range is outside of the pool tick and it is far enough from the pool tick
+        ///@dev can rebalance only if the pool tick is outside the position range, and it is far enough from it
         if (tickDistance > 0 && tickDistance >= MathHelper.fromUint256ToUint24(uint256(rebalanceDistance))) {
             (, , address token0, address token1, uint24 fee, , , , , , , ) = INonfungiblePositionManager(
                 uniswapAddressHolder.nonfungiblePositionManagerAddress()
