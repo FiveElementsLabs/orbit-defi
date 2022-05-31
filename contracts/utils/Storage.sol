@@ -44,7 +44,7 @@ library PositionManagerStorage {
     bytes32 constant key = keccak256('position-manager-storage-location');
 
     ///@notice get the storage from memory location
-    ///@return the storage struct
+    ///@return s the storage struct
     function getStorage() internal pure returns (StorageStruct storage s) {
         bytes32 k = key;
         assembly {
@@ -69,7 +69,7 @@ library PositionManagerStorage {
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     ///@notice set the owner field on the storage struct
-    ///@param newOwner new owner of the storage struct
+    ///@param _newOwner new owner of the storage struct
     function setContractOwner(address _newOwner) internal {
         StorageStruct storage ds = getStorage();
         address previousOwner = ds.owner;
