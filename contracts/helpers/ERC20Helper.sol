@@ -22,8 +22,8 @@ library ERC20Helper {
         if (IERC20(token).allowance(address(this), spender) >= amount) {
             return;
         }
-        IERC20(token).approve(spender, 0);
-        IERC20(token).approve(spender, amount);
+        IERC20(token).safeApprove(spender, 0);
+        IERC20(token).safeApprove(spender, amount);
     }
 
     ///@notice return the allowance of the token that the spender is able to spend

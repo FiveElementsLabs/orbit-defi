@@ -4,6 +4,8 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
+
 import '../../interfaces/IAToken.sol';
 import '../../interfaces/ILendingPool.sol';
 import '../../interfaces/IPositionManager.sol';
@@ -12,6 +14,8 @@ import '../utils/Storage.sol';
 
 ///@notice action to deposit tokens into aave protocol
 contract AaveDeposit is IAaveDeposit {
+    using SafeERC20 for IERC20;
+
     ///@notice emitted when a deposit on aave is made
     ///@param positionManager address of aave positionManager which deposited
     ///@param token token address
@@ -40,7 +44,7 @@ contract AaveDeposit is IAaveDeposit {
 
         if (IERC20(token).allowance(address(this), address(lendingPool)) < amount) {
             IERC20(token).approve(address(lendingPool), 0);
-            IERC20(token).approve(address(lendingPool), 2**256 - 1);
+            IERC20(token).approve(address(lendingPool), type(uint256).max);
         }
 
         lendingPool.deposit(token, amount, address(this), 0);
