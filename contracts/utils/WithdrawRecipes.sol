@@ -49,8 +49,8 @@ contract WithdrawRecipes {
             );
             IDecreaseLiquidity(positionManagerFactory.userToPositionManager(msg.sender)).decreaseLiquidity(
                 tokenId,
-                (amount0 * partToWithdraw) / 10000,
-                (amount1 * partToWithdraw) / 10000
+                (amount0.mul(partToWithdraw)).div(10000),
+                (amount1.mul(partToWithdraw)).div(10000)
             );
             ICollectFees(positionManagerFactory.userToPositionManager(msg.sender)).collectFees(tokenId, true);
         }

@@ -17,8 +17,6 @@ import '../../interfaces/actions/IMint.sol';
 
 ///@title Idle Liquidity Module to manage liquidity for a user position
 contract IdleLiquidityModule is BaseModule {
-    using SafeMath for int24;
-
     ///@notice uniswap address holder
     IUniswapAddressHolder public uniswapAddressHolder;
 
