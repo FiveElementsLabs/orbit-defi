@@ -73,14 +73,15 @@ describe('AaveWithdraw.sol', function () {
     LendingPool = await ethers.getContractAtFromArtifact(LendingPooljson, '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9');
 
     //deploy uniswapAddressHolder
+    const registry = await deployContract('Registry', [user.address]);
     const uniswapAddressHolder = await deployContract('UniswapAddressHolder', [
       Factory.address, //random address because we don't need it
       Factory.address, //random address because we don't need it
       Factory.address, //random address because we don't need it
+      registry.address,
     ]);
-    const aaveAddressHolder = await deployContract('AaveAddressHolder', [LendingPool.address]);
+    const aaveAddressHolder = await deployContract('AaveAddressHolder', [LendingPool.address, registry.address]);
     const diamondCutFacet = await deployContract('DiamondCutFacet');
-    const registry = await deployContract('Registry', [user.address]);
 
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactory = await deployPositionManagerFactoryAndActions(

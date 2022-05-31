@@ -39,23 +39,38 @@ contract ZapIn is IZapIn {
         uint24 fee
     ) public override returns (uint256 tokenId) {
         require(token0 != token1, 'ZapIn::zapIn: token0 and token1 cannot be the same');
+        require(amountIn > 0, 'ZapIn::zapIn: tokenIn cannot be 0');
+
         (token0, token1) = _reorderTokens(token0, token1);
 
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         ERC20Helper._pullTokensIfNeeded(tokenIn, Storage.owner, amountIn);
-
         ERC20Helper._approveToken(tokenIn, Storage.uniswapAddressHolder.swapRouterAddress(), amountIn);
 
         (, int24 tickPool, , , , , ) = IUniswapV3Pool(
             UniswapNFTHelper._getPool(Storage.uniswapAddressHolder.uniswapV3FactoryAddress(), token0, token1, fee)
         ).slot0();
 
-        uint256 amountInTo0 = (amountIn * 1e18) / (SwapHelper.getRatioFromRange(tickPool, tickLower, tickUpper) + 1e18);
-        uint256 amountInTo1 = amountIn - amountInTo0;
+        uint256 amountInTo0;
+        uint256 amountInTo1;
+
+        // If we are in range, calculate fractions of tokenIn to swap.
+        // Otherwise, set amount0 or amount1 to 0 according to the out-of-range direction
+        if (tickLower <= tickPool && tickUpper >= tickPool) {
+            amountInTo0 = (amountIn * 1e18) / (SwapHelper.getRatioFromRange(tickPool, tickLower, tickUpper) + 1e18);
+            amountInTo1 = (amountIn - amountInTo0);
+        } else if (tickLower < tickPool && tickUpper < tickPool) {
+            amountInTo0 = 0;
+            amountInTo1 = amountIn;
+        } else {
+            amountInTo0 = amountIn;
+            amountInTo1 = 0;
+        }
 
         ERC20Helper._approveToken(tokenIn, Storage.uniswapAddressHolder.swapRouterAddress(), amountIn);
+
         //if token in input is not the token0 of the pool, we need to swap it
-        if (tokenIn != token0) {
+        if (tokenIn != token0 && amountInTo0 != 0) {
             amountInTo0 = ISwapRouter(Storage.uniswapAddressHolder.swapRouterAddress()).exactInputSingle(
                 ISwapRouter.ExactInputSingleParams({
                     tokenIn: tokenIn,
@@ -71,7 +86,7 @@ contract ZapIn is IZapIn {
         }
 
         //if token in input is not the token1 of the pool, we need to swap it
-        if (tokenIn != token1) {
+        if (tokenIn != token1 && amountInTo1 != 0) {
             ERC20Helper._approveToken(tokenIn, Storage.uniswapAddressHolder.swapRouterAddress(), amountIn);
             amountInTo1 = ISwapRouter(Storage.uniswapAddressHolder.swapRouterAddress()).exactInputSingle(
                 ISwapRouter.ExactInputSingleParams({
