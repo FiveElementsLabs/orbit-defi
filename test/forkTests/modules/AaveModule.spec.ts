@@ -47,6 +47,7 @@ describe('AaveModule.sol', function () {
   let Factory: Contract; // the factory that will deploy all pools
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
   let PositionManager: PositionManager; // Position manager contract
+  let DepositRecipes: Contract;
   let AaveDepositFallback: Contract;
   let LendingPool: Contract;
   let AaveModule: Contract;
@@ -153,6 +154,19 @@ describe('AaveModule.sol', function () {
       true
     );
 
+    //deploy DepositRecipes contract
+    DepositRecipes = (await deployContract('DepositRecipes', [
+      uniswapAddressHolder.address,
+      PositionManagerFactory.address,
+    ])) as Contract;
+
+    await registry.addNewContract(
+      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('DepositRecipes')),
+      DepositRecipes.address,
+      hre.ethers.utils.formatBytes32String('1'),
+      true
+    );
+
     PositionManager = (await getPositionManager(PositionManagerFactory, user)) as PositionManager;
 
     //Get mock tokens. These need to be real Mainnet addresses
@@ -163,9 +177,12 @@ describe('AaveModule.sol', function () {
     //approve NFPM
     await doAllApprovals(
       [user, liquidityProvider, trader],
-      [NonFungiblePositionManager.address, swapRouter.address],
+      [NonFungiblePositionManager.address, swapRouter.address, DepositRecipes.address, PositionManager.address],
       [usdcMock, wbtcMock]
     );
+
+    await NonFungiblePositionManager.connect(user).setApprovalForAll(DepositRecipes.address, true);
+    await NonFungiblePositionManager.setApprovalForAll(PositionManager.address, true);
 
     let slot0 = await Pool0.slot0();
     tickLower = (Math.round(slot0.tick / 60) - 100) * 60;
@@ -183,7 +200,7 @@ describe('AaveModule.sol', function () {
         amount1Desired: '0x' + (1e10).toString(16),
         amount0Min: 0,
         amount1Min: 0,
-        recipient: PositionManager.address,
+        recipient: user.address,
         deadline: Date.now() + 1000,
       },
       { gasLimit: 670000 }
@@ -209,11 +226,12 @@ describe('AaveModule.sol', function () {
 
     const receipt: any = await mintTx.wait();
     tokenId = receipt.events[receipt.events.length - 1].args.tokenId;
-
+    /* 
     // user approve AaveModule
     await PositionManager.connect(user).toggleModule(tokenId, AaveModule.address, true);
-    await PositionManager.pushPositionId(tokenId);
-
+    await PositionManager.pushPositionId(tokenId); */
+    await NonFungiblePositionManager.ownerOf(tokenId);
+    await DepositRecipes.connect(user).depositUniNft([tokenId]);
     abiCoder = ethers.utils.defaultAbiCoder;
 
     const aUsdcAddress = (await LendingPool.getReserveData(usdcMock.address)).aTokenAddress;

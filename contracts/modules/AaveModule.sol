@@ -26,9 +26,9 @@ contract AaveModule is BaseModule {
         address _uniswapAddressHolder,
         address _registry
     ) BaseModule(_registry) {
-        require(_aaveAddressHolder != address(0));
-        require(_uniswapAddressHolder != address(0));
-        require(_registry != address(0));
+        require(_aaveAddressHolder != address(0), 'AaveModule::Constructor:aaveAddressHolder cannot be 0');
+        require(_uniswapAddressHolder != address(0), 'AaveModule::Constructor:uniswapAddressHolder cannot be 0');
+        require(_registry != address(0), 'AaveModule::Constructor:registry cannot be 0');
 
         aaveAddressHolder = IAaveAddressHolder(_aaveAddressHolder);
         uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
@@ -46,6 +46,8 @@ contract AaveModule is BaseModule {
         require(toAaveToken != address(0), 'AaveModule::depositIfNeeded: toAaveToken cannot be address 0');
 
         (, bytes32 data) = IPositionManager(positionManager).getModuleInfo(tokenId, address(this));
+
+        require(data != bytes32(0), 'AaveModule::depositIfNeeded: module data cannot be empty');
 
         uint24 rebalanceDistance = uint24(uint256(data));
         ///@dev move token to aave only if the position's range is outside of the tick of the pool

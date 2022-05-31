@@ -20,8 +20,8 @@ contract AutoCompoundModule is BaseModule {
     ///@param _addressHolder the address of the uniswap address holder contract
     ///@param _registry the address of the registry contract
     constructor(address _addressHolder, address _registry) BaseModule(_registry) {
-        require(_addressHolder != address(0), 'addressHolder cannot be 0');
-        require(_registry != address(0), 'registry cannot be 0');
+        require(_addressHolder != address(0), 'AutoCompoundModule::Constructor:addressHolder cannot be 0');
+        require(_registry != address(0), 'AutoCompoundModule::Constructor:registry cannot be 0');
         addressHolder = IUniswapAddressHolder(_addressHolder);
         registry = IRegistry(_registry);
     }
@@ -60,6 +60,7 @@ contract AutoCompoundModule is BaseModule {
         );
 
         (, bytes32 data) = IPositionManager(positionManagerAddress).getModuleInfo(tokenId, address(this));
+        require(data != bytes32(0), 'AutoCompoundModule::_checkIfCompoundIsNeeded: module data cannot be empty');
 
         uint256 feesThreshold = uint256(data);
 

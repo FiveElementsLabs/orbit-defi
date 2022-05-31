@@ -22,8 +22,11 @@ contract IdleLiquidityModule is BaseModule {
     ///@param _uniswapAddressHolder address of the uniswap address holder
     ///@param _registry address of the registry
     constructor(address _uniswapAddressHolder, address _registry) BaseModule(_registry) {
-        require(_uniswapAddressHolder != address(0), 'uniswapAddressHolder cannot be 0');
-        require(_registry != address(0), 'registry cannot be 0');
+        require(
+            _uniswapAddressHolder != address(0),
+            'IdleLiquidityModule::Constructor:uniswapAddressHolder cannot be 0'
+        );
+        require(_registry != address(0), 'IdleLiquidityModule::Constructor:registry cannot be 0');
 
         uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
     }
@@ -38,6 +41,7 @@ contract IdleLiquidityModule is BaseModule {
     {
         uint24 tickDistance = _checkDistanceFromRange(tokenId);
         (, bytes32 rebalanceDistance) = positionManager.getModuleInfo(tokenId, address(this));
+        require(rebalanceDistance != bytes32(0), 'IdleLiquidityModule:: rebalance: Rebalance distance is 0');
 
         ///@dev rebalance only if the position's range is outside of the tick of the pool (tickDistance < 0) and the position is far enough from tick of the pool
         if (tickDistance > 0 && uint24(uint256(rebalanceDistance)) <= tickDistance) {
