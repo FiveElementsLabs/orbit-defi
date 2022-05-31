@@ -316,16 +316,12 @@ contract PositionManager is IPositionManager, ERC721Holder {
     }
 
     fallback() external payable onlyWhitelisted {
-        StorageStruct storage Storage;
-        bytes32 position = PositionManagerStorage.key;
-        ///@dev get diamond storage position
-        assembly {
-            Storage.slot := position
-        }
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+
         address facet = Storage.selectorToFacetAndPosition[msg.sig].facetAddress;
         require(facet != address(0), 'PositionManager::Fallback: Function does not exist');
-        ///@dev Execute external function from facet using delegatecall and return any value.
 
+        ///@dev Execute external function from facet using delegatecall and return any value.
         assembly {
             // copy function selector and any arguments
             calldatacopy(0, 0, calldatasize())
