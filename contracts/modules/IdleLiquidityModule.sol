@@ -22,6 +22,9 @@ contract IdleLiquidityModule is BaseModule {
     ///@param _uniswapAddressHolder address of the uniswap address holder
     ///@param _registry address of the registry
     constructor(address _uniswapAddressHolder, address _registry) BaseModule(_registry) {
+        require(_uniswapAddressHolder != address(0), 'uniswapAddressHolder cannot be 0');
+        require(_registry != address(0), 'registry cannot be 0');
+
         uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
     }
 

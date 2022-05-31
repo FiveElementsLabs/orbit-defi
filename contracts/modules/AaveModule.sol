@@ -26,6 +26,10 @@ contract AaveModule is BaseModule {
         address _uniswapAddressHolder,
         address _registry
     ) BaseModule(_registry) {
+        require(_aaveAddressHolder != address(0));
+        require(_uniswapAddressHolder != address(0));
+        require(_registry != address(0));
+
         aaveAddressHolder = IAaveAddressHolder(_aaveAddressHolder);
         uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
     }
@@ -39,6 +43,8 @@ contract AaveModule is BaseModule {
         uint256 tokenId,
         address toAaveToken
     ) public activeModule(positionManager, tokenId) {
+        require(toAaveToken != address(0), 'AaveModule::depositIfNeeded: toAaveToken cannot be address 0');
+
         (, bytes32 data) = IPositionManager(positionManager).getModuleInfo(tokenId, address(this));
 
         uint24 rebalanceDistance = uint24(uint256(data));
@@ -57,6 +63,8 @@ contract AaveModule is BaseModule {
         address token,
         uint256 id
     ) public onlyWhitelistedKeeper {
+        require(token != address(0), 'AaveModule::withdrawIfNeeded: token cannot be address 0');
+
         uint256 tokenId = IPositionManager(positionManager).getTokenIdFromAavePosition(token, id);
         (, int24 tickPool, , , , , ) = IUniswapV3Pool(
             UniswapNFTHelper._getPoolFromTokenId(
