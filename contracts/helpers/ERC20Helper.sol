@@ -51,10 +51,9 @@ library ERC20Helper {
         uint256 needed = 0;
         uint256 balance = _getBalance(token, address(this));
         if (balance < amount) {
-            if (amount - balance <= _getBalance(token, from)) {
-                needed = amount - balance;
-                IERC20(token).safeTransferFrom(from, address(this), needed);
-            }
+            require(amount - balance <= _getBalance(token, from), 'Not enough balance to pull tokens');
+            needed = amount - balance;
+            IERC20(token).safeTransferFrom(from, address(this), needed);
         }
 
         require(
