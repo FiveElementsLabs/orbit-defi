@@ -100,9 +100,9 @@ contract IdleLiquidityModule is BaseModule {
         (, int24 tick, , , , , ) = pool.slot0();
 
         if (tick > tickUpper) {
-            return uint24(tick.sub(tickUpper));
+            return MathHelper.fromInt24ToUint24(tick.sub(tickUpper));
         } else if (tick < tickLower) {
-            return uint24(tickLower.sub(tick));
+            return MathHelper.fromInt24ToUint24(tickLower.sub(tick));
         } else {
             return 0;
         }
@@ -128,7 +128,7 @@ contract IdleLiquidityModule is BaseModule {
         );
 
         (, int24 tick, , , , , ) = pool.slot0();
-        int24 tickSpacing = int24(fee).div(50);
+        int24 tickSpacing = MathHelper.fromUint24ToInt24(fee).div(50);
 
         return (
             tick.sub(tickDelta).div(tickSpacing).mul(tickSpacing),

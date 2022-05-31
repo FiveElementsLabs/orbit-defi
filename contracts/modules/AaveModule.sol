@@ -199,9 +199,9 @@ contract AaveModule is BaseModule {
         (, int24 tick, , , , , ) = pool.slot0();
 
         if (tick > tickUpper) {
-            return uint24(tick.sub(tickUpper));
+            return MathHelper.fromInt24ToUint24(tick.sub(tickUpper));
         } else if (tick < tickLower) {
-            return uint24(tickLower.sub(tick));
+            return MathHelper.fromInt24ToUint24(tickLower.sub(tick));
         } else {
             return 0;
         }
