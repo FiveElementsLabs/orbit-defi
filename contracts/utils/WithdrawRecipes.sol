@@ -34,7 +34,7 @@ contract WithdrawRecipes {
             partToWithdraw > 0 && partToWithdraw <= 10_000,
             'WithdrawRecipes::withdrawUniNft: part to withdraw must be between 0 and 10000'
         );
-        if (partToWithdraw == 10000) {
+        if (partToWithdraw == 10_000) {
             IClosePosition(positionManagerFactory.userToPositionManager(msg.sender)).closePosition(
                 tokenId,
                 true ///@dev return the tokens to the user
