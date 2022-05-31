@@ -127,12 +127,10 @@ contract PositionManager is IPositionManager, ERC721Holder {
     function removePositionId(uint256 tokenId) public override onlyWhitelisted {
         for (uint256 i = 0; i < uniswapNFTs.length; i++) {
             if (uniswapNFTs[i] == tokenId) {
-                if (uniswapNFTs.length > 1) {
+                if (i + 1 != uniswapNFTs.length) {
                     uniswapNFTs[i] = uniswapNFTs[uniswapNFTs.length - 1];
-                    uniswapNFTs.pop();
-                } else {
-                    delete uniswapNFTs;
                 }
+                uniswapNFTs.pop();
                 return;
             }
         }
@@ -281,7 +279,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
         return Storage.owner;
     }
 
-    ///@notice return the all tokens of tokenAddress in the positionManager
+    ///@notice transfer ERC20 tokens stuck in Position Manager to owner
     ///@param tokenAddress address of the token to be withdrawn
     function withdrawERC20(address tokenAddress) external override onlyOwner {
         ERC20Helper._approveToken(tokenAddress, address(this), 2**256 - 1);
