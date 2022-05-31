@@ -48,10 +48,10 @@ library ERC20Helper {
         address from,
         uint256 amount
     ) internal returns (uint256) {
-        uint256 needed = 0;
+        uint256 neded = 0;
         uint256 balance = _getBalance(token, address(this));
         if (balance < amount) {
-            if (amount - balance < _getBalance(token, from)) {
+            if (amount - balance <= _getBalance(token, from)) {
                 needed = amount - balance;
                 IERC20(token).safeTransferFrom(from, address(this), needed);
             }
@@ -69,7 +69,7 @@ library ERC20Helper {
         uint256 amount
     ) internal returns (uint256 amountOut) {
         uint256 balance = _getBalance(token, address(this));
-        if (balance < amount) {
+        if (balance <= amount) {
             amountOut = balance;
         } else {
             amountOut = amount;

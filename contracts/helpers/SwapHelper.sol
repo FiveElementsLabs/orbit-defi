@@ -3,12 +3,15 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
+import '@openzeppelin/contracts/math/SafeMath.sol';
 import '@uniswap/v3-core/contracts/libraries/FixedPoint96.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 
 ///@title library to help with swap amounts calculations
 library SwapHelper {
+    using SafeMath for uint256;
+
     ///@notice calculate the ratio of the token amounts for a given position
     ///@param tickPool tick of the pool
     ///@param tickLower lower tick of position
@@ -46,7 +49,8 @@ library SwapHelper {
         uint256 amount0In,
         uint256 amount1In
     ) internal pure returns (uint256 amountToSwap, bool token0In) {
-        require(amount0In > 0 || amount1In > 0);
+        require(amount0In > 0 || amount1In > 0, 'SwapHelper::calcAmountToSwap: at least one amountIn should be > 0');
+
         if (tickPool <= tickLower) {
             amountToSwap = amount0In;
             token0In = true;
@@ -64,11 +68,12 @@ library SwapHelper {
             uint256 amount1PostX96 = (ratioE18 * valueX96) / (ratioE18 + 1e18);
 
             token0In = !(amount1In >= (amount1PostX96 >> FixedPoint96.RESOLUTION));
+
             if (token0In) {
                 amountToSwap =
-                    (((amount1PostX96 - (amount1In << FixedPoint96.RESOLUTION)) / sqrtPriceX96) <<
+                    (((amount1PostX96 - (amount1In << FixedPoint96.RESOLUTION)) / uint256(sqrtPriceX96)) <<
                         FixedPoint96.RESOLUTION) /
-                    sqrtPriceX96;
+                    uint256(sqrtPriceX96);
             } else {
                 amountToSwap = amount1In - (amount1PostX96 >> FixedPoint96.RESOLUTION);
             }
