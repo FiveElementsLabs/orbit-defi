@@ -26,7 +26,7 @@ contract IdleLiquidityModule is BaseModule {
         uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
     }
 
-    ///@notice check if the position is in the range of the pools and return rebalance the position swapping the tokens
+    ///@notice check if the position is out of range and rebalance it by swapping the tokens as necesary
     ///@param tokenId tokenId of the position
     ///@param positionManager address of the position manager
     function rebalance(uint256 tokenId, IPositionManager positionManager)
@@ -37,13 +37,13 @@ contract IdleLiquidityModule is BaseModule {
         uint24 tickDistance = _checkDistanceFromRange(tokenId);
         (, bytes32 rebalanceDistance) = positionManager.getModuleInfo(tokenId, address(this));
 
-        ///@dev rebalance only if the position's range is outside of the tick of the pool (tickDistance < 0) and the position is far enough from tick of the pool
-        if (tickDistance > 0 && MathHelper.fromUint256ToUint24(uint256(rebalanceDistance)) <= tickDistance) {
+        ///@dev can rebalance only if the position range is outside of the pool tick and it is far enough from the pool tick
+        if (tickDistance > 0 && tickDistance >= MathHelper.fromUint256ToUint24(uint256(rebalanceDistance))) {
             (, , address token0, address token1, uint24 fee, , , , , , , ) = INonfungiblePositionManager(
                 uniswapAddressHolder.nonfungiblePositionManagerAddress()
             ).positions(tokenId);
 
-            ///@dev calc tickLower and tickUpper with the same delta as the position but with tick of the pool in center
+            ///@dev calc tickLower and tickUpper with the same delta as the position but with the pool tick in center
             (int24 tickLower, int24 tickUpper) = _calcTick(tokenId, fee);
 
             ///@dev call closePositionAction
