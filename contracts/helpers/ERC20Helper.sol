@@ -48,7 +48,7 @@ library ERC20Helper {
         address from,
         uint256 amount
     ) internal returns (uint256) {
-        uint256 neded = 0;
+        uint256 needed = 0;
         uint256 balance = _getBalance(token, address(this));
         if (balance < amount) {
             if (amount - balance <= _getBalance(token, from)) {
