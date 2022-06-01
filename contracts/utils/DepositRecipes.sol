@@ -17,8 +17,8 @@ import '../../interfaces/IUniswapAddressHolder.sol';
 contract DepositRecipes {
     using SafeERC20 for IERC20;
 
-    IUniswapAddressHolder uniswapAddressHolder;
-    IPositionManagerFactory positionManagerFactory;
+    IUniswapAddressHolder public immutable uniswapAddressHolder;
+    IPositionManagerFactory public immutable positionManagerFactory;
 
     constructor(address _uniswapAddressHolder, address _positionManagerFactory) {
         uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);

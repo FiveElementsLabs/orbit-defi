@@ -21,8 +21,8 @@ import '../../interfaces/actions/IIncreaseLiquidity.sol';
 import '../../interfaces/ILendingPool.sol';
 
 contract AaveModule is BaseModule {
-    IAaveAddressHolder public aaveAddressHolder;
-    IUniswapAddressHolder public uniswapAddressHolder;
+    IAaveAddressHolder public immutable aaveAddressHolder;
+    IUniswapAddressHolder public immutable uniswapAddressHolder;
     using SignedSafeMath for int24;
 
     constructor(

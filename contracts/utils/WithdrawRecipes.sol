@@ -16,10 +16,10 @@ import '../../interfaces/actions/IZapOut.sol';
 
 ///@notice WithdrawRecipes allows user to withdraw positions from PositionManager
 contract WithdrawRecipes {
-    using SafeMath for uint256;
+    IPositionManagerFactory public immutable positionManagerFactory;
+    IUniswapAddressHolder public immutable uniswapAddressHolder;
 
-    IPositionManagerFactory positionManagerFactory;
-    IUniswapAddressHolder uniswapAddressHolder;
+    using SafeMath for uint256;
 
     constructor(address _positionManagerFactory, address _uniswapAddressHolder) {
         positionManagerFactory = IPositionManagerFactory(_positionManagerFactory);

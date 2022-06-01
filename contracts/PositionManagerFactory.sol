@@ -9,9 +9,9 @@ import '../interfaces/IDiamondCut.sol';
 
 contract PositionManagerFactory is IPositionManagerFactory {
     address public governance;
-    address public diamondCutFacet;
-    address uniswapAddressHolder;
-    address aaveAddressHolder;
+    address public immutable diamondCutFacet;
+    address public immutable uniswapAddressHolder;
+    address public immutable aaveAddressHolder;
     address public registry;
     address[] public positionManagers;
     IDiamondCut.FacetCut[] public actions;

@@ -81,8 +81,7 @@ library ERC20Helper {
         } else {
             amountOut = amount;
         }
-
-        IERC20(token).safeTransferFrom(address(this), to, amountOut);
+        IERC20(token).safeTransfer(to, amountOut);
     }
 
     ///@notice get the balance of the token for the given address

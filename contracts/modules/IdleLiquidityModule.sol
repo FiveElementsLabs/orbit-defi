@@ -20,7 +20,7 @@ contract IdleLiquidityModule is BaseModule {
     ///@dev deltaAmountSwapped of the amount because the amount swapped returned by the swapToPositionRatio its not precise
     uint256 constant deltaAmountSwapped = 10;
     ///@notice uniswap address holder
-    IUniswapAddressHolder public uniswapAddressHolder;
+    IUniswapAddressHolder public immutable uniswapAddressHolder;
     using SignedSafeMath for int24;
 
     ///@notice assing the uniswap address holder to the contract
