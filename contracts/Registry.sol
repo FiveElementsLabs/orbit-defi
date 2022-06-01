@@ -155,7 +155,8 @@ contract Registry is IRegistry {
     ///@param _keeper address to check
     ///@return bool true if whitelisted, false otherwise
     function isWhitelistedKeeper(address _keeper) public view override returns (bool) {
-        for (uint256 i = 0; i < whitelistedKeepers.length; i++) {
+        uint256 whitelistedKeeperLength = whitelistedKeepers.length;
+        for (uint256 i; i < whitelistedKeeperLength; ++i) {
             if (whitelistedKeepers[i] == _keeper) {
                 return true;
             }
