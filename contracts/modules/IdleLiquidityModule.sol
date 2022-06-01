@@ -17,7 +17,7 @@ import '../../interfaces/actions/IMint.sol';
 
 ///@title Idle Liquidity Module to manage liquidity for a user position
 contract IdleLiquidityModule is BaseModule {
-    ///@dev delta of the amount because its not precise the returned amount swapped
+    ///@dev deltaAmountSwapped of the amount because its not precise the returned amount swapped by the swapToPositionRatio
     uint256 constant deltaAmountSwapped = 10;
     ///@notice uniswap address holder
     IUniswapAddressHolder public uniswapAddressHolder;
