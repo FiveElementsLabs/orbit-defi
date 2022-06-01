@@ -62,20 +62,19 @@ library SwapHelper {
 
             uint160 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(tickPool);
 
-            uint256 valueX96 = (amount0In * ((uint256(sqrtPriceX96)**2) >> FixedPoint96.RESOLUTION)) +
-                (amount1In << FixedPoint96.RESOLUTION);
+            uint256 valueX96 = (amount0In.mul(uint256(sqrtPriceX96)**2) >> FixedPoint96.RESOLUTION).add(
+                amount1In << FixedPoint96.RESOLUTION
+            );
 
-            uint256 amount1PostX96 = (ratioE18 * valueX96) / (ratioE18 + 1e18);
+            uint256 amount1PostX96 = ratioE18.mul(valueX96).div(ratioE18.add(1e18));
 
             token0In = !(amount1In >= (amount1PostX96 >> FixedPoint96.RESOLUTION));
 
             if (token0In) {
-                amountToSwap =
-                    (((amount1PostX96 - (amount1In << FixedPoint96.RESOLUTION)) / uint256(sqrtPriceX96)) <<
-                        FixedPoint96.RESOLUTION) /
-                    uint256(sqrtPriceX96);
+                amountToSwap = ((amount1PostX96.sub(amount1In << FixedPoint96.RESOLUTION)).div(sqrtPriceX96) <<
+                    FixedPoint96.RESOLUTION).div(sqrtPriceX96);
             } else {
-                amountToSwap = amount1In - (amount1PostX96 >> FixedPoint96.RESOLUTION);
+                amountToSwap = amount1In.sub(amount1PostX96 >> FixedPoint96.RESOLUTION);
             }
         }
     }

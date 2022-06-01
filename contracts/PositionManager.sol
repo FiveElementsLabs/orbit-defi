@@ -287,9 +287,11 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
     ///@notice return the all tokens of tokenAddress in the positionManager
     ///@param tokenAddress address of the token to be withdrawn
     function withdrawERC20(address tokenAddress) external override onlyOwner {
-        ERC20Helper._approveToken(tokenAddress, address(this), 2**256 - 1);
-        uint256 amount = ERC20Helper._withdrawTokens(tokenAddress, msg.sender, 2**256 - 1);
-        emit ERC20Withdrawn(tokenAddress, msg.sender, amount);
+        uint256 amount = ERC20Helper._getBalance(tokenAddress, address(this));
+        uint256 got = ERC20Helper._withdrawTokens(tokenAddress, msg.sender, amount);
+
+        require(amount == got, 'PositionManager::withdrawERC20: ERC20 transfer failed.');
+        emit ERC20Withdrawn(tokenAddress, msg.sender, got);
     }
 
     ///@notice function to check if an address corresponds to an active module (or this contract)
@@ -298,6 +300,7 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
     function _calledFromActiveModule(address _address) internal view returns (bool isCalledFromActiveModule) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         bytes32[] memory keys = Storage.registry.getModuleKeys();
+
         for (uint256 i = 0; i < keys.length; i++) {
             (address moduleAddress, bool isActive, , ) = Storage.registry.getModuleInfo(keys[i]);
             if (moduleAddress == _address && isActive == true) {

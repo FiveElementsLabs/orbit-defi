@@ -36,7 +36,7 @@ contract IdleLiquidityModule is BaseModule {
         uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
     }
 
-    ///@notice check if the position is out of range and rebalance it by swapping the tokens as necesary
+    ///@notice check if the position is out of range and rebalance it by swapping the tokens as necessary
     ///@param tokenId tokenId of the position
     ///@param positionManager address of the position manager
     function rebalance(uint256 tokenId, IPositionManager positionManager)

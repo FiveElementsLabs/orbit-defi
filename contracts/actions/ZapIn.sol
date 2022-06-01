@@ -3,6 +3,7 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
+import '@openzeppelin/contracts/math/SafeMath.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '../helpers/UniswapNFTHelper.sol';
@@ -13,6 +14,8 @@ import '../../interfaces/IPositionManager.sol';
 import '../../interfaces/actions/IZapIn.sol';
 
 contract ZapIn is IZapIn {
+    using SafeMath for uint256;
+
     ///@notice emitted when a UniswapNFT is zapped in
     ///@param positionManager address of PositionManager
     ///@param tokenId Id of zapped token
@@ -57,8 +60,10 @@ contract ZapIn is IZapIn {
         // If we are in range, calculate fractions of tokenIn to swap.
         // Otherwise, set amount0 or amount1 to 0 according to the out-of-range direction
         if (tickLower <= tickPool && tickUpper >= tickPool) {
-            amountInTo0 = (amountIn * 1e18) / (SwapHelper.getRatioFromRange(tickPool, tickLower, tickUpper) + 1e18);
-            amountInTo1 = (amountIn - amountInTo0);
+            amountInTo0 = amountIn.mul(1e18).div(
+                SwapHelper.getRatioFromRange(tickPool, tickLower, tickUpper).add(1e18)
+            );
+            amountInTo1 = amountIn.sub(amountInTo0);
         } else if (tickLower < tickPool && tickUpper < tickPool) {
             amountInTo0 = 0;
             amountInTo1 = amountIn;
