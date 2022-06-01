@@ -31,10 +31,10 @@ contract WithdrawRecipes {
     ///@param partToWithdraw percentage of token to withdraw in base points
     function withdrawUniNft(uint256 tokenId, uint256 partToWithdraw) external onlyOwner(tokenId) {
         require(
-            partToWithdraw > 0 && partToWithdraw <= 10000,
+            partToWithdraw > 0 && partToWithdraw <= 10_000,
             'WithdrawRecipes::withdrawUniNft: part to withdraw must be between 0 and 10000'
         );
-        if (partToWithdraw == 10000) {
+        if (partToWithdraw == 10_000) {
             IClosePosition(positionManagerFactory.userToPositionManager(msg.sender)).closePosition(
                 tokenId,
                 true ///@dev return the tokens to the user
@@ -49,8 +49,8 @@ contract WithdrawRecipes {
             );
             IDecreaseLiquidity(positionManagerFactory.userToPositionManager(msg.sender)).decreaseLiquidity(
                 tokenId,
-                (amount0.mul(partToWithdraw)).div(10000),
-                (amount1.mul(partToWithdraw)).div(10000)
+                (amount0.mul(partToWithdraw)).div(10_000),
+                (amount1.mul(partToWithdraw)).div(10_000)
             );
             ICollectFees(positionManagerFactory.userToPositionManager(msg.sender)).collectFees(tokenId, true);
         }

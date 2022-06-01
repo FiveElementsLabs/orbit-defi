@@ -49,7 +49,8 @@ library SwapHelper {
         uint256 amount0In,
         uint256 amount1In
     ) internal pure returns (uint256 amountToSwap, bool token0In) {
-        require(amount0In > 0 || amount1In > 0);
+        require(amount0In > 0 || amount1In > 0, 'SwapHelper::calcAmountToSwap: at least one amountIn should be > 0');
+
         if (tickPool <= tickLower) {
             amountToSwap = amount0In;
             token0In = true;
@@ -68,6 +69,7 @@ library SwapHelper {
             uint256 amount1PostX96 = ratioE18.mul(valueX96).div(ratioE18.add(1e18));
 
             token0In = !(amount1In >= (amount1PostX96 >> FixedPoint96.RESOLUTION));
+
             if (token0In) {
                 amountToSwap = ((amount1PostX96.sub(amount1In << FixedPoint96.RESOLUTION)).div(sqrtPriceX96) <<
                     FixedPoint96.RESOLUTION).div(sqrtPriceX96);
