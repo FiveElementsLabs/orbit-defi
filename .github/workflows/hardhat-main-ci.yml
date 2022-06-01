@@ -2,7 +2,7 @@ name: Hardhat CI on main branch
 
 on:
   push:
-    branches: [main]
+    branches: [main, development]
 
 jobs:
   build:

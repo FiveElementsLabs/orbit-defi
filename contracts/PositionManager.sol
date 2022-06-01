@@ -4,6 +4,7 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import '@openzeppelin/contracts/token/ERC721/ERC721Holder.sol';
+import '@openzeppelin/contracts/proxy/Initializable.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import './helpers/ERC20Helper.sol';
 import './utils/Storage.sol';
@@ -24,7 +25,7 @@ import '../interfaces/ILendingPool.sol';
  * @notice  vault works for multiple positions
  */
 
-contract PositionManager is IPositionManager, ERC721Holder {
+contract PositionManager is IPositionManager, ERC721Holder, Initializable {
     uint256[] private uniswapNFTs;
     mapping(uint256 => mapping(address => ModuleInfo)) public activatedModules;
 
@@ -63,9 +64,11 @@ contract PositionManager is IPositionManager, ERC721Holder {
     }
 
     ///@notice modifier to check if the msg.sender is the PositionManagerFactory
-    modifier onlyFactory(address _registry) {
+    modifier onlyFactory() {
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+
         require(
-            IRegistry(_registry).positionManagerFactoryAddress() == msg.sender,
+            IRegistry(Storage.registry).positionManagerFactoryAddress() == msg.sender,
             'PositionManager::init: Only PositionManagerFactory can init this contract'
         );
         _;
@@ -87,7 +90,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
         address _owner,
         address _diamondCutFacet,
         address _registry
-    ) payable onlyFactory(_registry) {
+    ) payable {
         PositionManagerStorage.setContractOwner(_owner);
 
         // Add the diamondCut external function from the diamondCutFacet
@@ -100,18 +103,18 @@ contract PositionManager is IPositionManager, ERC721Holder {
             functionSelectors: functionSelectors
         });
         PositionManagerStorage.diamondCut(cut, address(0), '');
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+        Storage.registry = IRegistry(_registry);
     }
 
     function init(
         address _owner,
         address _uniswapAddressHolder,
-        address _registry,
         address _aaveAddressHolder
-    ) public onlyFactory(_registry) {
+    ) public onlyFactory initializer {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         Storage.owner = _owner;
         Storage.uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
-        Storage.registry = IRegistry(_registry);
         Storage.aaveAddressHolder = IAaveAddressHolder(_aaveAddressHolder);
     }
 
@@ -127,12 +130,10 @@ contract PositionManager is IPositionManager, ERC721Holder {
     function removePositionId(uint256 tokenId) public override onlyWhitelisted {
         for (uint256 i = 0; i < uniswapNFTs.length; i++) {
             if (uniswapNFTs[i] == tokenId) {
-                if (uniswapNFTs.length > 1) {
+                if (i + 1 != uniswapNFTs.length) {
                     uniswapNFTs[i] = uniswapNFTs[uniswapNFTs.length - 1];
-                    uniswapNFTs.pop();
-                } else {
-                    delete uniswapNFTs;
                 }
+                uniswapNFTs.pop();
                 return;
             }
         }
@@ -153,12 +154,12 @@ contract PositionManager is IPositionManager, ERC721Holder {
 
     ///@notice set default data for every module
     ///@param tokenId ID of the position
-    function _setDefaultDataOfPosition(uint256 tokenId) internal {
+    function _setDefaultDataOfPosition(uint256 tokenId) internal onlyOwnedPosition(tokenId) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
         bytes32[] memory moduleKeys = Storage.registry.getModuleKeys();
 
-        for (uint32 i = 0; i < moduleKeys.length; i++) {
+        for (uint256 i = 0; i < moduleKeys.length; i++) {
             (address moduleAddress, , bytes32 defaultData, bool activatedByDefault) = Storage.registry.getModuleInfo(
                 moduleKeys[i]
             );
@@ -191,7 +192,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
         bytes32 data
     ) external override onlyOwner onlyOwnedPosition(tokenId) {
         uint256 moduleData = uint256(data);
-        require(moduleData > 0, 'PositionManager::setModuleData: moduleData must be greater than 0%');
+        require(moduleData != 0, 'PositionManager::setModuleData: moduleData must be greater than 0%');
         activatedModules[tokenId][moduleAddress].data = data;
     }
 
@@ -281,12 +282,14 @@ contract PositionManager is IPositionManager, ERC721Holder {
         return Storage.owner;
     }
 
-    ///@notice return the all tokens of tokenAddress in the positionManager
+    ///@notice transfer ERC20 tokens stuck in Position Manager to owner
     ///@param tokenAddress address of the token to be withdrawn
     function withdrawERC20(address tokenAddress) external override onlyOwner {
-        ERC20Helper._approveToken(tokenAddress, address(this), 2**256 - 1);
-        uint256 amount = ERC20Helper._withdrawTokens(tokenAddress, msg.sender, 2**256 - 1);
-        emit ERC20Withdrawn(tokenAddress, msg.sender, amount);
+        uint256 amount = ERC20Helper._getBalance(tokenAddress, address(this));
+        uint256 got = ERC20Helper._withdrawTokens(tokenAddress, msg.sender, amount);
+
+        require(amount == got, 'PositionManager::withdrawERC20: ERC20 transfer failed.');
+        emit ERC20Withdrawn(tokenAddress, msg.sender, got);
     }
 
     ///@notice function to check if an address corresponds to an active module (or this contract)
@@ -295,6 +298,7 @@ contract PositionManager is IPositionManager, ERC721Holder {
     function _calledFromActiveModule(address _address) internal view returns (bool isCalledFromActiveModule) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         bytes32[] memory keys = Storage.registry.getModuleKeys();
+
         for (uint256 i = 0; i < keys.length; i++) {
             (address moduleAddress, bool isActive, , ) = Storage.registry.getModuleInfo(keys[i]);
             if (moduleAddress == _address && isActive == true) {
@@ -318,16 +322,12 @@ contract PositionManager is IPositionManager, ERC721Holder {
     }
 
     fallback() external payable onlyWhitelisted {
-        StorageStruct storage Storage;
-        bytes32 position = PositionManagerStorage.key;
-        ///@dev get diamond storage position
-        assembly {
-            Storage.slot := position
-        }
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+
         address facet = Storage.selectorToFacetAndPosition[msg.sig].facetAddress;
         require(facet != address(0), 'PositionManager::Fallback: Function does not exist');
-        ///@dev Execute external function from facet using delegatecall and return any value.
 
+        ///@dev Execute external function from facet using delegatecall and return any value.
         assembly {
             // copy function selector and any arguments
             calldatacopy(0, 0, calldatasize())

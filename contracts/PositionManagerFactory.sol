@@ -47,6 +47,12 @@ contract PositionManagerFactory is IPositionManagerFactory {
         governance = _governance;
     }
 
+    ///@notice changes the address of the registry
+    ///@param _registry address of the new registry
+    function changeRegistry(address _registry) external onlyGovernance {
+        registry = _registry;
+    }
+
     ///@notice adds a new action to the factory
     ///@param actionAddress address of the action
     ///@param selectors action selectors
@@ -71,7 +77,7 @@ contract PositionManagerFactory is IPositionManagerFactory {
         PositionManager manager = new PositionManager(msg.sender, diamondCutFacet, registry);
         positionManagers.push(address(manager));
         userToPositionManager[msg.sender] = address(manager);
-        manager.init(msg.sender, uniswapAddressHolder, registry, aaveAddressHolder);
+        manager.init(msg.sender, uniswapAddressHolder, aaveAddressHolder);
         bytes memory _calldata;
         IDiamondCut(address(manager)).diamondCut(actions, 0x0000000000000000000000000000000000000000, _calldata);
 
@@ -80,9 +86,8 @@ contract PositionManagerFactory is IPositionManagerFactory {
         return positionManagers;
     }
 
-    ///@notice get all positionManager array of address
-    ///@dev array need to return with a custom function to get all the array
-    ///@return address[] return the array of positionManager
+    ///@notice get the array of position manager addresses
+    ///@return address[] return array of PositionManager addresses
     function getAllPositionManagers() public view override returns (address[] memory) {
         return positionManagers;
     }
