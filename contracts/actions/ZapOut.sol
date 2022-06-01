@@ -40,7 +40,7 @@ contract ZapOut is IZapOut {
                 liquidity: liquidity,
                 amount0Min: 0,
                 amount1Min: 0,
-                deadline: block.timestamp + 120
+                deadline: block.timestamp
             })
         );
 
@@ -92,7 +92,7 @@ contract ZapOut is IZapOut {
                 tokenOut: tokenOut,
                 fee: _findBestFee(tokenIn, tokenOut),
                 recipient: address(this),
-                deadline: block.timestamp + 120,
+                deadline: block.timestamp,
                 amountIn: amountIn,
                 amountOutMinimum: 1,
                 sqrtPriceLimitX96: 0
