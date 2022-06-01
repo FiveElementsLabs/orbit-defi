@@ -94,7 +94,7 @@ contract Registry is IRegistry {
     ///@notice adds a new whitelisted keeper
     ///@param _keeper address of the new keeper
     function addKeeperToWhitelist(address _keeper) external override onlyGovernance {
-        require(!isWhitelistedKeeper[_keeper], 'Registry::addKeeperToWhitelist: Keeper is already whitelisted.');
+        require(!isWhitelistedKeeper(_keeper), 'Registry::addKeeperToWhitelist: Keeper is already whitelisted.');
         whitelistedKeepers[_keeper] = true;
     }
 
