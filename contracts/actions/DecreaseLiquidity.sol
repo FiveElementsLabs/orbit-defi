@@ -40,14 +40,16 @@ contract DecreaseLiquidity is IDecreaseLiquidity {
     {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
+        address nonfungiblePositionManagerAddress = Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress();
+
         (, , , , , int24 tickLower, int24 tickUpper, uint128 liquidity, , , , ) = INonfungiblePositionManager(
-            Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()
+            nonfungiblePositionManagerAddress
         ).positions(tokenId);
 
         IUniswapV3Pool pool = IUniswapV3Pool(
             UniswapNFTHelper._getPoolFromTokenId(
                 tokenId,
-                INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()),
+                INonfungiblePositionManager(nonfungiblePositionManagerAddress),
                 Storage.uniswapAddressHolder.uniswapV3FactoryAddress()
             )
         );
@@ -76,9 +78,9 @@ contract DecreaseLiquidity is IDecreaseLiquidity {
                 deadline: block.timestamp + 120
             });
 
-        (amount0, amount1) = INonfungiblePositionManager(
-            Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()
-        ).decreaseLiquidity(decreaseliquidityparams);
+        (amount0, amount1) = INonfungiblePositionManager(nonfungiblePositionManagerAddress).decreaseLiquidity(
+            decreaseliquidityparams
+        );
 
         emit LiquidityDecreased(address(this), tokenId);
     }

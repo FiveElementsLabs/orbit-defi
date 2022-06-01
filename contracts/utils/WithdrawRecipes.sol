@@ -31,7 +31,7 @@ contract WithdrawRecipes {
     ///@param partToWithdraw percentage of token to withdraw in base points
     function withdrawUniNft(uint256 tokenId, uint256 partToWithdraw) external onlyOwner(tokenId) {
         require(
-            partToWithdraw > 0 && partToWithdraw <= 10_000,
+            partToWithdraw != 0 && partToWithdraw <= 10_000,
             'WithdrawRecipes::withdrawUniNft: part to withdraw must be between 0 and 10000'
         );
         if (partToWithdraw == 10_000) {

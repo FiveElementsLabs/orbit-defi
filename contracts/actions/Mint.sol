@@ -32,16 +32,10 @@ contract Mint is IMint {
     {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
-        ERC20Helper._approveToken(
-            inputs.token0Address,
-            Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress(),
-            inputs.amount0Desired
-        );
-        ERC20Helper._approveToken(
-            inputs.token1Address,
-            Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress(),
-            inputs.amount1Desired
-        );
+        address nonfungiblePositionManagerAddress = Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress();
+
+        ERC20Helper._approveToken(inputs.token0Address, nonfungiblePositionManagerAddress, inputs.amount0Desired);
+        ERC20Helper._approveToken(inputs.token1Address, nonfungiblePositionManagerAddress, inputs.amount1Desired);
 
         INonfungiblePositionManager.MintParams memory params = INonfungiblePositionManager.MintParams({
             token0: inputs.token0Address,
@@ -57,9 +51,8 @@ contract Mint is IMint {
             deadline: block.timestamp + 120
         });
 
-        (tokenId, , amount0Deposited, amount1Deposited) = INonfungiblePositionManager(
-            Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()
-        ).mint(params);
+        (tokenId, , amount0Deposited, amount1Deposited) = INonfungiblePositionManager(nonfungiblePositionManagerAddress)
+            .mint(params);
 
         IPositionManager(address(this)).middlewareDeposit(tokenId);
         emit PositionMinted(address(this), tokenId);

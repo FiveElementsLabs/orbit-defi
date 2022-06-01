@@ -47,6 +47,7 @@ contract ZapIn is IZapIn {
         (token0, token1) = _reorderTokens(token0, token1);
 
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
+
         ERC20Helper._pullTokensIfNeeded(tokenIn, Storage.owner, amountIn);
         ERC20Helper._approveToken(tokenIn, Storage.uniswapAddressHolder.swapRouterAddress(), amountIn);
 
@@ -71,8 +72,6 @@ contract ZapIn is IZapIn {
             amountInTo0 = amountIn;
             amountInTo1 = 0;
         }
-
-        ERC20Helper._approveToken(tokenIn, Storage.uniswapAddressHolder.swapRouterAddress(), amountIn);
 
         //if token in input is not the token0 of the pool, we need to swap it
         if (tokenIn != token0 && amountInTo0 != 0) {
@@ -138,16 +137,10 @@ contract ZapIn is IZapIn {
     {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
-        ERC20Helper._approveToken(
-            token0Address,
-            Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress(),
-            amount0Desired
-        );
-        ERC20Helper._approveToken(
-            token1Address,
-            Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress(),
-            amount1Desired
-        );
+        address nonfungiblePositionManagerAddress = Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress();
+
+        ERC20Helper._approveToken(token0Address, nonfungiblePositionManagerAddress, amount0Desired);
+        ERC20Helper._approveToken(token1Address, nonfungiblePositionManagerAddress, amount1Desired);
 
         INonfungiblePositionManager.MintParams memory params = INonfungiblePositionManager.MintParams({
             token0: token0Address,
@@ -163,9 +156,8 @@ contract ZapIn is IZapIn {
             deadline: block.timestamp + 120
         });
 
-        (tokenId, , amount0Deposited, amount1Deposited) = INonfungiblePositionManager(
-            Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()
-        ).mint(params);
+        (tokenId, , amount0Deposited, amount1Deposited) = INonfungiblePositionManager(nonfungiblePositionManagerAddress)
+            .mint(params);
 
         IPositionManager(address(this)).middlewareDeposit(tokenId);
     }

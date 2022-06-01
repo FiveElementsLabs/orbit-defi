@@ -47,18 +47,19 @@ contract AaveModule is BaseModule {
         require(data != bytes32(0), 'AaveModule::depositIfNeeded: module data cannot be empty');
 
         uint24 rebalanceDistance = MathHelper.fromUint256ToUint24(uint256(data));
+        address nonfungiblePositionManager = uniswapAddressHolder.nonfungiblePositionManagerAddress();
         ///@dev move token to aave only if the position's range is outside of the tick of the pool
         if (
             UniswapNFTHelper._checkDistanceFromRange(
                 tokenId,
-                uniswapAddressHolder.nonfungiblePositionManagerAddress(),
+                nonfungiblePositionManager,
                 uniswapAddressHolder.uniswapV3FactoryAddress()
             ) >
             0 &&
             rebalanceDistance <=
             UniswapNFTHelper._checkDistanceFromRange(
                 tokenId,
-                uniswapAddressHolder.nonfungiblePositionManagerAddress(),
+                nonfungiblePositionManager,
                 uniswapAddressHolder.uniswapV3FactoryAddress()
             )
         ) {
@@ -77,18 +78,20 @@ contract AaveModule is BaseModule {
     ) public onlyWhitelistedKeeper {
         require(token != address(0), 'AaveModule::withdrawIfNeeded: token cannot be address 0');
 
+        address nonfungiblePositionManager = uniswapAddressHolder.nonfungiblePositionManagerAddress();
+
         uint256 tokenId = IPositionManager(positionManager).getTokenIdFromAavePosition(token, id);
         (, int24 tickPool, , , , , ) = IUniswapV3Pool(
             UniswapNFTHelper._getPoolFromTokenId(
                 tokenId,
-                INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()),
+                INonfungiblePositionManager(nonfungiblePositionManager),
                 uniswapAddressHolder.uniswapV3FactoryAddress()
             )
         ).slot0();
 
         (, , , int24 tickLower, int24 tickUpper) = UniswapNFTHelper._getTokens(
             tokenId,
-            INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress())
+            INonfungiblePositionManager(nonfungiblePositionManager)
         );
         if (tickPool > tickLower && tickPool < tickUpper) {
             _returnToUniswap(positionManager, token, id, tokenId);

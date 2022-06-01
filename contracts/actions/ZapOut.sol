@@ -83,9 +83,11 @@ contract ZapOut is IZapOut {
     ) internal returns (uint256 amountOut) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
-        ERC20Helper._approveToken(tokenIn, Storage.uniswapAddressHolder.swapRouterAddress(), amountIn);
+        address swapRouterAddress = Storage.uniswapAddressHolder.swapRouterAddress();
 
-        ISwapRouter swapRouter = ISwapRouter(Storage.uniswapAddressHolder.swapRouterAddress());
+        ERC20Helper._approveToken(tokenIn, swapRouterAddress, amountIn);
+
+        ISwapRouter swapRouter = ISwapRouter(swapRouterAddress);
         amountOut = swapRouter.exactInputSingle(
             ISwapRouter.ExactInputSingleParams({
                 tokenIn: tokenIn,
