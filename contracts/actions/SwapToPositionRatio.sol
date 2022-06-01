@@ -75,11 +75,18 @@ contract SwapToPositionRatio is ISwapToPositionRatio {
             ///@dev token0AddressIn false amount 0 + amountSwapped  ------ amount 1 - amountToSwap
             amount0Out = token0AddressIn ? inputs.amount0In - amountToSwap : inputs.amount0In + amountSwapped;
             amount1Out = token0AddressIn ? inputs.amount1In + amountSwapped : inputs.amount1In - amountToSwap;
+
+            emit SwappedToPositionRatio(
+                address(this),
+                inputs.token0Address,
+                inputs.token1Address,
+                amount0Out,
+                amount1Out
+            );
         } else {
             amount0Out = inputs.amount0In;
             amount1Out = inputs.amount1In;
         }
-        emit SwappedToPositionRatio(address(this), inputs.token0Address, inputs.token1Address, amount0Out, amount1Out);
     }
 
     ///@notice swaps token0 for token1
@@ -97,8 +104,8 @@ contract SwapToPositionRatio is ISwapToPositionRatio {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         ISwapRouter swapRouter = ISwapRouter(Storage.uniswapAddressHolder.swapRouterAddress());
 
-        ERC20Helper._approveToken(token0Address, address(swapRouter), 2**256 - 1);
-        ERC20Helper._approveToken(token1Address, address(swapRouter), 2**256 - 1);
+        ERC20Helper._approveToken(token0Address, address(swapRouter), type(uint256).max);
+        ERC20Helper._approveToken(token1Address, address(swapRouter), type(uint256).max);
 
         ISwapRouter.ExactInputSingleParams memory swapParams = ISwapRouter.ExactInputSingleParams({
             tokenIn: token0Address,

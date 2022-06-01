@@ -1,7 +1,7 @@
 import { ethers } from 'hardhat';
 
 async function main() {
-  const provider = new ethers.providers.JsonRpcProvider(process.env.ALCHEMY_MUMBAI);
+  const provider = new ethers.providers.JsonRpcProvider(process.env.ALCHEMY_MUMBAI || '');
   const signer = new ethers.Wallet(process.env.TEST_PRIVATE_KEY || '', provider);
 
   const PositionManagerFactory = await ethers.getContractAt(
