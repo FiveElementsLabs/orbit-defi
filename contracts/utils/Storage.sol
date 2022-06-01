@@ -43,6 +43,8 @@ struct StorageStruct {
 library PositionManagerStorage {
     bytes32 constant key = keccak256('position-manager-storage-location');
 
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
     function getStorage() internal pure returns (StorageStruct storage s) {
         bytes32 k = key;
         assembly {
@@ -59,13 +61,14 @@ library PositionManagerStorage {
         return recipes;
     }
 
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-
     function setContractOwner(address _newOwner) internal {
+        require(_newOwner != address(0), 'Storage::setContractOwner: new owner cannot be the null address');
         StorageStruct storage ds = getStorage();
         address previousOwner = ds.owner;
         ds.owner = _newOwner;
-        emit OwnershipTransferred(previousOwner, _newOwner);
+        if (_newOwner != previousOwner) {
+            emit OwnershipTransferred(previousOwner, _newOwner);
+        }
     }
 
     function enforceIsGovernance() internal view {

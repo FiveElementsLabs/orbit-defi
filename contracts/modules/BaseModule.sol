@@ -7,7 +7,7 @@ import '../../interfaces/IRegistry.sol';
 import '../../interfaces/IPositionManager.sol';
 
 contract BaseModule {
-    IRegistry immutable registry;
+    IRegistry public immutable registry;
 
     modifier onlyWhitelistedKeeper() {
         require(

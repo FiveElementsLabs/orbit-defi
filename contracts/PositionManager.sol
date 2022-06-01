@@ -156,12 +156,12 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
 
     ///@notice set default data for every module
     ///@param tokenId ID of the position
-    function _setDefaultDataOfPosition(uint256 tokenId) internal {
+    function _setDefaultDataOfPosition(uint256 tokenId) internal onlyOwnedPosition(tokenId) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
         bytes32[] memory moduleKeys = Storage.registry.getModuleKeys();
 
-        for (uint32 i = 0; i < moduleKeys.length; i++) {
+        for (uint256 i = 0; i < moduleKeys.length; i++) {
             (address moduleAddress, , bytes32 defaultData, bool activatedByDefault) = Storage.registry.getModuleInfo(
                 moduleKeys[i]
             );
