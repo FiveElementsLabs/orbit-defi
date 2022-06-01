@@ -130,12 +130,10 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
     function removePositionId(uint256 tokenId) public override onlyWhitelisted {
         for (uint256 i = 0; i < uniswapNFTs.length; i++) {
             if (uniswapNFTs[i] == tokenId) {
-                if (uniswapNFTs.length > 1) {
+                if (i + 1 != uniswapNFTs.length) {
                     uniswapNFTs[i] = uniswapNFTs[uniswapNFTs.length - 1];
-                    uniswapNFTs.pop();
-                } else {
-                    delete uniswapNFTs;
                 }
+                uniswapNFTs.pop();
                 return;
             }
         }
@@ -194,7 +192,7 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
         bytes32 data
     ) external override onlyOwner onlyOwnedPosition(tokenId) {
         uint256 moduleData = uint256(data);
-        require(moduleData > 0, 'PositionManager::setModuleData: moduleData must be greater than 0%');
+        require(moduleData != 0, 'PositionManager::setModuleData: moduleData must be greater than 0%');
         activatedModules[tokenId][moduleAddress].data = data;
     }
 
@@ -284,7 +282,7 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
         return Storage.owner;
     }
 
-    ///@notice return the all tokens of tokenAddress in the positionManager
+    ///@notice transfer ERC20 tokens stuck in Position Manager to owner
     ///@param tokenAddress address of the token to be withdrawn
     function withdrawERC20(address tokenAddress) external override onlyOwner {
         uint256 amount = ERC20Helper._getBalance(tokenAddress, address(this));
@@ -324,16 +322,12 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
     }
 
     fallback() external payable onlyWhitelisted {
-        StorageStruct storage Storage;
-        bytes32 position = PositionManagerStorage.key;
-        ///@dev get diamond storage position
-        assembly {
-            Storage.slot := position
-        }
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+
         address facet = Storage.selectorToFacetAndPosition[msg.sig].facetAddress;
         require(facet != address(0), 'PositionManager::Fallback: Function does not exist');
-        ///@dev Execute external function from facet using delegatecall and return any value.
 
+        ///@dev Execute external function from facet using delegatecall and return any value.
         assembly {
             // copy function selector and any arguments
             calldatacopy(0, 0, calldatasize())

@@ -41,7 +41,7 @@ struct StorageStruct {
 }
 
 library PositionManagerStorage {
-    bytes32 constant key = keccak256('position-manager-storage-location');
+    bytes32 private constant key = keccak256('position-manager-storage-location');
 
     ///@notice get the storage from memory location
     ///@return s the storage struct
