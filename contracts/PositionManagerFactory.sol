@@ -9,9 +9,9 @@ import '../interfaces/IDiamondCut.sol';
 
 contract PositionManagerFactory is IPositionManagerFactory {
     address public governance;
-    address public diamondCutFacet;
-    address uniswapAddressHolder;
-    address aaveAddressHolder;
+    address public immutable diamondCutFacet;
+    address public immutable uniswapAddressHolder;
+    address public immutable aaveAddressHolder;
     address public registry;
     address[] public positionManagers;
     IDiamondCut.FacetCut[] public actions;
@@ -44,12 +44,20 @@ contract PositionManagerFactory is IPositionManagerFactory {
     ///@notice changes the address of the governance
     ///@param _governance address of the new governance
     function changeGovernance(address _governance) external onlyGovernance {
+        require(
+            _governance != address(0),
+            'PositionManagerFactory::changeGovernance: New governance cannot be the null address'
+        );
         governance = _governance;
     }
 
     ///@notice changes the address of the registry
     ///@param _registry address of the new registry
     function changeRegistry(address _registry) external onlyGovernance {
+        require(
+            _registry != address(0),
+            'PositionManagerFactory::changeRegistry: New registry cannot be the null address'
+        );
         registry = _registry;
     }
 

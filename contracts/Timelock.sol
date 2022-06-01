@@ -66,6 +66,7 @@ contract Timelock {
     /// @notice Sets a new address as pending admin
     /// @param _pendingAdmin the pending admin
     function setNewPendingAdmin(address _pendingAdmin) public onlyAdmin {
+        require(pendingAdmin == address(0), 'Timelock::setNewPendingAdmin: Pending admin already set.');
         pendingAdmin = _pendingAdmin;
         pendingAdminAccepted[_pendingAdmin] = false;
 

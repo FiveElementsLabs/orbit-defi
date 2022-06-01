@@ -128,10 +128,11 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
     ///@notice remove awareness of tokenId UniswapV3 NFT
     ///@param tokenId ID of the NFT to remove
     function removePositionId(uint256 tokenId) public override onlyWhitelisted {
-        for (uint256 i = 0; i < uniswapNFTs.length; i++) {
+        uint256 uniswapNFTsLength = uniswapNFTs.length;
+        for (uint256 i; i < uniswapNFTsLength; ++i) {
             if (uniswapNFTs[i] == tokenId) {
-                if (i + 1 != uniswapNFTs.length) {
-                    uniswapNFTs[i] = uniswapNFTs[uniswapNFTs.length - 1];
+                if (i + 1 != uniswapNFTsLength) {
+                    uniswapNFTs[i] = uniswapNFTs[uniswapNFTsLength - 1];
                 }
                 uniswapNFTs.pop();
                 return;
@@ -159,7 +160,8 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
 
         bytes32[] memory moduleKeys = Storage.registry.getModuleKeys();
 
-        for (uint256 i = 0; i < moduleKeys.length; i++) {
+        uint256 moduleKeysLength = moduleKeys.length;
+        for (uint256 i; i < moduleKeysLength; ++i) {
             (address moduleAddress, , bytes32 defaultData, bool activatedByDefault) = Storage.registry.getModuleInfo(
                 moduleKeys[i]
             );
@@ -256,10 +258,11 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
     function removeTokenIdFromAave(address token, uint256 id) public override onlyWhitelisted {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
-        for (uint256 i = 0; i < Storage.aavePositionsArray.length; i++) {
+        uint256 aavePositionsLength = Storage.aavePositionsArray.length;
+        for (uint256 i; i < aavePositionsLength; ++i) {
             if (Storage.aavePositionsArray[i].id == id && Storage.aavePositionsArray[i].tokenToAave == token) {
                 if (Storage.aavePositionsArray.length > 1) {
-                    Storage.aavePositionsArray[i] = Storage.aavePositionsArray[Storage.aavePositionsArray.length - 1];
+                    Storage.aavePositionsArray[i] = Storage.aavePositionsArray[aavePositionsLength - 1];
                     Storage.aavePositionsArray.pop();
                 } else {
                     delete Storage.aavePositionsArray;
@@ -300,7 +303,8 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         bytes32[] memory keys = Storage.registry.getModuleKeys();
 
-        for (uint256 i = 0; i < keys.length; i++) {
+        uint256 keysLength = keys.length;
+        for (uint256 i; i < keysLength; ++i) {
             (address moduleAddress, bool isActive, , ) = Storage.registry.getModuleInfo(keys[i]);
             if (moduleAddress == _address && isActive == true) {
                 isCalledFromActiveModule = true;
@@ -313,7 +317,8 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         bytes32[] memory recipeKeys = PositionManagerStorage.getRecipesKeys();
 
-        for (uint256 i = 0; i < recipeKeys.length; i++) {
+        uint256 recipeKeysLength = recipeKeys.length;
+        for (uint256 i; i < recipeKeysLength; ++i) {
             (address moduleAddress, , , ) = Storage.registry.getModuleInfo(recipeKeys[i]);
             if (moduleAddress == _address) {
                 isCalledFromRecipe = true;
