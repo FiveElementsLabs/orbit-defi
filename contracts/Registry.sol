@@ -8,7 +8,8 @@ import '../interfaces/IRegistry.sol';
 contract Registry is IRegistry {
     address public override governance;
     address public override positionManagerFactoryAddress;
-    address[] public whitelistedKeepers;
+    //address[] public whitelistedKeepers;
+    mapping(address => bool) public whitelistedKeepers;
     mapping(bytes32 => Entry) public modules;
     bytes32[] public moduleKeys;
 
@@ -93,8 +94,8 @@ contract Registry is IRegistry {
     ///@notice adds a new whitelisted keeper
     ///@param _keeper address of the new keeper
     function addKeeperToWhitelist(address _keeper) external override onlyGovernance {
-        require(!isWhitelistedKeeper(_keeper), 'Registry::addKeeperToWhitelist: Keeper is already whitelisted.');
-        whitelistedKeepers.push(_keeper);
+        require(!isWhitelistedKeeper[_keeper], 'Registry::addKeeperToWhitelist: Keeper is already whitelisted.');
+        whitelistedKeepers[_keeper] = true;
     }
 
     ///@notice Get the keys for all modules
@@ -150,12 +151,7 @@ contract Registry is IRegistry {
     ///@param _keeper address to check
     ///@return bool true if whitelisted, false otherwise
     function isWhitelistedKeeper(address _keeper) public view override returns (bool) {
-        for (uint256 i = 0; i < whitelistedKeepers.length; i++) {
-            if (whitelistedKeepers[i] == _keeper) {
-                return true;
-            }
-        }
-        return false;
+        return whitelistedKeepers[_keeper];
     }
 
     ///@notice modifier to check if the sender is the governance contract
