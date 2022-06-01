@@ -36,19 +36,6 @@ contract ZapOut is IZapOut {
 
         (address token0, address token1, , , ) = UniswapNFTHelper._getTokens(tokenId, nonfungiblePositionManager);
 
-        SwapHelper.checkDeviation(
-            IUniswapV3Pool(
-                UniswapNFTHelper._getPool(
-                    Storage.uniswapAddressHolder.uniswapV3FactoryAddress(),
-                    token0,
-                    token1,
-                    _findBestFee(token0, token1)
-                )
-            ),
-            Storage.registry.maxTwapDeviation(),
-            Storage.registry.twapDuration()
-        );
-
         (, , , , , , , uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(tokenId);
 
         nonfungiblePositionManager.decreaseLiquidity(
@@ -102,13 +89,27 @@ contract ZapOut is IZapOut {
 
         ERC20Helper._approveToken(tokenIn, Storage.uniswapAddressHolder.swapRouterAddress(), amountIn);
 
-        ISwapRouter swapRouter = ISwapRouter(Storage.uniswapAddressHolder.swapRouterAddress());
+        uint24 bestFee = _findBestFee(tokenIn, tokenOut);
+        console.log('bestFee', (bestFee));
 
-        amountOut = swapRouter.exactInputSingle(
+        SwapHelper.checkDeviation(
+            IUniswapV3Pool(
+                UniswapNFTHelper._getPool(
+                    Storage.uniswapAddressHolder.uniswapV3FactoryAddress(),
+                    tokenIn,
+                    tokenOut,
+                    bestFee
+                )
+            ),
+            Storage.registry.maxTwapDeviation(),
+            Storage.registry.twapDuration()
+        );
+
+        amountOut = ISwapRouter(Storage.uniswapAddressHolder.swapRouterAddress()).exactInputSingle(
             ISwapRouter.ExactInputSingleParams({
                 tokenIn: tokenIn,
                 tokenOut: tokenOut,
-                fee: _findBestFee(tokenIn, tokenOut),
+                fee: bestFee,
                 recipient: address(this),
                 deadline: block.timestamp + 120,
                 amountIn: amountIn,
@@ -123,8 +124,8 @@ contract ZapOut is IZapOut {
     ///@param token1 address of second token
     ///@return fee suggested fee tier
     function _findBestFee(address token0, address token1) internal view returns (uint24 fee) {
-        uint128 bestLiquidity = 0;
-        uint16[4] memory fees = [100, 500, 3000, 10000];
+        uint128 bestLiquidity;
+        uint16[4] memory fees = [100, 500, 3_000, 10_000];
 
         for (uint8 i = 0; i < 4; i++) {
             try this.getPoolLiquidity(token0, token1, uint24(fees[i])) returns (uint128 nextLiquidity) {
@@ -137,7 +138,6 @@ contract ZapOut is IZapOut {
             }
         }
 
-        console.log('RETURN: ', fee);
         if (bestLiquidity == 0) {
             revert('ZapOut::_findBestFee: No pool found with desired tokens');
         }

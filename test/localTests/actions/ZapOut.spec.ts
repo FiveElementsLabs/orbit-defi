@@ -183,7 +183,7 @@ describe('ZapOut.sol', function () {
       {
         token0: tokenEth.address,
         token1: tokenDai.address,
-        fee: 500,
+        fee: 3000,
         tickLower: 0 - 60 * 1000,
         tickUpper: 0 + 60 * 1000,
         amount0Desired: '0x' + (1e15).toString(16),
@@ -200,7 +200,7 @@ describe('ZapOut.sol', function () {
       {
         token0: tokenUsdc.address,
         token1: tokenDai.address,
-        fee: 500,
+        fee: 3000,
         tickLower: 0 - 60 * 1000,
         tickUpper: 0 + 60 * 1000,
         amount0Desired: '0x' + (1e15).toString(16),
@@ -313,8 +313,8 @@ describe('ZapOut.sol', function () {
         fee: 3000,
         tickLower: 0 - 60 * 1000,
         tickUpper: 0 + 60 * 1000,
-        amount0Desired: '0x' + (1e21).toString(16),
-        amount1Desired: '0x' + (1e21).toString(16),
+        amount0Desired: '0x' + (1e13).toString(16),
+        amount1Desired: '0x' + (1e14).toString(16),
         amount0Min: 0,
         amount1Min: 0,
         recipient: PositionManager.address,
@@ -324,14 +324,20 @@ describe('ZapOut.sol', function () {
       const tokenId = mintReceipt.events[mintReceipt.events.length - 1].args.tokenId.toNumber();
 
       await registry.setMaxTwapDeviation(10);
-      const tickBefore = (await PoolEthUsdc500.slot0()).tick;
+      const tickBefore1 = (await PoolEthDai500.slot0()).tick;
+      const tickBefore2 = (await PoolUsdcDai500.slot0()).tick;
 
       // This zap should succeed
-      await ZapOutFallback.connect(user).zapOut(tokenId, tokenUsdt.address);
+      await ZapOutFallback.connect(user).zapOut(tokenId, tokenDai.address);
 
-      const tickAfter = (await PoolEthUsdc500.slot0()).tick;
-      console.log('TICKS: ', tickBefore, tickAfter);
-      expect(tickAfter).to.not.be.eq(tickBefore);
+      const tickAfter1 = (await PoolEthDai500.slot0()).tick;
+      const tickAfter2 = (await PoolUsdcDai500.slot0()).tick;
+
+      console.log('TICKS 1: ', tickBefore1, tickAfter1);
+      console.log('TICKS 2: ', tickBefore2, tickAfter2);
+
+      expect(tickAfter1).to.not.be.eq(tickBefore1);
+      expect(tickAfter2).to.not.be.eq(tickBefore2);
 
       const mintTx2 = await NonFungiblePositionManager.connect(user).mint({
         token0: tokenEth.address,
@@ -339,8 +345,8 @@ describe('ZapOut.sol', function () {
         fee: 3000,
         tickLower: 0 - 60 * 1000,
         tickUpper: 0 + 60 * 1000,
-        amount0Desired: 1e6,
-        amount1Desired: 1e6,
+        amount0Desired: 1e9,
+        amount1Desired: 1e9,
         amount0Min: 0,
         amount1Min: 0,
         recipient: PositionManager.address,
@@ -350,7 +356,7 @@ describe('ZapOut.sol', function () {
       const tokenId2 = mintReceipt2.events[mintReceipt2.events.length - 1].args.tokenId.toNumber();
 
       // This zap should fail because of maxTwapDeviation
-      await expect(ZapOutFallback.connect(user).zapOut(tokenId2, tokenUsdt.address)).to.be.revertedWith(
+      await expect(ZapOutFallback.connect(user).zapOut(tokenId2, tokenDai.address)).to.be.revertedWith(
         'SwapHelper::checkDeviation: Price deviation is too high'
       );
     });
