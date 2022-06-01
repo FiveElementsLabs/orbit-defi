@@ -17,6 +17,8 @@ import '../../interfaces/actions/IMint.sol';
 
 ///@title Idle Liquidity Module to manage liquidity for a user position
 contract IdleLiquidityModule is BaseModule {
+    ///@dev deltaAmountSwapped of the amount because the amount swapped returned by the swapToPositionRatio its not precise
+    uint256 constant deltaAmountSwapped = 10;
     ///@notice uniswap address holder
     IUniswapAddressHolder public immutable uniswapAddressHolder;
     using SignedSafeMath for int24;
@@ -34,7 +36,7 @@ contract IdleLiquidityModule is BaseModule {
         uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
     }
 
-    ///@notice check if the position is in the range of the pools and return rebalance the position swapping the tokens
+    ///@notice check if the position is out of range and rebalance it by swapping the tokens as necessary
     ///@param tokenId tokenId of the position
     ///@param positionManager address of the position manager
     function rebalance(uint256 tokenId, IPositionManager positionManager)
@@ -42,12 +44,16 @@ contract IdleLiquidityModule is BaseModule {
         onlyWhitelistedKeeper
         activeModule(address(positionManager), tokenId)
     {
-        uint24 tickDistance = _checkDistanceFromRange(tokenId);
+        uint24 tickDistance = UniswapNFTHelper._checkDistanceFromRange(
+            tokenId,
+            uniswapAddressHolder.nonfungiblePositionManagerAddress(),
+            uniswapAddressHolder.uniswapV3FactoryAddress()
+        );
         (, bytes32 rebalanceDistance) = positionManager.getModuleInfo(tokenId, address(this));
         require(rebalanceDistance != bytes32(0), 'IdleLiquidityModule:: rebalance: Rebalance distance is 0');
 
-        ///@dev rebalance only if the position's range is outside of the tick of the pool (tickDistance < 0) and the position is far enough from tick of the pool
-        if (tickDistance > 0 && MathHelper.fromUint256ToUint24(uint256(rebalanceDistance)) <= tickDistance) {
+        ///@dev can rebalance only if the position range is outside of the pool tick and it is far enough from the pool tick
+        if (tickDistance > 0 && tickDistance >= MathHelper.fromUint256ToUint24(uint256(rebalanceDistance))) {
             (, , address token0, address token1, uint24 fee, , , , , , , ) = INonfungiblePositionManager(
                 uniswapAddressHolder.nonfungiblePositionManagerAddress()
             ).positions(tokenId);
@@ -77,41 +83,16 @@ contract IdleLiquidityModule is BaseModule {
 
             ///@dev call mintAction
             IMint(address(positionManager)).mint(
-                IMint.MintInput(token0, token1, fee, tickLower, tickUpper, token0Swapped - 10, token1Swapped - 10)
+                IMint.MintInput(
+                    token0,
+                    token1,
+                    fee,
+                    tickLower,
+                    tickUpper,
+                    token0Swapped - deltaAmountSwapped,
+                    token1Swapped - deltaAmountSwapped
+                )
             );
-        }
-    }
-
-    ///@notice checkDistance from ticklower tickupper from tick of the pools
-    ///@param tokenId tokenId of the position
-    ///@return int24 distance from ticklower tickupper from tick of the pools and return the minimum distance
-    function _checkDistanceFromRange(uint256 tokenId) internal view returns (uint24) {
-        (
-            ,
-            ,
-            address token0,
-            address token1,
-            uint24 fee,
-            int24 tickLower,
-            int24 tickUpper,
-            ,
-            ,
-            ,
-            ,
-
-        ) = INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).positions(tokenId);
-
-        IUniswapV3Pool pool = IUniswapV3Pool(
-            UniswapNFTHelper._getPool(uniswapAddressHolder.uniswapV3FactoryAddress(), token0, token1, fee)
-        );
-        (, int24 tick, , , , , ) = pool.slot0();
-
-        if (tick > tickUpper) {
-            return MathHelper.fromInt24ToUint24(tick.sub(tickUpper));
-        } else if (tick < tickLower) {
-            return MathHelper.fromInt24ToUint24(tickLower.sub(tick));
-        } else {
-            return 0;
         }
     }
 

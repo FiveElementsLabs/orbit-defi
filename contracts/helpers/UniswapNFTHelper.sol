@@ -8,6 +8,7 @@ import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import '@uniswap/v3-periphery/contracts/libraries/PoolAddress.sol';
+import './MathHelper.sol';
 
 ///@title library to interact with NFT token and do some useful function with it
 library UniswapNFTHelper {
@@ -138,5 +139,30 @@ library UniswapNFTHelper {
                 token0,
                 token1
             );
+    }
+
+    ///@notice checkDistance from ticklower tickupper from tick of the pools
+    ///@param tokenId tokenId of the position
+    ///@return int24 distance from ticklower tickupper from tick of the pools and return the minimum distance
+    function _checkDistanceFromRange(
+        uint256 tokenId,
+        address nonfungiblePositionManager,
+        address _uniswapFactory
+    ) internal view returns (uint24) {
+        (address token0, address token1, uint24 fee, int24 tickLower, int24 tickUpper) = UniswapNFTHelper._getTokens(
+            tokenId,
+            INonfungiblePositionManager(nonfungiblePositionManager)
+        );
+
+        IUniswapV3Pool pool = IUniswapV3Pool(UniswapNFTHelper._getPool(_uniswapFactory, token0, token1, fee));
+        (, int24 tick, , , , , ) = pool.slot0();
+
+        if (tick > tickUpper) {
+            return MathHelper.fromInt24ToUint24(tick - tickUpper);
+        } else if (tick < tickLower) {
+            return MathHelper.fromInt24ToUint24(tickLower - tick);
+        } else {
+            return 0;
+        }
     }
 }
