@@ -6,9 +6,12 @@ pragma abicoder v2;
 import '@uniswap/v3-core/contracts/libraries/FixedPoint96.sol';
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
+import './SafeInt24Math.sol';
 
 ///@title library to help with swap amounts calculations
 library SwapHelper {
+    using SignedSafeMath for int24;
+
     ///@notice calculate the ratio of the token amounts for a given position
     ///@param tickPool tick of the pool
     ///@param tickLower lower tick of position
@@ -73,5 +76,32 @@ library SwapHelper {
                 amountToSwap = amount1In - (amount1PostX96 >> FixedPoint96.RESOLUTION);
             }
         }
+    }
+
+    ///@notice Check price volatility is under specified threshold. This mitigates price manipulation during rebalance
+    ///@param pool v3 pool
+    ///@param maxTwapDeviation max deviation threshold from the twap tick price
+    ///@param twapDuration duration of the twap oracle observations
+    function checkDeviation(
+        IUniswapV3Pool pool,
+        int24 maxTwapDeviation,
+        uint32 twapDuration
+    ) internal view {
+        (, int24 currentTick, , , , , ) = pool.slot0();
+        int24 twap = getTwap(pool, twapDuration);
+        int24 deviation = currentTick > twap ? currentTick.sub(twap) : twap.sub(currentTick);
+        require(deviation <= maxTwapDeviation, 'SwapHelper::checkDeviation: Price deviation is too high');
+    }
+
+    ///@notice Fetch time-weighted average price in ticks from Uniswap pool for specified duration
+    ///@param pool v3 pool
+    ///@param twapDuration duration of the twap oracle observations
+    function getTwap(IUniswapV3Pool pool, uint32 twapDuration) internal view returns (int24) {
+        uint32[] memory secondsAgo = new uint32[](2);
+        secondsAgo[0] = twapDuration;
+        secondsAgo[1] = 0; // 0 is the most recent observation
+
+        (int56[] memory tickCumulatives, ) = pool.observe(secondsAgo);
+        return int24((tickCumulatives[1] - tickCumulatives[0]) / twapDuration);
     }
 }
