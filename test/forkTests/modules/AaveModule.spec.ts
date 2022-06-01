@@ -138,13 +138,13 @@ describe('AaveModule.sol', function () {
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('AaveModule')),
       AaveModule.address,
-      hre.ethers.utils.formatBytes32String('10'),
+      ethers.utils.hexZeroPad(ethers.utils.hexlify(10), 32),
       true
     );
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Factory')),
       PositionManagerFactory.address,
-      hre.ethers.utils.formatBytes32String('1'),
+      ethers.utils.hexZeroPad(ethers.utils.hexlify(1), 32),
       true
     );
     await registry.addKeeperToWhitelist(user.address);
@@ -152,7 +152,7 @@ describe('AaveModule.sol', function () {
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')),
       user.address,
-      hre.ethers.utils.formatBytes32String('1'),
+      ethers.utils.hexZeroPad(ethers.utils.hexlify(1), 32),
       true
     );
 
@@ -165,7 +165,7 @@ describe('AaveModule.sol', function () {
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('DepositRecipes')),
       DepositRecipes.address,
-      hre.ethers.utils.formatBytes32String('1'),
+      ethers.utils.hexZeroPad(ethers.utils.hexlify(1), 32),
       true
     );
 
