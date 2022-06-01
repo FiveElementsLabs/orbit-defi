@@ -110,7 +110,7 @@ contract Registry is IRegistry {
         require(modules[_id].contractAddress != address(0), 'Registry::setDefaultValue: Entry does not exist.');
         modules[_id].defaultData = _defaultData;
     }
-    
+
     ///@notice Set default activation for a module
     ///@param _id keccak256 of module id string
     ///@param _activatedByDefault default activation bool for the module
