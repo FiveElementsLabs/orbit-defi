@@ -48,8 +48,8 @@ contract ZapOut is IZapOut {
             INonfungiblePositionManager.CollectParams({
                 tokenId: tokenId,
                 recipient: address(this),
-                amount0Max: 2**128 - 1,
-                amount1Max: 2**128 - 1
+                amount0Max: type(uint128).max,
+                amount1Max: type(uint128).max
             })
         );
 

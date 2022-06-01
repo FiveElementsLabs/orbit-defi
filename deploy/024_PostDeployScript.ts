@@ -18,6 +18,10 @@ const PostDeployScript: DeployFunction = async function (hre: HardhatRuntimeEnvi
   const IdleLiquidityModule = await ethers.getContract('IdleLiquidityModule');
   const AaveModule = await ethers.getContract('AaveModule');
 
+  // For future reference:
+  // Remember to use `ethers.utils.hexZeroPad(ethers.utils.hexlify(1), 32)`
+  // to send padded bytes values to the registry on addNewContract calls.
+
   await Registry.addNewContract(
     hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('AutoCompoundModule')),
     AutoCompoundModule.address,
