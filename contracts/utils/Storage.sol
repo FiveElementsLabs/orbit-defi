@@ -105,7 +105,8 @@ library PositionManagerStorage {
         address _init,
         bytes memory _calldata
     ) internal {
-        for (uint256 facetIndex; facetIndex < _diamondCut.length; facetIndex++) {
+        uint256 _diamondCutLength = _diamondCut.length;
+        for (uint256 facetIndex; facetIndex < _diamondCutLength; ++facetIndex) {
             IDiamondCut.FacetCutAction action = _diamondCut[facetIndex].action;
             if (action == IDiamondCut.FacetCutAction.Add) {
                 addFunctions(_diamondCut[facetIndex].facetAddress, _diamondCut[facetIndex].functionSelectors);
@@ -134,7 +135,9 @@ library PositionManagerStorage {
         if (selectorPosition == 0) {
             addFacet(ds, _facetAddress);
         }
-        for (uint256 selectorIndex; selectorIndex < _functionSelectors.length; selectorIndex++) {
+
+        uint256 _functionSelectorsLength = _functionSelectors.length;
+        for (uint256 selectorIndex; selectorIndex < _functionSelectorsLength; ++selectorIndex) {
             bytes4 selector = _functionSelectors[selectorIndex];
             address oldFacetAddress = ds.selectorToFacetAndPosition[selector].facetAddress;
             require(
@@ -234,7 +237,8 @@ library PositionManagerStorage {
             addFacet(ds, _facetAddress);
         }
 
-        for (uint256 selectorIndex; selectorIndex < _functionSelectors.length; selectorIndex++) {
+        uint256 _functionSelectorsLength = _functionSelectors.length;
+        for (uint256 selectorIndex; selectorIndex < _functionSelectorsLength; ++selectorIndex) {
             bytes4 selector = _functionSelectors[selectorIndex];
             address oldFacetAddress = ds.selectorToFacetAndPosition[selector].facetAddress;
 
@@ -262,7 +266,8 @@ library PositionManagerStorage {
             'PositionManagerStorage::removeFunctions: Remove facet address must be address(0)'
         );
 
-        for (uint256 selectorIndex; selectorIndex < _functionSelectors.length; selectorIndex++) {
+        uint256 _functionSelectorsLength = _functionSelectors.length;
+        for (uint256 selectorIndex; selectorIndex < _functionSelectorsLength; ++selectorIndex) {
             bytes4 selector = _functionSelectors[selectorIndex];
             address oldFacetAddress = ds.selectorToFacetAndPosition[selector].facetAddress;
             removeFunction(ds, oldFacetAddress, selector);
