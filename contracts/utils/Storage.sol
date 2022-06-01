@@ -41,7 +41,7 @@ struct StorageStruct {
 }
 
 library PositionManagerStorage {
-    bytes32 constant key = keccak256('position-manager-storage-location');
+    bytes32 private constant key = keccak256('position-manager-storage-location');
 
     ///@notice get the storage from memory location
     ///@return s the storage struct
@@ -70,11 +70,15 @@ library PositionManagerStorage {
 
     ///@notice set the owner field on the storage struct
     ///@param _newOwner new owner of the storage struct
+
     function setContractOwner(address _newOwner) internal {
+        require(_newOwner != address(0), 'Storage::setContractOwner: new owner cannot be the null address');
         StorageStruct storage ds = getStorage();
         address previousOwner = ds.owner;
         ds.owner = _newOwner;
-        emit OwnershipTransferred(previousOwner, _newOwner);
+        if (_newOwner != previousOwner) {
+            emit OwnershipTransferred(previousOwner, _newOwner);
+        }
     }
 
     ///@notice make sure that a function is called by the PositionManagerFactory contract

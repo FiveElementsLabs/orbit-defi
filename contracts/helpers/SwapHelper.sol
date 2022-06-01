@@ -71,12 +71,10 @@ library SwapHelper {
             token0In = !(amount1In >= (amount1PostX96 >> FixedPoint96.RESOLUTION));
 
             if (token0In) {
-                amountToSwap =
-                    (((amount1PostX96 - (amount1In << FixedPoint96.RESOLUTION)) / uint256(sqrtPriceX96)) <<
-                        FixedPoint96.RESOLUTION) /
-                    uint256(sqrtPriceX96);
+                amountToSwap = ((amount1PostX96.sub(amount1In << FixedPoint96.RESOLUTION)).div(sqrtPriceX96) <<
+                    FixedPoint96.RESOLUTION).div(sqrtPriceX96);
             } else {
-                amountToSwap = amount1In - (amount1PostX96 >> FixedPoint96.RESOLUTION);
+                amountToSwap = amount1In.sub(amount1PostX96 >> FixedPoint96.RESOLUTION);
             }
         }
     }

@@ -37,12 +37,28 @@ contract AaveModule is BaseModule {
     ///@notice deposit a position in an Aave lending pool
     ///@param positionManager address of the position manager
     ///@param tokenId id of the Uniswap position to deposit
+
     function depositIfNeeded(address positionManager, uint256 tokenId) public activeModule(positionManager, tokenId) {
         (, bytes32 data) = IPositionManager(positionManager).getModuleInfo(tokenId, address(this));
 
+        require(data != bytes32(0), 'AaveModule::depositIfNeeded: module data cannot be empty');
+
         uint24 rebalanceDistance = MathHelper.fromUint256ToUint24(uint256(data));
         ///@dev move token to aave only if the position's range is outside of the tick of the pool
-        if (_checkDistanceFromRange(tokenId) > 0 && rebalanceDistance <= _checkDistanceFromRange(tokenId)) {
+        if (
+            UniswapNFTHelper._checkDistanceFromRange(
+                tokenId,
+                uniswapAddressHolder.nonfungiblePositionManagerAddress(),
+                uniswapAddressHolder.uniswapV3FactoryAddress()
+            ) >
+            0 &&
+            rebalanceDistance <=
+            UniswapNFTHelper._checkDistanceFromRange(
+                tokenId,
+                uniswapAddressHolder.nonfungiblePositionManagerAddress(),
+                uniswapAddressHolder.uniswapV3FactoryAddress()
+            )
+        ) {
             _depositToAave(positionManager, tokenId);
         }
     }
@@ -56,6 +72,8 @@ contract AaveModule is BaseModule {
         address token,
         uint256 id
     ) public onlyWhitelistedKeeper {
+        require(token != address(0), 'AaveModule::withdrawIfNeeded: token cannot be address 0');
+
         uint256 tokenId = IPositionManager(positionManager).getTokenIdFromAavePosition(token, id);
         (, int24 tickPool, , , , , ) = IUniswapV3Pool(
             UniswapNFTHelper._getPoolFromTokenId(
@@ -170,41 +188,6 @@ contract AaveModule is BaseModule {
         IIncreaseLiquidity(positionManager).increaseLiquidity(tokenId, amount0Out, amount1Out);
         IPositionManager(positionManager).removeTokenIdFromAave(token, id);
         IPositionManager(positionManager).pushPositionId(tokenId);
-    }
-
-    ///@notice checkDistance from ticklower tickupper from tick of the pools
-    ///@param tokenId tokenId of the position
-    ///@return int24 distance from ticklower tickupper from tick of the pools and return the minimum distance
-    function _checkDistanceFromRange(uint256 tokenId) internal view returns (uint24) {
-        (
-            ,
-            ,
-            address token0,
-            address token1,
-            uint24 fee,
-            int24 tickLower,
-            int24 tickUpper,
-            ,
-            ,
-            ,
-            ,
-
-        ) = INonfungiblePositionManager(address(uniswapAddressHolder.nonfungiblePositionManagerAddress())).positions(
-                tokenId
-            );
-
-        IUniswapV3Pool pool = IUniswapV3Pool(
-            UniswapNFTHelper._getPool(address(uniswapAddressHolder.uniswapV3FactoryAddress()), token0, token1, fee)
-        );
-        (, int24 tick, , , , , ) = pool.slot0();
-
-        if (tick > tickUpper) {
-            return MathHelper.fromInt24ToUint24(tick.sub(tickUpper));
-        } else if (tick < tickLower) {
-            return MathHelper.fromInt24ToUint24(tickLower.sub(tick));
-        } else {
-            return 0;
-        }
     }
 
     ///@notice finds the best fee tier on which to perform a swap

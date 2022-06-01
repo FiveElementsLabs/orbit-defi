@@ -130,12 +130,10 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
     function removePositionId(uint256 tokenId) public override onlyWhitelisted {
         for (uint256 i = 0; i < uniswapNFTs.length; i++) {
             if (uniswapNFTs[i] == tokenId) {
-                if (uniswapNFTs.length > 1) {
+                if (i + 1 != uniswapNFTs.length) {
                     uniswapNFTs[i] = uniswapNFTs[uniswapNFTs.length - 1];
-                    uniswapNFTs.pop();
-                } else {
-                    delete uniswapNFTs;
                 }
+                uniswapNFTs.pop();
                 return;
             }
         }
@@ -156,7 +154,7 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
 
     ///@notice set default data for every module
     ///@param tokenId ID of the position
-    function _setDefaultDataOfPosition(uint256 tokenId) internal {
+    function _setDefaultDataOfPosition(uint256 tokenId) internal onlyOwnedPosition(tokenId) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
         bytes32[] memory moduleKeys = Storage.registry.getModuleKeys();
@@ -194,7 +192,7 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
         bytes32 data
     ) external override onlyOwner onlyOwnedPosition(tokenId) {
         uint256 moduleData = uint256(data);
-        require(moduleData > 0, 'PositionManager::setModuleData: moduleData must be greater than 0%');
+        require(moduleData != 0, 'PositionManager::setModuleData: moduleData must be greater than 0%');
         activatedModules[tokenId][moduleAddress].data = data;
     }
 
@@ -284,12 +282,14 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
         return Storage.owner;
     }
 
-    ///@notice return the all tokens of tokenAddress in the positionManager
+    ///@notice transfer ERC20 tokens stuck in Position Manager to owner
     ///@param tokenAddress address of the token to be withdrawn
     function withdrawERC20(address tokenAddress) external override onlyOwner {
-        ERC20Helper._approveToken(tokenAddress, address(this), 2**256 - 1);
-        uint256 amount = ERC20Helper._withdrawTokens(tokenAddress, msg.sender, 2**256 - 1);
-        emit ERC20Withdrawn(tokenAddress, msg.sender, amount);
+        uint256 amount = ERC20Helper._getBalance(tokenAddress, address(this));
+        uint256 got = ERC20Helper._withdrawTokens(tokenAddress, msg.sender, amount);
+
+        require(amount == got, 'PositionManager::withdrawERC20: ERC20 transfer failed.');
+        emit ERC20Withdrawn(tokenAddress, msg.sender, got);
     }
 
     ///@notice function to check if an address corresponds to an active module (or this contract)
@@ -298,6 +298,7 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
     function _calledFromActiveModule(address _address) internal view returns (bool isCalledFromActiveModule) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         bytes32[] memory keys = Storage.registry.getModuleKeys();
+
         for (uint256 i = 0; i < keys.length; i++) {
             (address moduleAddress, bool isActive, , ) = Storage.registry.getModuleInfo(keys[i]);
             if (moduleAddress == _address && isActive == true) {
@@ -321,16 +322,12 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
     }
 
     fallback() external payable onlyWhitelisted {
-        StorageStruct storage Storage;
-        bytes32 position = PositionManagerStorage.key;
-        ///@dev get diamond storage position
-        assembly {
-            Storage.slot := position
-        }
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+
         address facet = Storage.selectorToFacetAndPosition[msg.sig].facetAddress;
         require(facet != address(0), 'PositionManager::Fallback: Function does not exist');
-        ///@dev Execute external function from facet using delegatecall and return any value.
 
+        ///@dev Execute external function from facet using delegatecall and return any value.
         assembly {
             // copy function selector and any arguments
             calldatacopy(0, 0, calldatasize())
