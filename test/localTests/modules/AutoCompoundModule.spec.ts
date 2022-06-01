@@ -239,4 +239,7 @@ describe('AutoCompoundModule.sol', function () {
     await PositionManager.connect(user).setModuleData(2, autoCompound.address, abiCoder.encode(['uint256'], [30]));
     await expect(autoCompound.connect(user).autoCompoundFees(Factory.address, 2));
   });
+  it('should revert if caller is not a whitelistedkeeper', async function () {
+    await expect(autoCompound.connect(liquidityProvider).autoCompoundFees(PositionManager.address, 2)).to.be.reverted;
+  });
 });
