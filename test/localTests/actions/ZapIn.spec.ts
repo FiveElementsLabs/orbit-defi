@@ -12,6 +12,7 @@ import {
   deployPositionManagerFactoryAndActions,
   getPositionManager,
   doAllApprovals,
+  RegistryFixture,
 } from '../../shared/fixtures';
 import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, ZapIn, PositionManager } from '../../../typechain';
 
@@ -37,6 +38,7 @@ describe('ZapIn.sol', function () {
   let SwapRouter: Contract;
   let ZapInFallback: ZapIn;
   let PositionManager: PositionManager;
+  let registry: Contract;
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
@@ -69,7 +71,7 @@ describe('ZapIn.sol', function () {
     await mintSTDAmount(tokenUsdt);
 
     //deploy our contracts
-    const registry = await deployContract('Registry', [user.address]);
+    registry = (await RegistryFixture(user.address)).registryFixture;
     const uniswapAddressHolder = await deployContract('UniswapAddressHolder', [
       NonFungiblePositionManager.address,
       Factory.address,
@@ -267,6 +269,43 @@ describe('ZapIn.sol', function () {
       await expect(
         ZapInFallback.connect(user).zapIn(tokenUsdc.address, 0, tokenUsdc.address, tokenDai.address, -600, 600, 500)
       ).to.be.revertedWith('ZapIn::zapIn: tokenIn cannot be 0');
+    });
+
+    it('should fail to zap if twap deviation is too high', async function () {
+      // 0. change maxTwapDeviation to a small value (10)
+      // 1. make a big swap to change ticks by at least maxTwapDeviation
+      // 2. check tick has changed after swap
+      // 3. try to swap again and check that it fails for max twap deviation
+
+      await registry.setMaxTwapDeviation(10);
+      const tickBefore = (await PoolEthUsdc500.slot0()).tick;
+
+      // This zap should succeed
+      await ZapInFallback.connect(user).zapIn(
+        tokenUsdc.address,
+        '0x' + (1e23).toString(16),
+        tokenEth.address,
+        tokenUsdc.address,
+        -600,
+        600,
+        500
+      );
+
+      const tickAfter = (await PoolEthUsdc500.slot0()).tick;
+      expect(tickAfter).to.not.be.eq(tickBefore);
+
+      // This zap should fail because of maxTwapDeviation
+      await expect(
+        ZapInFallback.connect(user).zapIn(
+          tokenUsdc.address,
+          '0x' + (1e21).toString(16),
+          tokenEth.address,
+          tokenUsdc.address,
+          -600,
+          600,
+          500
+        )
+      ).to.be.revertedWith('SwapHelper::checkDeviation: Price deviation is too high');
     });
   });
 });

@@ -4,17 +4,10 @@ import { ContractFactory, Contract, BigNumber } from 'ethers';
 import { AbiCoder } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import hre from 'hardhat';
-import UniswapV3Factoryjson from '@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json';
-import NonFungiblePositionManagerjson from '@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json';
-import NonFungiblePositionManagerDescriptorjson from '@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json';
-import PositionManagerjson from '../../../artifacts/contracts/PositionManager.sol/PositionManager.json';
-import SwapRouterjson from '@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json';
 import {
-  NonFungiblePositionManagerDescriptorBytecode,
   tokensFixture,
   poolFixture,
   mintSTDAmount,
-  getSelectors,
   RegistryFixture,
   deployUniswapContracts,
   deployContract,
@@ -46,6 +39,7 @@ describe('Swap.sol', function () {
   let SwapFallback: Contract; // Swap contract
   let abiCoder: AbiCoder;
   let UniswapAddressHolder: Contract; // address holder for UniswapV3 contracts
+  let registry: Contract;
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
@@ -70,7 +64,7 @@ describe('Swap.sol', function () {
     await mintSTDAmount(tokenDai);
 
     //deploy our contracts
-    const registry = await deployContract('Registry', [user.address]);
+    registry = (await RegistryFixture(user.address)).registryFixture;
     const UniswapAddressHolder = await deployContract('UniswapAddressHolder', [
       NonFungiblePositionManager.address,
       Factory.address,
@@ -150,6 +144,28 @@ describe('Swap.sol', function () {
       await SwapFallback.connect(user).swap(tokenEth.address, tokenUsdc.address, 3000, amount0In);
       expect(await tokenEth.balanceOf(PositionManager.address)).to.equal(amount0Before.sub(amount0In));
       expect(await tokenUsdc.balanceOf(PositionManager.address)).to.gt(amount1Before);
+    });
+
+    it('should fail to swap if twap deviation is too high', async function () {
+      // 0. change maxTwapDeviation to a small value (10)
+      // 1. make a big swap to change ticks by at least maxTwapDeviation
+      // 2. check tick has changed after swap
+      // 3. try to swap again and check that it fails for max twap deviation
+
+      await registry.setMaxTwapDeviation(10);
+      const amount0In = '0x' + (1e24).toString(16);
+      const tickBefore = (await Pool0.slot0()).tick;
+
+      // This swap should succeed
+      await SwapFallback.connect(user).swap(tokenEth.address, tokenUsdc.address, 3000, amount0In);
+
+      const tickAfter = (await Pool0.slot0()).tick;
+      expect(tickAfter).to.not.be.eq(tickBefore);
+
+      // This swap should fail because of maxTwapDeviation
+      await expect(
+        SwapFallback.connect(user).swap(tokenEth.address, tokenUsdc.address, 3000, amount0In)
+      ).to.be.revertedWith('SwapHelper::checkDeviation: Price deviation is too high');
     });
 
     it('should revert if pool does not exist', async function () {

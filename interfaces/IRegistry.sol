@@ -18,6 +18,14 @@ interface IRegistry {
     ///@return address of Governance
     function governance() external view returns (address);
 
+    ///@notice return the max twap deviation
+    ///@return int24 max twap deviation
+    function maxTwapDeviation() external view returns (int24);
+
+    ///@notice return the twap duration
+    ///@return uint32 twap duration
+    function twapDuration() external view returns (uint32);
+
     ///@notice return the address of Governance
     ///@return address of Governance
     function getModuleKeys() external view returns (bytes32[] memory);

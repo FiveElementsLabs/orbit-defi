@@ -14,6 +14,7 @@ import {
   deployPositionManagerFactoryAndActions,
   mintForkedTokens,
   getPositionManager,
+  RegistryFixture,
 } from '../../shared/fixtures';
 import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager } from '../../../typechain';
 
@@ -62,7 +63,7 @@ describe('AaveDeposit.sol', function () {
     await mintSTDAmount(tokenUsdc);
 
     //deploy our contracts
-    const registry = await deployContract('Registry', [user.address]);
+    const registry = (await RegistryFixture(user.address)).registryFixture;
     const uniswapAddressHolder = await deployContract('UniswapAddressHolder', [
       Factory.address, //random address because we don't need it
       Factory.address, //random address because we don't need it

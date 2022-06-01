@@ -42,7 +42,7 @@ export async function tokensFixture(name: string, decimal: number): Promise<Toke
 
 export async function RegistryFixture(ownerAddress: string): Promise<RegistryFixture> {
   const registryFactory = await ethers.getContractFactory('Registry');
-  const registryFixture: Registry = (await registryFactory.deploy(ownerAddress)) as Registry;
+  const registryFixture: Registry = (await registryFactory.deploy(ownerAddress, 500, 2)) as Registry;
   return { registryFixture };
 }
 
