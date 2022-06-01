@@ -4,7 +4,6 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
-import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import '@openzeppelin/contracts/math/SafeMath.sol';
 import '../helpers/SwapHelper.sol';
 import '../helpers/UniswapNFTHelper.sol';
@@ -52,7 +51,8 @@ contract SwapToPositionRatio is ISwapToPositionRatio {
         IUniswapV3Pool pool = IUniswapV3Pool(poolAddress);
         (, int24 tickPool, , , , , ) = pool.slot0();
 
-        require(checkDeviation(pool, 200, 5), 'SwapToPositionRatio::swapToPositionRatio: Deviation to high');
+        SwapHelper.checkDeviation(pool, Storage.registry.maxTwapDeviation(), Storage.registry.twapDuration());
+
         (uint256 amountToSwap, bool token0AddressIn) = SwapHelper.calcAmountToSwap(
             tickPool,
             inputs.tickLower,
@@ -115,31 +115,9 @@ contract SwapToPositionRatio is ISwapToPositionRatio {
             deadline: block.timestamp + 120,
             amountIn: amount0In,
             amountOutMinimum: 0,
-            sqrtPriceLimitX96: sqrtPriceLimitX96
+            sqrtPriceLimitX96: 0
         });
 
         amount1Out = swapRouter.exactInputSingle(swapParams);
-    }
-
-    function checkDeviation(
-        IUniswapV3Pool pool,
-        int24 maxTwapDeviation,
-        uint32 twapDuration
-    ) internal view returns (int24) {
-        (, int24 currentTick, , , , , ) = pool.slot0();
-        int24 twap = getTwap(pool, twapDuration);
-        int24 deviation = currentTick > twap ? currentTick - twap : twap - currentTick;
-        require(deviation <= maxTwapDeviation, 'PSC');
-        return currentTick;
-    }
-
-    function getTwap(IUniswapV3Pool pool, uint32 twapDuration) internal view returns (int24) {
-        uint32 _twapDuration = twapDuration;
-        uint32[] memory secondsAgo = new uint32[](2);
-        secondsAgo[0] = _twapDuration;
-        secondsAgo[1] = 0;
-
-        (int56[] memory tickCumulatives, ) = pool.observe(secondsAgo);
-        return int24((tickCumulatives[1] - tickCumulatives[0]) / _twapDuration);
     }
 }

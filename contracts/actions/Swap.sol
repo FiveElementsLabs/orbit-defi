@@ -5,6 +5,8 @@ pragma abicoder v2;
 
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '../helpers/ERC20Helper.sol';
+import '../helpers/SwapHelper.sol';
+import '../helpers/UniswapNFTHelper.sol';
 import '../utils/Storage.sol';
 import '../../interfaces/actions/ISwap.sol';
 
@@ -23,6 +25,29 @@ contract Swap is ISwap {
         uint256 amountOut
     );
 
+    ///@notice check for twap oracle price manipulation
+    ///@param token0Address address of the first token
+    ///@param token1Address address of the second token
+    ///@param fee pool fee level
+    modifier checkDeviation(
+        address token0Address,
+        address token1Address,
+        uint24 fee
+    ) {
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+        IUniswapV3Pool pool = IUniswapV3Pool(
+            UniswapNFTHelper._getPool(
+                Storage.uniswapAddressHolder.uniswapV3FactoryAddress(),
+                token0Address,
+                token1Address,
+                fee
+            )
+        );
+
+        SwapHelper.checkDeviation(pool, Storage.registry.maxTwapDeviation(), Storage.registry.twapDuration());
+        _;
+    }
+
     ///@notice swaps token0 for token1 on uniswap
     ///@param token0Address address of first token
     ///@param token1Address address of second token
@@ -33,7 +58,7 @@ contract Swap is ISwap {
         address token1Address,
         uint24 fee,
         uint256 amount0In
-    ) public override returns (uint256 amount1Out) {
+    ) public override checkDeviation(token0Address, token1Address, fee) returns (uint256 amount1Out) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         ISwapRouter swapRouter = ISwapRouter(Storage.uniswapAddressHolder.swapRouterAddress());
 

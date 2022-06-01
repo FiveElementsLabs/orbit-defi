@@ -7,9 +7,12 @@ import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.s
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '../helpers/UniswapNFTHelper.sol';
 import '../helpers/ERC20Helper.sol';
+import '../helpers/SwapHelper.sol';
 import '../utils/Storage.sol';
 import '../../interfaces/IPositionManager.sol';
 import '../../interfaces/actions/IZapOut.sol';
+
+import 'hardhat/console.sol';
 
 ///@notice ZapOut allows users to close positions and withdraw to a single output token
 contract ZapOut is IZapOut {
@@ -26,11 +29,25 @@ contract ZapOut is IZapOut {
     ///@return uint256 amount of tokenOut withdrawn
     function zapOut(uint256 tokenId, address tokenOut) public override returns (uint256) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
+
         INonfungiblePositionManager nonfungiblePositionManager = INonfungiblePositionManager(
             Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()
         );
 
         (address token0, address token1, , , ) = UniswapNFTHelper._getTokens(tokenId, nonfungiblePositionManager);
+
+        SwapHelper.checkDeviation(
+            IUniswapV3Pool(
+                UniswapNFTHelper._getPool(
+                    Storage.uniswapAddressHolder.uniswapV3FactoryAddress(),
+                    token0,
+                    token1,
+                    _findBestFee(token0, token1)
+                )
+            ),
+            Storage.registry.maxTwapDeviation(),
+            Storage.registry.twapDuration()
+        );
 
         (, , , , , , , uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(tokenId);
 
@@ -86,6 +103,7 @@ contract ZapOut is IZapOut {
         ERC20Helper._approveToken(tokenIn, Storage.uniswapAddressHolder.swapRouterAddress(), amountIn);
 
         ISwapRouter swapRouter = ISwapRouter(Storage.uniswapAddressHolder.swapRouterAddress());
+
         amountOut = swapRouter.exactInputSingle(
             ISwapRouter.ExactInputSingleParams({
                 tokenIn: tokenIn,
@@ -119,6 +137,7 @@ contract ZapOut is IZapOut {
             }
         }
 
+        console.log('RETURN: ', fee);
         if (bestLiquidity == 0) {
             revert('ZapOut::_findBestFee: No pool found with desired tokens');
         }
