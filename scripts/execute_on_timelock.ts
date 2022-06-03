@@ -2,7 +2,7 @@ import { ethers } from 'hardhat';
 import { Config } from '../deploy/000_Config';
 
 async function main() {
-  const provider = new ethers.providers.JsonRpcProvider(process.env.ALCHEMY_POLYGON);
+  const provider = new ethers.providers.JsonRpcProvider(process.env.ALCHEMY_POLYGON || '');
   const signer = new ethers.Wallet(process.env.POLYGON_PRIVATE_KEY || '', provider);
   const AbiCoder = ethers.utils.defaultAbiCoder;
 

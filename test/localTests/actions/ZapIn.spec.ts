@@ -1,25 +1,18 @@
 import '@nomiclabs/hardhat-ethers';
 import { expect } from 'chai';
-import { ContractFactory, Contract } from 'ethers';
+import { Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import hre from 'hardhat';
-import UniswapV3Factoryjson from '@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json';
-import NonFungiblePositionManagerjson from '@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json';
-import NonFungiblePositionManagerDescriptorjson from '@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json';
-import SwapRouterjson from '@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json';
-import PositionManagerjson from '../../../artifacts/contracts/PositionManager.sol/PositionManager.json';
 import {
-  NonFungiblePositionManagerDescriptorBytecode,
   tokensFixture,
   poolFixture,
   mintSTDAmount,
-  getSelectors,
-  RegistryFixture,
   deployUniswapContracts,
   deployContract,
   deployPositionManagerFactoryAndActions,
   getPositionManager,
   doAllApprovals,
+  RegistryFixture,
 } from '../../shared/fixtures';
 import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, ZapIn, PositionManager } from '../../../typechain';
 
@@ -38,12 +31,14 @@ describe('ZapIn.sol', function () {
   //all the pools used globally
   let PoolEthUsdc3000: IUniswapV3Pool, PoolEthDai3000: IUniswapV3Pool, PoolUsdcDai3000: IUniswapV3Pool;
   let PoolEthUsdc500: IUniswapV3Pool, PoolEthDai500: IUniswapV3Pool, PoolUsdcDai500: IUniswapV3Pool;
+  let PoolUsdtUsdc500: IUniswapV3Pool;
 
   let Factory: Contract; // the factory that will deploy all pools
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
   let SwapRouter: Contract;
   let ZapInFallback: ZapIn;
   let PositionManager: PositionManager;
+  let registry: Contract;
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
@@ -51,11 +46,11 @@ describe('ZapIn.sol', function () {
     user = await user; //owner of the smart vault, a normal user
     liquidityProvider = await liquidityProvider; //generic address as other users, mint pool liquidity, try to do onlyUser call etc
 
-    //deploy first 3 token - ETH, USDC, DAI
+    //deploy first 4 tokens - ETH, USDC, DAI, USDT
     tokenEth = (await tokensFixture('ETH', 18)).tokenFixture;
     tokenDai = (await tokensFixture('DAI', 18)).tokenFixture;
     tokenUsdc = (await tokensFixture('USDC', 6)).tokenFixture;
-    tokenUsdt = (await tokensFixture('USDT', 18)).tokenFixture;
+    tokenUsdt = (await tokensFixture('USDT', 12)).tokenFixture;
 
     //deploy factory, used for pools
     [Factory, NonFungiblePositionManager, SwapRouter] = await deployUniswapContracts(tokenEth);
@@ -67,20 +62,23 @@ describe('ZapIn.sol', function () {
     PoolEthUsdc500 = (await poolFixture(tokenEth, tokenUsdc, 500, Factory)).pool;
     PoolEthDai500 = (await poolFixture(tokenEth, tokenDai, 500, Factory)).pool;
     PoolUsdcDai500 = (await poolFixture(tokenDai, tokenUsdc, 500, Factory)).pool;
+    PoolUsdtUsdc500 = (await poolFixture(tokenUsdt, tokenUsdc, 500, Factory)).pool;
 
     //mint 1e30 token, you can call with arbitrary amount
     await mintSTDAmount(tokenEth);
     await mintSTDAmount(tokenUsdc);
     await mintSTDAmount(tokenDai);
+    await mintSTDAmount(tokenUsdt);
 
     //deploy our contracts
+    registry = (await RegistryFixture(user.address)).registryFixture;
     const uniswapAddressHolder = await deployContract('UniswapAddressHolder', [
       NonFungiblePositionManager.address,
       Factory.address,
       SwapRouter.address,
+      registry.address,
     ]);
     const diamondCutFacet = await deployContract('DiamondCutFacet');
-    const registry = await deployContract('Registry', [user.address]);
 
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactory = await deployPositionManagerFactoryAndActions(
@@ -174,8 +172,8 @@ describe('ZapIn.sol', function () {
         fee: 500,
         tickLower: 0 - 60 * 1000,
         tickUpper: 0 + 60 * 1000,
-        amount0Desired: '0x' + (1e15).toString(16),
-        amount1Desired: '0x' + (1e15).toString(16),
+        amount0Desired: '0x' + (1e25).toString(16),
+        amount1Desired: '0x' + (1e25).toString(16),
         amount0Min: 0,
         amount1Min: 0,
         recipient: liquidityProvider.address,
@@ -224,7 +222,7 @@ describe('ZapIn.sol', function () {
   describe('ZapIn.sol', function () {
     it('should correctly mint a position', async function () {
       const beforeLength = await PositionManager.getAllUniPositions();
-      const txMint = await ZapInFallback.connect(user).zapIn(
+      await ZapInFallback.connect(user).zapIn(
         tokenUsdc.address,
         1000,
         tokenUsdc.address,
@@ -235,6 +233,79 @@ describe('ZapIn.sol', function () {
       );
       const afterLength = await PositionManager.getAllUniPositions();
       expect(Number(afterLength)).to.be.gt(Number(beforeLength));
+    });
+
+    it('should mint a position with tokens with different decimals', async function () {
+      const beforeLength = await PositionManager.getAllUniPositions();
+      await ZapInFallback.connect(user).zapIn(
+        tokenDai.address,
+        1000000000000,
+        tokenEth.address,
+        tokenUsdc.address,
+        -600,
+        600,
+        500
+      );
+      const afterLength = await PositionManager.getAllUniPositions();
+      expect(Number(afterLength[1])).to.be.gt(Number(beforeLength));
+    });
+
+    it('should mint out of range', async function () {
+      const beforeLength = await PositionManager.getAllUniPositions();
+      await ZapInFallback.connect(user).zapIn(
+        tokenUsdc.address,
+        100000000,
+        tokenEth.address,
+        tokenUsdc.address,
+        400,
+        500,
+        500
+      );
+      const afterLength = await PositionManager.getAllUniPositions();
+      expect(Number(afterLength.length)).to.be.gt(Number(beforeLength.length));
+    });
+
+    it('should fail if amountIn is 0', async function () {
+      await expect(
+        ZapInFallback.connect(user).zapIn(tokenUsdc.address, 0, tokenUsdc.address, tokenDai.address, -600, 600, 500)
+      ).to.be.revertedWith('ZapIn::zapIn: tokenIn cannot be 0');
+    });
+
+    it('should fail to zap if twap deviation is too high', async function () {
+      // 0. change maxTwapDeviation to a small value (10)
+      // 1. make a big swap to change ticks by at least maxTwapDeviation
+      // 2. check tick has changed after swap
+      // 3. try to swap again and check that it fails for max twap deviation
+
+      await registry.setMaxTwapDeviation(10);
+      const tickBefore = (await PoolEthUsdc500.slot0()).tick;
+
+      // This zap should succeed
+      await ZapInFallback.connect(user).zapIn(
+        tokenUsdc.address,
+        '0x' + (1e23).toString(16),
+        tokenEth.address,
+        tokenUsdc.address,
+        -600,
+        600,
+        500
+      );
+
+      const tickAfter = (await PoolEthUsdc500.slot0()).tick;
+      expect(tickAfter).to.not.be.eq(tickBefore);
+
+      // This zap should fail because of maxTwapDeviation
+      await expect(
+        ZapInFallback.connect(user).zapIn(
+          tokenUsdc.address,
+          '0x' + (1e21).toString(16),
+          tokenEth.address,
+          tokenUsdc.address,
+          -600,
+          600,
+          500
+        )
+      ).to.be.revertedWith('SwapHelper::checkDeviation: Price deviation is too high');
     });
   });
 });

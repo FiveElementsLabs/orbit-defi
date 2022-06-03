@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL v2
 
 pragma solidity 0.7.6;
 pragma abicoder v2;
@@ -27,4 +27,8 @@ interface IUniswapAddressHolder {
     ///@notice Set the address of uniV3 swap router
     ///@param newAddress new address of univ3 swap router
     function setSwapRouterAddress(address newAddress) external;
+
+    ///@notice Set the address of the registry
+    ///@param newAddress The address of the registry
+    function setRegistry(address newAddress) external;
 }

@@ -1,8 +1,9 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL v2
 
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
+import '@openzeppelin/contracts/math/SafeMath.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '../helpers/UniswapNFTHelper.sol';
 import '../../interfaces/IPositionManager.sol';
@@ -15,8 +16,10 @@ import '../../interfaces/actions/IZapOut.sol';
 
 ///@notice WithdrawRecipes allows user to withdraw positions from PositionManager
 contract WithdrawRecipes {
-    IPositionManagerFactory positionManagerFactory;
-    IUniswapAddressHolder uniswapAddressHolder;
+    IPositionManagerFactory public immutable positionManagerFactory;
+    IUniswapAddressHolder public immutable uniswapAddressHolder;
+
+    using SafeMath for uint256;
 
     constructor(address _positionManagerFactory, address _uniswapAddressHolder) {
         positionManagerFactory = IPositionManagerFactory(_positionManagerFactory);
@@ -28,10 +31,10 @@ contract WithdrawRecipes {
     ///@param partToWithdraw percentage of token to withdraw in base points
     function withdrawUniNft(uint256 tokenId, uint256 partToWithdraw) external onlyOwner(tokenId) {
         require(
-            partToWithdraw > 0 && partToWithdraw <= 10000,
+            partToWithdraw != 0 && partToWithdraw <= 10_000,
             'WithdrawRecipes::withdrawUniNft: part to withdraw must be between 0 and 10000'
         );
-        if (partToWithdraw == 10000) {
+        if (partToWithdraw == 10_000) {
             IClosePosition(positionManagerFactory.userToPositionManager(msg.sender)).closePosition(
                 tokenId,
                 true ///@dev return the tokens to the user
@@ -46,8 +49,8 @@ contract WithdrawRecipes {
             );
             IDecreaseLiquidity(positionManagerFactory.userToPositionManager(msg.sender)).decreaseLiquidity(
                 tokenId,
-                (amount0 * partToWithdraw) / 10000,
-                (amount1 * partToWithdraw) / 10000
+                (amount0.mul(partToWithdraw)).div(10_000),
+                (amount1.mul(partToWithdraw)).div(10_000)
             );
             ICollectFees(positionManagerFactory.userToPositionManager(msg.sender)).collectFees(tokenId, true);
         }
@@ -63,7 +66,8 @@ contract WithdrawRecipes {
     modifier onlyOwner(uint256 tokenId) {
         require(
             positionManagerFactory.userToPositionManager(msg.sender) ==
-                INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(tokenId), "WithdrawRecipes::onlyOwner: Only owner can call this function"
+                INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(tokenId),
+            'WithdrawRecipes::onlyOwner: Only owner can call this function'
         );
         _;
     }

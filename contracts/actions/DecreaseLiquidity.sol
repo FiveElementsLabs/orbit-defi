@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL v2
 
 pragma solidity 0.7.6;
 pragma abicoder v2;
@@ -40,14 +40,16 @@ contract DecreaseLiquidity is IDecreaseLiquidity {
     {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
+        address nonfungiblePositionManagerAddress = Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress();
+
         (, , , , , int24 tickLower, int24 tickUpper, uint128 liquidity, , , , ) = INonfungiblePositionManager(
-            Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()
+            nonfungiblePositionManagerAddress
         ).positions(tokenId);
 
         IUniswapV3Pool pool = IUniswapV3Pool(
             UniswapNFTHelper._getPoolFromTokenId(
                 tokenId,
-                INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()),
+                INonfungiblePositionManager(nonfungiblePositionManagerAddress),
                 Storage.uniswapAddressHolder.uniswapV3FactoryAddress()
             )
         );
@@ -73,12 +75,12 @@ contract DecreaseLiquidity is IDecreaseLiquidity {
                 liquidity: liquidityToDecrease,
                 amount0Min: 0,
                 amount1Min: 0,
-                deadline: block.timestamp + 120
+                deadline: block.timestamp
             });
 
-        (amount0, amount1) = INonfungiblePositionManager(
-            Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()
-        ).decreaseLiquidity(decreaseliquidityparams);
+        (amount0, amount1) = INonfungiblePositionManager(nonfungiblePositionManagerAddress).decreaseLiquidity(
+            decreaseliquidityparams
+        );
 
         emit LiquidityDecreased(address(this), tokenId);
     }

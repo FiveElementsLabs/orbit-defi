@@ -4,13 +4,7 @@ import { ContractFactory, Contract } from 'ethers';
 import { AbiCoder } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import hre from 'hardhat';
-import UniswapV3Factoryjson from '@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json';
-import NonFungiblePositionManagerjson from '@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json';
-import NonFungiblePositionManagerDescriptorjson from '@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json';
-import PositionManagerjson from '../../../artifacts/contracts/PositionManager.sol/PositionManager.json';
-import SwapRouterjson from '@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json';
 import {
-  NonFungiblePositionManagerDescriptorBytecode,
   tokensFixture,
   poolFixture,
   mintSTDAmount,
@@ -90,13 +84,14 @@ describe('AutoCompoundModule.sol', function () {
     await mintSTDAmount(tokenDai);
 
     //deploy our contracts
+    const registry = (await RegistryFixture(user.address)).registryFixture;
     const uniswapAddressHolder = await deployContract('UniswapAddressHolder', [
       NonFungiblePositionManager.address,
       Factory.address,
       SwapRouter.address,
+      registry.address,
     ]);
     const diamondCutFacet = await deployContract('DiamondCutFacet');
-    const registry = await deployContract('Registry', [user.address]);
     autoCompound = await deployContract('AutoCompoundModule', [uniswapAddressHolder.address, registry.address]);
 
     //deploy the PositionManagerFactory => deploy PositionManager
@@ -237,5 +232,8 @@ describe('AutoCompoundModule.sol', function () {
   it('should revert if position Manager does not exist', async function () {
     await PositionManager.connect(user).setModuleData(2, autoCompound.address, abiCoder.encode(['uint256'], [30]));
     await expect(autoCompound.connect(user).autoCompoundFees(Factory.address, 2));
+  });
+  it('should revert if caller is not a whitelistedkeeper', async function () {
+    await expect(autoCompound.connect(liquidityProvider).autoCompoundFees(PositionManager.address, 2)).to.be.reverted;
   });
 });

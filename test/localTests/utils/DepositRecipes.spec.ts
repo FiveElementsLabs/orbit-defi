@@ -12,6 +12,7 @@ import {
   doAllApprovals,
   deployPositionManagerFactoryAndActions,
   getPositionManager,
+  RegistryFixture,
 } from '../../shared/fixtures';
 import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, DepositRecipes } from '../../../typechain';
 
@@ -75,13 +76,14 @@ describe('DepositRecipes.sol', function () {
     await mintSTDAmount(tokenDai);
 
     //deploy our contracts
+    registry = (await RegistryFixture(user.address)).registryFixture;
     UniswapAddressHolder = await deployContract('UniswapAddressHolder', [
       NonFungiblePositionManager.address,
       Factory.address,
       SwapRouter.address,
+      registry.address,
     ]);
     DiamondCutFacet = await deployContract('DiamondCutFacet');
-    registry = await deployContract('Registry', [user.address]);
 
     //deploy the PositionManagerFactory => deploy PositionManager
     PositionManagerFactory = await deployPositionManagerFactoryAndActions(
@@ -399,7 +401,6 @@ describe('DepositRecipes.sol', function () {
       await DepositRecipes.connect(user).depositUniNft([tokenId]);
       const moduleData = await PositionManager.getModuleInfo(tokenId, AutoCompoundModule.address);
 
-      console.log('autocompound address: ', AutoCompoundModule.address);
       expect(moduleData[0]).to.be.equal(true);
       expect(moduleData[1]).to.be.equal(hre.ethers.utils.formatBytes32String('5'));
     });

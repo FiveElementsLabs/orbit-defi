@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL v2
 
 pragma solidity 0.7.6;
 pragma abicoder v2;
@@ -7,7 +7,7 @@ import '../../interfaces/IRegistry.sol';
 import '../../interfaces/IPositionManager.sol';
 
 contract BaseModule {
-    IRegistry registry;
+    IRegistry public immutable registry;
 
     modifier onlyWhitelistedKeeper() {
         require(

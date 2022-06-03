@@ -1,10 +1,10 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL v2
 
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
-import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
+import '@openzeppelin/contracts/math/SafeMath.sol';
 import '../helpers/SwapHelper.sol';
 import '../helpers/UniswapNFTHelper.sol';
 import '../helpers/ERC20Helper.sol';
@@ -13,6 +13,8 @@ import '../../interfaces/actions/ISwapToPositionRatio.sol';
 
 ///@notice action to swap to an exact position ratio
 contract SwapToPositionRatio is ISwapToPositionRatio {
+    using SafeMath for uint256;
+
     ///@notice emitted when a positionManager swaps to ratio
     ///@param positionManager address of PositionManager
     ///@param token0 address of first token of the pool
@@ -38,14 +40,18 @@ contract SwapToPositionRatio is ISwapToPositionRatio {
     {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
-        address poolAddress = UniswapNFTHelper._getPool(
-            Storage.uniswapAddressHolder.uniswapV3FactoryAddress(),
-            inputs.token0Address,
-            inputs.token1Address,
-            inputs.fee
+        IUniswapV3Pool pool = IUniswapV3Pool(
+            UniswapNFTHelper._getPool(
+                Storage.uniswapAddressHolder.uniswapV3FactoryAddress(),
+                inputs.token0Address,
+                inputs.token1Address,
+                inputs.fee
+            )
         );
-        IUniswapV3Pool pool = IUniswapV3Pool(poolAddress);
         (, int24 tickPool, , , , , ) = pool.slot0();
+
+        SwapHelper.checkDeviation(pool, Storage.registry.maxTwapDeviation(), Storage.registry.twapDuration());
+
         (uint256 amountToSwap, bool token0AddressIn) = SwapHelper.calcAmountToSwap(
             tickPool,
             inputs.tickLower,
@@ -59,7 +65,8 @@ contract SwapToPositionRatio is ISwapToPositionRatio {
                 token0AddressIn ? inputs.token0Address : inputs.token1Address,
                 token0AddressIn ? inputs.token1Address : inputs.token0Address,
                 inputs.fee,
-                amountToSwap
+                amountToSwap,
+                token0AddressIn
             );
 
             ///@notice return the new amount of the token swapped and the token returned
@@ -67,11 +74,18 @@ contract SwapToPositionRatio is ISwapToPositionRatio {
             ///@dev token0AddressIn false amount 0 + amountSwapped  ------ amount 1 - amountToSwap
             amount0Out = token0AddressIn ? inputs.amount0In - amountToSwap : inputs.amount0In + amountSwapped;
             amount1Out = token0AddressIn ? inputs.amount1In + amountSwapped : inputs.amount1In - amountToSwap;
+
+            emit SwappedToPositionRatio(
+                address(this),
+                inputs.token0Address,
+                inputs.token1Address,
+                amount0Out,
+                amount1Out
+            );
         } else {
             amount0Out = inputs.amount0In;
             amount1Out = inputs.amount1In;
         }
-        emit SwappedToPositionRatio(address(this), inputs.token0Address, inputs.token1Address, amount0Out, amount1Out);
     }
 
     ///@notice swaps token0 for token1
@@ -83,20 +97,21 @@ contract SwapToPositionRatio is ISwapToPositionRatio {
         address token0Address,
         address token1Address,
         uint24 fee,
-        uint256 amount0In
+        uint256 amount0In,
+        bool token0AddressIn
     ) internal returns (uint256 amount1Out) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         ISwapRouter swapRouter = ISwapRouter(Storage.uniswapAddressHolder.swapRouterAddress());
 
-        ERC20Helper._approveToken(token0Address, address(swapRouter), 2**256 - 1);
-        ERC20Helper._approveToken(token1Address, address(swapRouter), 2**256 - 1);
+        ERC20Helper._approveToken(token0Address, address(swapRouter), type(uint256).max);
+        ERC20Helper._approveToken(token1Address, address(swapRouter), type(uint256).max);
 
         ISwapRouter.ExactInputSingleParams memory swapParams = ISwapRouter.ExactInputSingleParams({
             tokenIn: token0Address,
             tokenOut: token1Address,
             fee: fee,
             recipient: address(this),
-            deadline: block.timestamp + 120,
+            deadline: block.timestamp,
             amountIn: amount0In,
             amountOutMinimum: 0,
             sqrtPriceLimitX96: 0

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL v2
 
 pragma solidity 0.7.6;
 pragma abicoder v2;
@@ -32,16 +32,10 @@ contract Mint is IMint {
     {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
-        ERC20Helper._approveToken(
-            inputs.token0Address,
-            Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress(),
-            inputs.amount0Desired
-        );
-        ERC20Helper._approveToken(
-            inputs.token1Address,
-            Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress(),
-            inputs.amount1Desired
-        );
+        address nonfungiblePositionManagerAddress = Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress();
+
+        ERC20Helper._approveToken(inputs.token0Address, nonfungiblePositionManagerAddress, inputs.amount0Desired);
+        ERC20Helper._approveToken(inputs.token1Address, nonfungiblePositionManagerAddress, inputs.amount1Desired);
 
         INonfungiblePositionManager.MintParams memory params = INonfungiblePositionManager.MintParams({
             token0: inputs.token0Address,
@@ -54,12 +48,11 @@ contract Mint is IMint {
             amount0Min: 0,
             amount1Min: 0,
             recipient: address(this),
-            deadline: block.timestamp + 120
+            deadline: block.timestamp
         });
 
-        (tokenId, , amount0Deposited, amount1Deposited) = INonfungiblePositionManager(
-            Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()
-        ).mint(params);
+        (tokenId, , amount0Deposited, amount1Deposited) = INonfungiblePositionManager(nonfungiblePositionManagerAddress)
+            .mint(params);
 
         IPositionManager(address(this)).middlewareDeposit(tokenId);
         emit PositionMinted(address(this), tokenId);

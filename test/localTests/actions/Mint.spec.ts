@@ -4,12 +4,7 @@ import { ContractFactory, Contract } from 'ethers';
 import { AbiCoder } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import hre from 'hardhat';
-import UniswapV3Factoryjson from '@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json';
-import NonFungiblePositionManagerjson from '@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json';
-import NonFungiblePositionManagerDescriptorjson from '@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json';
-import PositionManagerjson from '../../../artifacts/contracts/PositionManager.sol/PositionManager.json';
 import {
-  NonFungiblePositionManagerDescriptorBytecode,
   tokensFixture,
   poolFixture,
   mintSTDAmount,
@@ -67,13 +62,14 @@ describe('Mint.sol', function () {
     await mintSTDAmount(tokenUsdc);
 
     //deploy our contracts
+    const registry = (await RegistryFixture(user.address)).registryFixture;
     const uniswapAddressHolder = await deployContract('UniswapAddressHolder', [
       NonFungiblePositionManager.address,
       Factory.address,
       SwapRouter.address,
+      registry.address,
     ]);
     const diamondCutFacet = await deployContract('DiamondCutFacet');
-    const registry = await deployContract('Registry', [user.address]);
 
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactory = await deployPositionManagerFactoryAndActions(
@@ -144,6 +140,30 @@ describe('Mint.sol', function () {
       const amount1In = 5e5;
       const tickLower = -720;
       const tickUpper = 3600;
+
+      await MintFallback.mint({
+        token0Address: tokenEth.address,
+        token1Address: tokenUsdc.address,
+        fee: 3000,
+        tickLower: tickLower,
+        tickUpper: tickUpper,
+        amount0Desired: amount0In,
+        amount1Desired: amount1In,
+      });
+
+      expect(await NonFungiblePositionManager.balanceOf(PositionManager.address)).to.gt(balancePre);
+    });
+
+    it('should successfully mint a UNIV3 position out of range', async function () {
+      const balancePre = await NonFungiblePositionManager.balanceOf(PositionManager.address);
+      const amount0In = 5e5;
+      const amount1In = 5e5;
+      const tickLower = -7200;
+      const tickUpper = -3600;
+      const tick = (await Pool0.slot0()).tick;
+
+      expect(tickLower).to.be.lt(tick);
+      expect(tickUpper).to.be.lt(tick);
 
       await MintFallback.mint({
         token0Address: tokenEth.address,

@@ -1,9 +1,11 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL v2
 
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
+
 import '../../interfaces/IAToken.sol';
 import '../../interfaces/ILendingPool.sol';
 import '../../interfaces/IPositionManager.sol';
@@ -12,6 +14,8 @@ import '../utils/Storage.sol';
 
 ///@notice action to deposit tokens into aave protocol
 contract AaveDeposit is IAaveDeposit {
+    using SafeERC20 for IERC20;
+
     ///@notice emitted when a deposit on aave is made
     ///@param positionManager address of aave positionManager which deposited
     ///@param token token address
@@ -29,17 +33,15 @@ contract AaveDeposit is IAaveDeposit {
             PositionManagerStorage.getStorage().aaveAddressHolder.lendingPoolAddress()
         );
 
-        require(
-            lendingPool.getReserveData(token).aTokenAddress != address(0),
-            'AaveDeposit::depositToAave: Aave token not found.'
-        );
-
         IAToken aToken = IAToken(lendingPool.getReserveData(token).aTokenAddress);
+
+        require(address(aToken) != address(0), 'AaveDeposit::depositToAave: Aave token not found.');
 
         uint256 balanceBefore = aToken.scaledBalanceOf(address(this));
 
         if (IERC20(token).allowance(address(this), address(lendingPool)) < amount) {
-            IERC20(token).approve(address(lendingPool), amount);
+            IERC20(token).safeApprove(address(lendingPool), 0);
+            IERC20(token).safeApprove(address(lendingPool), type(uint256).max);
         }
 
         lendingPool.deposit(token, amount, address(this), 0);

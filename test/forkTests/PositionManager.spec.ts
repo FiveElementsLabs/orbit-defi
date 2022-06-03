@@ -3,11 +3,6 @@ import { expect } from 'chai';
 import { ContractFactory, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import hre from 'hardhat';
-import UniswapV3Factoryjson from '@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json';
-import NonFungiblePositionManagerjson from '@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json';
-import NonFungiblePositionManagerDescriptorjson from '@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json';
-import PositionManagerjson from '../../artifacts/contracts/PositionManager.sol/PositionManager.json';
-import SwapRouterjson from '@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json';
 import LendingPooljson from '@aave/protocol-v2/artifacts/contracts/protocol/lendingpool/LendingPool.sol/LendingPool.json';
 import {
   NonFungiblePositionManagerDescriptorBytecode,
@@ -96,14 +91,15 @@ describe('PositionManager.sol', function () {
     LendingPool = await ethers.getContractAtFromArtifact(LendingPooljson, '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9');
 
     //deploy our contracts
+    Registry = (await RegistryFixture(user.address)).registryFixture;
     UniswapAddressHolder = await deployContract('UniswapAddressHolder', [
       NonFungiblePositionManager.address,
       Factory.address,
       SwapRouter.address,
+      Registry.address,
     ]);
-    AaveAddressHolder = await deployContract('AaveAddressHolder', [LendingPool.address]);
+    AaveAddressHolder = await deployContract('AaveAddressHolder', [LendingPool.address, Registry.address]);
     DiamondCutFacet = await deployContract('DiamondCutFacet');
-    Registry = await deployContract('Registry', [user.address]);
 
     //deploy the PositionManagerFactory => deploy PositionManager
     const PositionManagerFactory = await deployPositionManagerFactoryAndActions(
@@ -301,19 +297,7 @@ describe('PositionManager.sol', function () {
         PositionManager.connect(liquidityProvider).init(
           user.address,
           UniswapAddressHolder.address,
-          Registry.address,
-          AaveAddressHolder.address,
-          user.address //governance
-        )
-      ).to.be.reverted;
-    });
-    it('should revert if deployed not by the factory', async function () {
-      const PositionManagerFactory = await ethers.getContractFactory('PositionManager');
-      await expect(
-        PositionManagerFactory.connect(liquidityProvider).deploy(
-          liquidityProvider.address,
-          DiamondCutFacet.address,
-          Registry.address
+          AaveAddressHolder.address
         )
       ).to.be.reverted;
     });

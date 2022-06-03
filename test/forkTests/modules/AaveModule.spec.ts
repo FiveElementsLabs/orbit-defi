@@ -5,7 +5,6 @@ import { AbiCoder, TransactionDescription } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import hre from 'hardhat';
 import UniswapV3Factoryjson from '@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json';
-import PositionManagerjson from '../../../artifacts/contracts/PositionManager.sol/PositionManager.json';
 import NonFungiblePositionManagerjson from '@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json';
 import LendingPooljson from '@aave/protocol-v2/artifacts/contracts/protocol/lendingpool/LendingPool.sol/LendingPool.json';
 import SwapRouterjson from '@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json';
@@ -19,6 +18,7 @@ import {
   mintForkedTokens,
   getPositionManager,
   doAllApprovals,
+  RegistryFixture,
 } from '../../shared/fixtures';
 import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager } from '../../../typechain';
 
@@ -47,6 +47,7 @@ describe('AaveModule.sol', function () {
   let Factory: Contract; // the factory that will deploy all pools
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
   let PositionManager: PositionManager; // Position manager contract
+  let DepositRecipes: Contract;
   let AaveDepositFallback: Contract;
   let LendingPool: Contract;
   let AaveModule: Contract;
@@ -55,6 +56,7 @@ describe('AaveModule.sol', function () {
   let abiCoder: AbiCoder;
   let swapRouter: Contract;
   let aUsdc: Contract;
+  let aWbtc: Contract;
   let tickLower: number;
   let tickUpper: number;
   let aaveId: any;
@@ -97,14 +99,15 @@ describe('AaveModule.sol', function () {
     LendingPool = await ethers.getContractAtFromArtifact(LendingPooljson, '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9');
 
     //deploy our contracts
+    const registry = (await RegistryFixture(user.address)).registryFixture;
     const uniswapAddressHolder = await deployContract('UniswapAddressHolder', [
       NonFungiblePositionManager.address,
       '0x1F98431c8aD98523631AE4a59f267346ea31F984',
       swapRouter.address,
+      registry.address,
     ]);
-    const aaveAddressHolder = await deployContract('AaveAddressHolder', [LendingPool.address]);
+    const aaveAddressHolder = await deployContract('AaveAddressHolder', [LendingPool.address, registry.address]);
     const diamondCutFacet = await deployContract('DiamondCutFacet');
-    const registry = await deployContract('Registry', [user.address]);
     AaveModule = await deployContract('AaveModule', [
       aaveAddressHolder.address,
       uniswapAddressHolder.address,
@@ -135,13 +138,13 @@ describe('AaveModule.sol', function () {
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('AaveModule')),
       AaveModule.address,
-      hre.ethers.utils.formatBytes32String('10'),
+      ethers.utils.hexZeroPad(ethers.utils.hexlify(10), 32),
       true
     );
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Factory')),
       PositionManagerFactory.address,
-      hre.ethers.utils.formatBytes32String('1'),
+      ethers.utils.hexZeroPad(ethers.utils.hexlify(1), 32),
       true
     );
     await registry.addKeeperToWhitelist(user.address);
@@ -149,7 +152,20 @@ describe('AaveModule.sol', function () {
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Test')),
       user.address,
-      hre.ethers.utils.formatBytes32String('1'),
+      ethers.utils.hexZeroPad(ethers.utils.hexlify(1), 32),
+      true
+    );
+
+    //deploy DepositRecipes contract
+    DepositRecipes = (await deployContract('DepositRecipes', [
+      uniswapAddressHolder.address,
+      PositionManagerFactory.address,
+    ])) as Contract;
+
+    await registry.addNewContract(
+      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('DepositRecipes')),
+      DepositRecipes.address,
+      ethers.utils.hexZeroPad(ethers.utils.hexlify(1), 32),
       true
     );
 
@@ -163,9 +179,12 @@ describe('AaveModule.sol', function () {
     //approve NFPM
     await doAllApprovals(
       [user, liquidityProvider, trader],
-      [NonFungiblePositionManager.address, swapRouter.address],
+      [NonFungiblePositionManager.address, swapRouter.address, DepositRecipes.address, PositionManager.address],
       [usdcMock, wbtcMock]
     );
+
+    await NonFungiblePositionManager.connect(user).setApprovalForAll(DepositRecipes.address, true);
+    await NonFungiblePositionManager.setApprovalForAll(PositionManager.address, true);
 
     let slot0 = await Pool0.slot0();
     tickLower = (Math.round(slot0.tick / 60) - 100) * 60;
@@ -183,7 +202,7 @@ describe('AaveModule.sol', function () {
         amount1Desired: '0x' + (1e10).toString(16),
         amount0Min: 0,
         amount1Min: 0,
-        recipient: PositionManager.address,
+        recipient: user.address,
         deadline: Date.now() + 1000,
       },
       { gasLimit: 670000 }
@@ -210,19 +229,21 @@ describe('AaveModule.sol', function () {
     const receipt: any = await mintTx.wait();
     tokenId = receipt.events[receipt.events.length - 1].args.tokenId;
 
-    // user approve AaveModule
-    await PositionManager.connect(user).toggleModule(tokenId, AaveModule.address, true);
-    await PositionManager.pushPositionId(tokenId);
-
+    await NonFungiblePositionManager.ownerOf(tokenId);
+    await DepositRecipes.connect(user).depositUniNft([tokenId]);
     abiCoder = ethers.utils.defaultAbiCoder;
 
     const aUsdcAddress = (await LendingPool.getReserveData(usdcMock.address)).aTokenAddress;
     aUsdc = await ethers.getContractAtFromArtifact(ATokenjson, aUsdcAddress);
+    const aWbtcAddress = (await LendingPool.getReserveData(wbtcMock.address)).aTokenAddress;
+    aWbtc = await ethers.getContractAtFromArtifact(ATokenjson, aWbtcAddress);
+
+    await registry.setMaxTwapDeviation(1000000);
   });
 
   describe('AaveModule - depositToAave', function () {
     it('should not deposit to aave if position is in range', async function () {
-      await AaveModule.connect(user).depositIfNeeded(PositionManager.address, tokenId, usdcMock.address);
+      await AaveModule.connect(user).depositIfNeeded(PositionManager.address, tokenId);
       expect(await NonFungiblePositionManager.ownerOf(tokenId)).to.equal(PositionManager.address);
     });
 
@@ -234,7 +255,7 @@ describe('AaveModule.sol', function () {
           fee: 3000,
           recipient: trader.address,
           deadline: Date.now() + 1000,
-          amountIn: '0x' + (1e16).toString(16),
+          amountIn: '0x' + (1e18).toString(16),
           amountOutMinimum: 0,
           sqrtPriceLimitX96: 0,
         });
@@ -242,18 +263,19 @@ describe('AaveModule.sol', function () {
 
       expect((await Pool0.slot0()).tick).to.gt(tickUpper);
 
-      const tx = await AaveModule.connect(user).depositIfNeeded(PositionManager.address, tokenId, usdcMock.address);
+      const tx = await AaveModule.connect(user).depositIfNeeded(PositionManager.address, tokenId);
       const events = (await tx.wait()).events;
       aaveId = abiCoder.decode(['address', 'uint256', 'uint256'], events[events.length - 1].data)[1];
-      expect(await aUsdc.balanceOf(PositionManager.address)).to.gt(0);
+
+      expect(await aWbtc.balanceOf(PositionManager.address)).to.gt(0);
     });
 
     it('should not return to position if still out of range', async function () {
-      await AaveModule.connect(user).withdrawIfNeeded(PositionManager.address, usdcMock.address, aaveId);
-      expect(await aUsdc.balanceOf(PositionManager.address)).to.gt(0);
+      await AaveModule.connect(user).withdrawIfNeeded(PositionManager.address, wbtcMock.address, aaveId);
+      expect(await aWbtc.balanceOf(PositionManager.address)).to.gt(0);
     });
 
-    it('should retrun to position if returns in range', async function () {
+    it('should return to position manager if it is back in range', async function () {
       while ((await Pool0.slot0()).tick >= tickUpper) {
         await swapRouter.connect(trader).exactInputSingle({
           tokenIn: wbtcMock.address,
@@ -270,8 +292,15 @@ describe('AaveModule.sol', function () {
       expect(slot0.tick).to.gt(tickLower);
       expect(slot0.tick).to.lt(tickUpper);
 
-      const tx = await AaveModule.connect(user).withdrawIfNeeded(PositionManager.address, usdcMock.address, aaveId);
-      expect(await aUsdc.balanceOf(PositionManager.address)).to.equal(0);
+      const positions = await PositionManager.connect(user).getAavePositionsArray();
+
+      const tx = await AaveModule.connect(user).withdrawIfNeeded(
+        PositionManager.address,
+        positions[0].tokenToAave,
+        positions[0].id
+      );
+      await tx.wait();
+      expect(await wbtcMock.balanceOf(PositionManager.address)).to.equal(0);
     });
   });
 });

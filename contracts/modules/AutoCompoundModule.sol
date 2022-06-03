@@ -1,8 +1,9 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL v2
 
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
+import '@openzeppelin/contracts/math/SafeMath.sol';
 import './BaseModule.sol';
 import '../../interfaces/IPositionManager.sol';
 import '../../interfaces/IRegistry.sol';
@@ -14,14 +15,17 @@ import '../helpers/UniswapNFTHelper.sol';
 import '../utils/Storage.sol';
 
 contract AutoCompoundModule is BaseModule {
-    IUniswapAddressHolder addressHolder;
+    IUniswapAddressHolder public immutable addressHolder;
+
+    using SafeMath for uint256;
 
     ///@notice constructor of autoCompoundModule
     ///@param _addressHolder the address of the uniswap address holder contract
     ///@param _registry the address of the registry contract
     constructor(address _addressHolder, address _registry) BaseModule(_registry) {
+        require(_addressHolder != address(0), 'AutoCompoundModule::Constructor:addressHolder cannot be 0');
+        require(_registry != address(0), 'AutoCompoundModule::Constructor:registry cannot be 0');
         addressHolder = IUniswapAddressHolder(_addressHolder);
-        registry = IRegistry(_registry);
     }
 
     ///@notice executes our recipe for autocompounding
@@ -51,25 +55,40 @@ contract AutoCompoundModule is BaseModule {
         (uint256 uncollectedFees0, uint256 uncollectedFees1) = IUpdateUncollectedFees(positionManagerAddress)
             .updateUncollectedFees(tokenId);
 
+        address nonfungiblePositionManagerAddress = addressHolder.nonfungiblePositionManagerAddress();
+        address uniswapV3FactoryAddress = addressHolder.uniswapV3FactoryAddress();
+
         (uint256 amount0, uint256 amount1) = UniswapNFTHelper._getAmountsfromTokenId(
             tokenId,
-            INonfungiblePositionManager(addressHolder.nonfungiblePositionManagerAddress()),
-            addressHolder.uniswapV3FactoryAddress()
+            INonfungiblePositionManager(nonfungiblePositionManagerAddress),
+            uniswapV3FactoryAddress
         );
 
         (, bytes32 data) = IPositionManager(positionManagerAddress).getModuleInfo(tokenId, address(this));
+        require(data != bytes32(0), 'AutoCompoundModule::_checkIfCompoundIsNeeded: module data cannot be empty');
 
         uint256 feesThreshold = uint256(data);
 
         (uint160 sqrtPriceX96, , , , , , ) = IUniswapV3Pool(
             UniswapNFTHelper._getPoolFromTokenId(
                 tokenId,
-                INonfungiblePositionManager(addressHolder.nonfungiblePositionManagerAddress()),
-                addressHolder.uniswapV3FactoryAddress()
+                INonfungiblePositionManager(nonfungiblePositionManagerAddress),
+                uniswapV3FactoryAddress
             )
         ).slot0();
-        //returns true if the value of uncollected fees * 100 is greater than amount in the position * threshold
-        return (((uncollectedFees0 * sqrtPriceX96) / 2**96 + (uncollectedFees1 * 2**96) / sqrtPriceX96) * 100 >
-            ((amount0 * sqrtPriceX96) / 2**96 + (amount1 * 2**96) / sqrtPriceX96) * feesThreshold);
+
+        //returns true if the value of uncollected fees * 100 is greater than amount in the position * threshold:
+        //  (((uncollectedFees0 * sqrtPriceX96) / 2**96 + (uncollectedFees1 * 2**96) / sqrtPriceX96) * 100 >
+        //  ((amount0 * sqrtPriceX96) / 2**96 + (amount1 * 2**96) / sqrtPriceX96) * feesThreshold)
+        return ((
+            (uncollectedFees0.mul(uint256(sqrtPriceX96))).div(2**96).add(
+                uncollectedFees1.mul(2**96).div(uint256(sqrtPriceX96)).mul(100)
+            )
+        ) >
+            (
+                amount0.mul(uint256(sqrtPriceX96)).div(2**96).add(amount1.mul(2**96).div(uint256(sqrtPriceX96))).mul(
+                    feesThreshold
+                )
+            ));
     }
 }

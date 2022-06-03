@@ -1,9 +1,10 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL v2
 
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '../../interfaces/actions/IMint.sol';
 import '../../interfaces/actions/IZapIn.sol';
@@ -14,8 +15,10 @@ import '../../interfaces/IUniswapAddressHolder.sol';
 ///@notice DepositRecipes allows user to fill their position manager with UniswapV3 positions
 ///        by depositing an already minted NFT or by minting directly a new one
 contract DepositRecipes {
-    IUniswapAddressHolder uniswapAddressHolder;
-    IPositionManagerFactory positionManagerFactory;
+    using SafeERC20 for IERC20;
+
+    IUniswapAddressHolder public immutable uniswapAddressHolder;
+    IPositionManagerFactory public immutable positionManagerFactory;
 
     constructor(address _uniswapAddressHolder, address _positionManagerFactory) {
         uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
@@ -33,7 +36,8 @@ contract DepositRecipes {
     function depositUniNft(uint256[] calldata tokenIds) external {
         address positionManagerAddress = positionManagerFactory.userToPositionManager(msg.sender);
 
-        for (uint32 i = 0; i < tokenIds.length; i++) {
+        uint256 tokenIdsLength = tokenIds.length;
+        for (uint256 i; i < tokenIdsLength; ++i) {
             INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).safeTransferFrom(
                 msg.sender,
                 positionManagerAddress,
@@ -66,8 +70,8 @@ contract DepositRecipes {
         address positionManagerAddress = positionManagerFactory.userToPositionManager(msg.sender);
 
         ///@dev send tokens to position manager to be able to call the mint action
-        IERC20(token0).transferFrom(msg.sender, positionManagerAddress, amount0Desired);
-        IERC20(token1).transferFrom(msg.sender, positionManagerAddress, amount1Desired);
+        IERC20(token0).safeTransferFrom(msg.sender, positionManagerAddress, amount0Desired);
+        IERC20(token1).safeTransferFrom(msg.sender, positionManagerAddress, amount1Desired);
 
         (tokenId, , ) = IMint(positionManagerAddress).mint(
             IMint.MintInput(token0, token1, fee, tickLower, tickUpper, amount0Desired, amount1Desired)

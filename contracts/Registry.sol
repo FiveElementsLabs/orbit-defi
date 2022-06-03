@@ -1,14 +1,17 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL v2
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import '../interfaces/IRegistry.sol';
 
-/// @title Stores all the contract addresses
+/// @title Stores all the governance variables
 contract Registry is IRegistry {
     address public override governance;
     address public override positionManagerFactoryAddress;
-    address[] public whitelistedKeepers;
+    int24 public override maxTwapDeviation;
+    uint32 public override twapDuration;
+
+    mapping(address => bool) public whitelistedKeepers;
     mapping(bytes32 => Entry) public modules;
     bytes32[] public moduleKeys;
 
@@ -32,19 +35,39 @@ contract Registry is IRegistry {
     ///@param isActive true if module is switched on, false otherwise
     event ModuleSwitched(bytes32 moduleId, bool isActive);
 
-    constructor(address _governance) {
+    constructor(
+        address _governance,
+        int24 _maxTwapDeviation,
+        uint32 _twapDuration
+    ) {
+        require(_governance != address(0), 'Registry::constructor: governance cannot be address(0).');
+        require(_twapDuration != 0, 'Registry::constructor: twapDuration cannot be 0.');
+
         governance = _governance;
+        maxTwapDeviation = _maxTwapDeviation;
+        twapDuration = _twapDuration;
+    }
+
+    ///@notice modifier to check if the sender is the governance contract
+    modifier onlyGovernance() {
+        require(msg.sender == governance, 'Registry::onlyGovernance: Call must come from governance.');
+        _;
     }
 
     ///@notice sets the Position manager factory address
     ///@param _positionManagerFactory the address of the position manager factory
     function setPositionManagerFactory(address _positionManagerFactory) external onlyGovernance {
+        require(
+            _positionManagerFactory != address(0),
+            'Registry::setPositionManagerFactory: New position manager factory cannot be the null address'
+        );
         positionManagerFactoryAddress = _positionManagerFactory;
     }
 
     ///@notice change the address of the governance
     ///@param _governance the address of the new governance
     function changeGovernance(address _governance) external onlyGovernance {
+        require(_governance != address(0), 'Registry::changeGovernance: New governance cannot be the null address');
         governance = _governance;
         emit GovernanceChanged(_governance);
     }
@@ -94,7 +117,14 @@ contract Registry is IRegistry {
     ///@param _keeper address of the new keeper
     function addKeeperToWhitelist(address _keeper) external override onlyGovernance {
         require(!isWhitelistedKeeper(_keeper), 'Registry::addKeeperToWhitelist: Keeper is already whitelisted.');
-        whitelistedKeepers.push(_keeper);
+        whitelistedKeepers[_keeper] = true;
+    }
+
+    ///@notice remove a whitelisted keeper
+    ///@param _keeper address of the keeper to remove
+    function removeKeeperFromWhitelist(address _keeper) external override onlyGovernance {
+        require(isWhitelistedKeeper(_keeper), 'Registry::addKeeperToWhitelist: Keeper is not whitelisted.');
+        whitelistedKeepers[_keeper] = false;
     }
 
     ///@notice Get the keys for all modules
@@ -108,15 +138,30 @@ contract Registry is IRegistry {
     ///@param _defaultData default data for the module
     function setDefaultValue(bytes32 _id, bytes32 _defaultData) external onlyGovernance {
         require(modules[_id].contractAddress != address(0), 'Registry::setDefaultValue: Entry does not exist.');
+        require(_defaultData != bytes32(0), 'Registry::setDefaultValue: Default data cannot be empty.');
+
         modules[_id].defaultData = _defaultData;
     }
-    
+
     ///@notice Set default activation for a module
     ///@param _id keccak256 of module id string
     ///@param _activatedByDefault default activation bool for the module
     function setDefaultActivation(bytes32 _id, bool _activatedByDefault) external onlyGovernance {
         require(modules[_id].contractAddress != address(0), 'Registry::setDefaultValue: Entry does not exist.');
         modules[_id].activatedByDefault = _activatedByDefault;
+    }
+
+    ///@notice set oracle price deviation threshold
+    ///@param _maxTwapDeviation the new oracle price deviation threshold
+    function setMaxTwapDeviation(int24 _maxTwapDeviation) external onlyGovernance {
+        maxTwapDeviation = _maxTwapDeviation;
+    }
+
+    ///@notice set twap duration
+    ///@param _twapDuration the new twap duration
+    function setTwapDuration(uint32 _twapDuration) external onlyGovernance {
+        require(_twapDuration != 0, 'Registry::setTwapDuration: Twap duration cannot be 0.');
+        twapDuration = _twapDuration;
     }
 
     ///@notice Get the address of a module for a given key
@@ -148,17 +193,6 @@ contract Registry is IRegistry {
     ///@param _keeper address to check
     ///@return bool true if whitelisted, false otherwise
     function isWhitelistedKeeper(address _keeper) public view override returns (bool) {
-        for (uint256 i = 0; i < whitelistedKeepers.length; i++) {
-            if (whitelistedKeepers[i] == _keeper) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    ///@notice modifier to check if the sender is the governance contract
-    modifier onlyGovernance() {
-        require(msg.sender == governance, 'Registry::onlyGovernance: Call must come from governance.');
-        _;
+        return whitelistedKeepers[_keeper];
     }
 }
