@@ -126,7 +126,7 @@ library PositionManagerStorage {
     ///@param _facetAddress address of the facet
     ///@param _functionSelectors function selectors to add
     function addFunctions(address _facetAddress, bytes4[] memory _functionSelectors) internal {
-        require(_functionSelectors.length > 0, 'PositionManagerStorage::addFunctions: No selectors in facet to cut');
+        require(_functionSelectors.length != 0, 'PositionManagerStorage::addFunctions: No selectors in facet to cut');
         StorageStruct storage ds = getStorage();
         require(_facetAddress != address(0), "PositionManagerStorage::addFunctions: Add facet can't be address(0)");
         uint96 selectorPosition = uint96(ds.facetFunctionSelectors[_facetAddress].functionSelectors.length);
@@ -225,7 +225,7 @@ library PositionManagerStorage {
     ///@param _functionSelectors function selectors to replace
     function replaceFunctions(address _facetAddress, bytes4[] memory _functionSelectors) internal {
         require(
-            _functionSelectors.length > 0,
+            _functionSelectors.length != 0,
             'PositionManagerStorage::replaceFunctions: No selectors in facet to cut'
         );
         StorageStruct storage ds = getStorage();
@@ -257,7 +257,10 @@ library PositionManagerStorage {
     ///@param _facetAddress address of the facet
     ///@param _functionSelectors function selectors to remove
     function removeFunctions(address _facetAddress, bytes4[] memory _functionSelectors) internal {
-        require(_functionSelectors.length > 0, 'PositionManagerStorage::removeFunctions: No selectors in facet to cut');
+        require(
+            _functionSelectors.length != 0,
+            'PositionManagerStorage::removeFunctions: No selectors in facet to cut'
+        );
 
         StorageStruct storage ds = getStorage();
 
@@ -285,14 +288,14 @@ library PositionManagerStorage {
             );
         } else {
             require(
-                _calldata.length > 0,
+                _calldata.length != 0,
                 'PositionManagerStorage::initializeDiamondCut: _calldata is empty but _init is not address(0)'
             );
 
             (bool success, bytes memory error) = _init.delegatecall(_calldata);
 
             if (!success) {
-                if (error.length > 0) {
+                if (error.length != 0) {
                     revert(string(error));
                 } else {
                     revert('PositionManagerStorage::initializeDiamondCut: _init function reverted');

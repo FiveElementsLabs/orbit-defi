@@ -55,10 +55,13 @@ contract AutoCompoundModule is BaseModule {
         (uint256 uncollectedFees0, uint256 uncollectedFees1) = IUpdateUncollectedFees(positionManagerAddress)
             .updateUncollectedFees(tokenId);
 
+        address nonfungiblePositionManagerAddress = addressHolder.nonfungiblePositionManagerAddress();
+        address uniswapV3FactoryAddress = addressHolder.uniswapV3FactoryAddress();
+
         (uint256 amount0, uint256 amount1) = UniswapNFTHelper._getAmountsfromTokenId(
             tokenId,
-            INonfungiblePositionManager(addressHolder.nonfungiblePositionManagerAddress()),
-            addressHolder.uniswapV3FactoryAddress()
+            INonfungiblePositionManager(nonfungiblePositionManagerAddress),
+            uniswapV3FactoryAddress
         );
 
         (, bytes32 data) = IPositionManager(positionManagerAddress).getModuleInfo(tokenId, address(this));
@@ -69,8 +72,8 @@ contract AutoCompoundModule is BaseModule {
         (uint160 sqrtPriceX96, , , , , , ) = IUniswapV3Pool(
             UniswapNFTHelper._getPoolFromTokenId(
                 tokenId,
-                INonfungiblePositionManager(addressHolder.nonfungiblePositionManagerAddress()),
-                addressHolder.uniswapV3FactoryAddress()
+                INonfungiblePositionManager(nonfungiblePositionManagerAddress),
+                uniswapV3FactoryAddress
             )
         ).slot0();
 

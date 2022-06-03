@@ -27,6 +27,8 @@ contract IncreaseLiquidity is IIncreaseLiquidity {
     ) public override {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
+        address nonfungiblePositionManagerAddress = Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress();
+
         require(
             amount0Desired > 0 || amount1Desired > 0,
             'IncreaseLiquidity::increaseLiquidity: Amounts cannot be both zero'
@@ -34,19 +36,11 @@ contract IncreaseLiquidity is IIncreaseLiquidity {
 
         (address token0Address, address token1Address, , , ) = UniswapNFTHelper._getTokens(
             tokenId,
-            INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress())
+            INonfungiblePositionManager(nonfungiblePositionManagerAddress)
         );
 
-        ERC20Helper._approveToken(
-            token0Address,
-            Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress(),
-            amount0Desired
-        );
-        ERC20Helper._approveToken(
-            token1Address,
-            Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress(),
-            amount1Desired
-        );
+        ERC20Helper._approveToken(token0Address, nonfungiblePositionManagerAddress, amount0Desired);
+        ERC20Helper._approveToken(token1Address, nonfungiblePositionManagerAddress, amount1Desired);
 
         INonfungiblePositionManager.IncreaseLiquidityParams memory params = INonfungiblePositionManager
             .IncreaseLiquidityParams({
@@ -57,9 +51,7 @@ contract IncreaseLiquidity is IIncreaseLiquidity {
                 amount1Min: 0,
                 deadline: block.timestamp
             });
-        INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).increaseLiquidity(
-                params
-            );
+        INonfungiblePositionManager(nonfungiblePositionManagerAddress).increaseLiquidity(params);
 
         emit LiquidityIncreased(address(this), tokenId);
     }
