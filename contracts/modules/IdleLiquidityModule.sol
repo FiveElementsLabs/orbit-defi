@@ -20,7 +20,7 @@ contract IdleLiquidityModule is BaseModule {
     ///@dev deltaAmountSwapped of the amount because the amount swapped returned by the swapToPositionRatio its not precise
     uint256 constant deltaAmountSwapped = 10;
     ///@notice uniswap address holder
-    IUniswapAddressHolder public uniswapAddressHolder;
+    IUniswapAddressHolder public immutable uniswapAddressHolder;
     using SignedSafeMath for int24;
 
     ///@notice assing the uniswap address holder to the contract
@@ -52,13 +52,13 @@ contract IdleLiquidityModule is BaseModule {
         (, bytes32 rebalanceDistance) = positionManager.getModuleInfo(tokenId, address(this));
         require(rebalanceDistance != bytes32(0), 'IdleLiquidityModule:: rebalance: Rebalance distance is 0');
 
-        ///@dev can rebalance only if the position range is outside of the pool tick and it is far enough from the pool tick
+        ///@dev can rebalance only if the pool tick is outside the position range, and it is far enough from it
         if (tickDistance > 0 && tickDistance >= MathHelper.fromUint256ToUint24(uint256(rebalanceDistance))) {
             (, , address token0, address token1, uint24 fee, , , , , , , ) = INonfungiblePositionManager(
                 uniswapAddressHolder.nonfungiblePositionManagerAddress()
             ).positions(tokenId);
 
-            ///@dev calc tickLower and tickUpper with the same delta as the position but with tick of the pool in center
+            ///@dev calc tickLower and tickUpper with the same delta as the position but with the pool tick in center
             (int24 tickLower, int24 tickUpper) = _calcTick(tokenId);
 
             ///@dev call closePositionAction

@@ -73,7 +73,7 @@ contract DecreaseLiquidity is IDecreaseLiquidity {
                 liquidity: liquidityToDecrease,
                 amount0Min: 0,
                 amount1Min: 0,
-                deadline: block.timestamp + 120
+                deadline: block.timestamp
             });
 
         (amount0, amount1) = INonfungiblePositionManager(

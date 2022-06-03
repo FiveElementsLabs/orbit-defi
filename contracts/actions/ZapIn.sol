@@ -65,11 +65,9 @@ contract ZapIn is IZapIn {
             );
             amountInTo1 = amountIn.sub(amountInTo0);
         } else if (tickLower < tickPool && tickUpper < tickPool) {
-            amountInTo0 = 0;
             amountInTo1 = amountIn;
         } else {
             amountInTo0 = amountIn;
-            amountInTo1 = 0;
         }
 
         ERC20Helper._approveToken(tokenIn, Storage.uniswapAddressHolder.swapRouterAddress(), amountIn);
