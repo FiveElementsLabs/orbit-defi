@@ -11,8 +11,6 @@ import '../helpers/ERC20Helper.sol';
 import '../utils/Storage.sol';
 import '../../interfaces/actions/ISwapToPositionRatio.sol';
 
-import 'hardhat/console.sol';
-
 ///@notice action to swap to an exact position ratio
 contract SwapToPositionRatio is ISwapToPositionRatio {
     using SafeMath for uint256;
