@@ -4,13 +4,7 @@ import { ContractFactory, Contract, BigNumber } from 'ethers';
 import { AbiCoder } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import hre from 'hardhat';
-import UniswapV3Factoryjson from '@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json';
-import NonFungiblePositionManagerjson from '@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json';
-import NonFungiblePositionManagerDescriptorjson from '@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json';
-import PositionManagerjson from '../../../artifacts/contracts/PositionManager.sol/PositionManager.json';
-import SwapRouterjson from '@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json';
 import {
-  NonFungiblePositionManagerDescriptorBytecode,
   tokensFixture,
   poolFixture,
   mintSTDAmount,
@@ -52,6 +46,7 @@ describe('SwapToPositionRatio.sol', function () {
   let SwapToPositionRatioFallback: Contract; // SwapToPositionRatio contract
   let abiCoder: AbiCoder;
   let UniswapAddressHolder: Contract; // address holder for UniswapV3 contracts
+  let registry: Contract;
 
   before(async function () {
     await hre.network.provider.send('hardhat_reset');
@@ -76,7 +71,7 @@ describe('SwapToPositionRatio.sol', function () {
     await mintSTDAmount(tokenDai);
 
     //deploy our contracts
-    const registry = await deployContract('Registry', [user.address]);
+    registry = (await RegistryFixture(user.address)).registryFixture;
     const UniswapAddressHolder = await deployContract('UniswapAddressHolder', [
       NonFungiblePositionManager.address,
       Factory.address,
@@ -150,11 +145,28 @@ describe('SwapToPositionRatio.sol', function () {
   });
 
   describe('doAction', function () {
-    it('should correctly swap to exact position ratio', async function () {
+    it('should correctly swap to exact position ratio amount0In', async function () {
       const tickLower = -300;
       const tickUpper = 600;
       const amount0In = 1e5;
       const amount1In = 2e5;
+
+      await SwapToPositionRatioFallback.connect(user).swapToPositionRatio({
+        token0Address: tokenEth.address,
+        token1Address: tokenUsdc.address,
+        fee: 3000,
+        amount0In: amount0In,
+        amount1In: amount1In,
+        tickLower: tickLower,
+        tickUpper: tickUpper,
+      });
+    });
+
+    it('should correctly swap to exact position ratio amount1In', async function () {
+      const tickLower = -600;
+      const tickUpper = 300;
+      const amount0In = 2e5;
+      const amount1In = 1e5;
 
       await SwapToPositionRatioFallback.connect(user).swapToPositionRatio({
         token0Address: tokenEth.address,
@@ -193,12 +205,37 @@ describe('SwapToPositionRatio.sol', function () {
       expect(amount1Out.toNumber()).to.equal(100498);
     });
 
-    it('should revert if a too high/low tick is passed', async function () {
-      const tickLower = -60;
-      const tickUpper = 900000;
-      const amount0In = 7e5;
-      const amount1In = 5e5;
+    it('should fail to swap if twap deviation is too high', async function () {
+      // 0. change maxTwapDeviation to a small value (10)
+      // 1. make a big swap to change ticks by at least maxTwapDeviation
+      // 2. check tick has changed after swap
+      // 3. try to swap again and check that it fails for max twap deviation
 
+      await registry.setMaxTwapDeviation(10);
+      const tickBefore = (await Pool0.slot0()).tick;
+
+      // This swap should succeed
+      const tickLower = -800;
+      const tickUpper = 200;
+      let amount0In = '0x' + (1e24).toString(16);
+      let amount1In = '0x' + (1e24).toString(16);
+
+      await SwapToPositionRatioFallback.connect(user).swapToPositionRatio({
+        token0Address: tokenEth.address,
+        token1Address: tokenUsdc.address,
+        fee: 3000,
+        amount0In: amount0In,
+        amount1In: amount1In,
+        tickLower: tickLower,
+        tickUpper: tickUpper,
+      });
+
+      const tickAfter = (await Pool0.slot0()).tick;
+      expect(tickAfter).to.not.be.eq(tickBefore);
+
+      // This swap should fail because of maxTwapDeviation
+      amount0In = '0x' + (1e20).toString(16);
+      amount1In = '0x' + (1e18).toString(16);
       await expect(
         SwapToPositionRatioFallback.connect(user).swapToPositionRatio({
           token0Address: tokenEth.address,
@@ -209,7 +246,7 @@ describe('SwapToPositionRatio.sol', function () {
           tickLower: tickLower,
           tickUpper: tickUpper,
         })
-      ).to.be.reverted;
+      ).to.be.revertedWith('SwapHelper::checkDeviation: Price deviation is too high');
     });
 
     it('should revert if pool does not exist', async function () {

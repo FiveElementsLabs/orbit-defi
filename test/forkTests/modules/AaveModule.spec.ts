@@ -5,7 +5,6 @@ import { AbiCoder, TransactionDescription } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import hre from 'hardhat';
 import UniswapV3Factoryjson from '@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json';
-import PositionManagerjson from '../../../artifacts/contracts/PositionManager.sol/PositionManager.json';
 import NonFungiblePositionManagerjson from '@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json';
 import LendingPooljson from '@aave/protocol-v2/artifacts/contracts/protocol/lendingpool/LendingPool.sol/LendingPool.json';
 import SwapRouterjson from '@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json';
@@ -19,6 +18,7 @@ import {
   mintForkedTokens,
   getPositionManager,
   doAllApprovals,
+  RegistryFixture,
 } from '../../shared/fixtures';
 import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager } from '../../../typechain';
 
@@ -99,7 +99,7 @@ describe('AaveModule.sol', function () {
     LendingPool = await ethers.getContractAtFromArtifact(LendingPooljson, '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9');
 
     //deploy our contracts
-    const registry = await deployContract('Registry', [user.address]);
+    const registry = (await RegistryFixture(user.address)).registryFixture;
     const uniswapAddressHolder = await deployContract('UniswapAddressHolder', [
       NonFungiblePositionManager.address,
       '0x1F98431c8aD98523631AE4a59f267346ea31F984',
@@ -228,10 +228,7 @@ describe('AaveModule.sol', function () {
 
     const receipt: any = await mintTx.wait();
     tokenId = receipt.events[receipt.events.length - 1].args.tokenId;
-    /* 
-    // user approve AaveModule
-    await PositionManager.connect(user).toggleModule(tokenId, AaveModule.address, true);
-    await PositionManager.pushPositionId(tokenId); */
+
     await NonFungiblePositionManager.ownerOf(tokenId);
     await DepositRecipes.connect(user).depositUniNft([tokenId]);
     abiCoder = ethers.utils.defaultAbiCoder;
@@ -240,6 +237,8 @@ describe('AaveModule.sol', function () {
     aUsdc = await ethers.getContractAtFromArtifact(ATokenjson, aUsdcAddress);
     const aWbtcAddress = (await LendingPool.getReserveData(wbtcMock.address)).aTokenAddress;
     aWbtc = await ethers.getContractAtFromArtifact(ATokenjson, aWbtcAddress);
+
+    await registry.setMaxTwapDeviation(1000000);
   });
 
   describe('AaveModule - depositToAave', function () {
@@ -276,7 +275,7 @@ describe('AaveModule.sol', function () {
       expect(await aWbtc.balanceOf(PositionManager.address)).to.gt(0);
     });
 
-    it('should return to position if returns in range', async function () {
+    it('should return to position manager if it is back in range', async function () {
       while ((await Pool0.slot0()).tick >= tickUpper) {
         await swapRouter.connect(trader).exactInputSingle({
           tokenIn: wbtcMock.address,

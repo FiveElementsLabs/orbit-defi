@@ -55,6 +55,14 @@ contract ZapIn is IZapIn {
             UniswapNFTHelper._getPool(Storage.uniswapAddressHolder.uniswapV3FactoryAddress(), token0, token1, fee)
         ).slot0();
 
+        SwapHelper.checkDeviation(
+            IUniswapV3Pool(
+                UniswapNFTHelper._getPool(Storage.uniswapAddressHolder.uniswapV3FactoryAddress(), token0, token1, fee)
+            ),
+            Storage.registry.maxTwapDeviation(),
+            Storage.registry.twapDuration()
+        );
+
         uint256 amountInTo0;
         uint256 amountInTo1;
 

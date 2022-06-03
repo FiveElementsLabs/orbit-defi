@@ -4,7 +4,7 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
-import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
+import '@openzeppelin/contracts/math/SafeMath.sol';
 import '../helpers/SwapHelper.sol';
 import '../helpers/UniswapNFTHelper.sol';
 import '../helpers/ERC20Helper.sol';
@@ -13,6 +13,8 @@ import '../../interfaces/actions/ISwapToPositionRatio.sol';
 
 ///@notice action to swap to an exact position ratio
 contract SwapToPositionRatio is ISwapToPositionRatio {
+    using SafeMath for uint256;
+
     ///@notice emitted when a positionManager swaps to ratio
     ///@param positionManager address of PositionManager
     ///@param token0 address of first token of the pool
@@ -47,6 +49,9 @@ contract SwapToPositionRatio is ISwapToPositionRatio {
             )
         );
         (, int24 tickPool, , , , , ) = pool.slot0();
+
+        SwapHelper.checkDeviation(pool, Storage.registry.maxTwapDeviation(), Storage.registry.twapDuration());
+
         (uint256 amountToSwap, bool token0AddressIn) = SwapHelper.calcAmountToSwap(
             tickPool,
             inputs.tickLower,
@@ -60,7 +65,8 @@ contract SwapToPositionRatio is ISwapToPositionRatio {
                 token0AddressIn ? inputs.token0Address : inputs.token1Address,
                 token0AddressIn ? inputs.token1Address : inputs.token0Address,
                 inputs.fee,
-                amountToSwap
+                amountToSwap,
+                token0AddressIn
             );
 
             ///@notice return the new amount of the token swapped and the token returned
@@ -91,7 +97,8 @@ contract SwapToPositionRatio is ISwapToPositionRatio {
         address token0Address,
         address token1Address,
         uint24 fee,
-        uint256 amount0In
+        uint256 amount0In,
+        bool token0AddressIn
     ) internal returns (uint256 amount1Out) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         ISwapRouter swapRouter = ISwapRouter(Storage.uniswapAddressHolder.swapRouterAddress());

@@ -7,7 +7,7 @@ pragma solidity >=0.6.0 <0.8.0;
  * @dev Signed math operations with safety checks that revert on error.
  */
 library SignedSafeMath {
-    int24 private constant _INT_24_MIN = -2**23;
+    int24 private constant _INT_24_MIN = type(int24).min;
 
     /**
      * @dev Returns the multiplication of two signed integers, reverting on
@@ -27,10 +27,10 @@ library SignedSafeMath {
             return 0;
         }
 
-        require(!(a == -1 && b == _INT_24_MIN), 'SignedSafeMath: multiplication overflow');
+        require(!(a == -1 && b == _INT_24_MIN), 'SignedSafeMath::mul: multiplication overflow');
 
         int24 c = a * b;
-        require(c / a == b, 'SignedSafeMath: multiplication overflow');
+        require(c / a == b, 'SignedSafeMath::mul: multiplication overflow');
 
         return c;
     }
@@ -48,8 +48,8 @@ library SignedSafeMath {
      * - The divisor cannot be zero.
      */
     function div(int24 a, int24 b) internal pure returns (int24) {
-        require(b != 0, 'SignedSafeMath: division by zero');
-        require(!(b == -1 && a == _INT_24_MIN), 'SignedSafeMath: division overflow');
+        require(b != 0, 'SignedSafeMath::div: division by zero');
+        require(!(b == -1 && a == _INT_24_MIN), 'SignedSafeMath::div: division overflow');
 
         int24 c = a / b;
 
@@ -68,7 +68,7 @@ library SignedSafeMath {
      */
     function sub(int24 a, int24 b) internal pure returns (int24) {
         int24 c = a - b;
-        require((b >= 0 && c <= a) || (b < 0 && c > a), 'SignedSafeMath: subtraction overflow');
+        require((b >= 0 && c <= a) || (b < 0 && c > a), 'SignedSafeMath::sub: subtraction overflow');
 
         return c;
     }
@@ -85,7 +85,7 @@ library SignedSafeMath {
      */
     function add(int24 a, int24 b) internal pure returns (int24) {
         int24 c = a + b;
-        require((b >= 0 && c >= a) || (b < 0 && c < a), 'SignedSafeMath: addition overflow');
+        require((b >= 0 && c >= a) || (b < 0 && c < a), 'SignedSafeMath::add: addition overflow');
 
         return c;
     }

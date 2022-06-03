@@ -76,7 +76,7 @@ describe('IdleLiquidityModule.sol', function () {
     await mintSTDAmount(tokenUsdc);
 
     //deploy our contracts
-    const registry = await deployContract('Registry', [user.address]);
+    const registry = (await RegistryFixture(user.address)).registryFixture;
     const uniswapAddressHolder = await deployContract('UniswapAddressHolder', [
       NonFungiblePositionManager.address,
       Factory.address,

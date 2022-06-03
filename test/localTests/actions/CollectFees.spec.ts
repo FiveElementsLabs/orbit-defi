@@ -4,11 +4,6 @@ import { ContractFactory, Contract } from 'ethers';
 import { AbiCoder } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import hre from 'hardhat';
-import UniswapV3Factoryjson from '@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json';
-import NonFungiblePositionManagerjson from '@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json';
-import NonFungiblePositionManagerDescriptorjson from '@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json';
-import PositionManagerjson from '../../../artifacts/contracts/PositionManager.sol/PositionManager.json';
-import SwapRouterjson from '@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json';
 import {
   tokensFixture,
   poolFixture,
@@ -18,6 +13,7 @@ import {
   deployPositionManagerFactoryAndActions,
   getPositionManager,
   doAllApprovals,
+  RegistryFixture,
 } from '../../shared/fixtures';
 import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager } from '../../../typechain';
 
@@ -69,7 +65,7 @@ describe('CollectFees.sol', function () {
     await mintSTDAmount(tokenUsdc);
 
     //deploy our contracts
-    const registry = await deployContract('Registry', [user.address]);
+    const registry = (await RegistryFixture(user.address)).registryFixture;
     const uniswapAddressHolder = await deployContract('UniswapAddressHolder', [
       NonFungiblePositionManager.address,
       Factory.address,

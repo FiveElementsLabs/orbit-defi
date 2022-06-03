@@ -12,6 +12,7 @@ import {
   doAllApprovals,
   deployPositionManagerFactoryAndActions,
   getPositionManager,
+  RegistryFixture,
 } from '../../shared/fixtures';
 import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, DepositRecipes } from '../../../typechain';
 
@@ -75,7 +76,7 @@ describe('DepositRecipes.sol', function () {
     await mintSTDAmount(tokenDai);
 
     //deploy our contracts
-    registry = await deployContract('Registry', [user.address]);
+    registry = (await RegistryFixture(user.address)).registryFixture;
     UniswapAddressHolder = await deployContract('UniswapAddressHolder', [
       NonFungiblePositionManager.address,
       Factory.address,

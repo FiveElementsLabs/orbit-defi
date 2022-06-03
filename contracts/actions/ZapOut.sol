@@ -7,6 +7,7 @@ import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.s
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '../helpers/UniswapNFTHelper.sol';
 import '../helpers/ERC20Helper.sol';
+import '../helpers/SwapHelper.sol';
 import '../utils/Storage.sol';
 import '../../interfaces/IPositionManager.sol';
 import '../../interfaces/actions/IZapOut.sol';
@@ -26,12 +27,12 @@ contract ZapOut is IZapOut {
     ///@return uint256 amount of tokenOut withdrawn
     function zapOut(uint256 tokenId, address tokenOut) public override returns (uint256) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
+
         INonfungiblePositionManager nonfungiblePositionManager = INonfungiblePositionManager(
             Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()
         );
 
         (address token0, address token1, , , ) = UniswapNFTHelper._getTokens(tokenId, nonfungiblePositionManager);
-
         (, , , , , , , uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(tokenId);
 
         nonfungiblePositionManager.decreaseLiquidity(
@@ -83,20 +84,32 @@ contract ZapOut is IZapOut {
     ) internal returns (uint256 amountOut) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
-        address swapRouterAddress = Storage.uniswapAddressHolder.swapRouterAddress();
+        uint24 bestFee = _findBestFee(tokenIn, tokenOut);
 
-        ERC20Helper._approveToken(tokenIn, swapRouterAddress, amountIn);
+        SwapHelper.checkDeviation(
+            IUniswapV3Pool(
+                UniswapNFTHelper._getPool(
+                    Storage.uniswapAddressHolder.uniswapV3FactoryAddress(),
+                    tokenIn,
+                    tokenOut,
+                    bestFee
+                )
+            ),
+            Storage.registry.maxTwapDeviation(),
+            Storage.registry.twapDuration()
+        );
 
-        ISwapRouter swapRouter = ISwapRouter(swapRouterAddress);
-        amountOut = swapRouter.exactInputSingle(
+        ERC20Helper._approveToken(tokenIn, Storage.uniswapAddressHolder.swapRouterAddress(), amountIn);
+
+        amountOut = ISwapRouter(Storage.uniswapAddressHolder.swapRouterAddress()).exactInputSingle(
             ISwapRouter.ExactInputSingleParams({
                 tokenIn: tokenIn,
                 tokenOut: tokenOut,
-                fee: _findBestFee(tokenIn, tokenOut),
+                fee: bestFee,
                 recipient: address(this),
                 deadline: block.timestamp,
                 amountIn: amountIn,
-                amountOutMinimum: 1,
+                amountOutMinimum: 0,
                 sqrtPriceLimitX96: 0
             })
         );
@@ -109,7 +122,7 @@ contract ZapOut is IZapOut {
     ///@return fee suggested fee tier
     function _findBestFee(address token0, address token1) internal view returns (uint24 fee) {
         uint128 bestLiquidity;
-        uint16[4] memory fees = [100, 500, 3000, 10000];
+        uint16[4] memory fees = [100, 500, 3_000, 10_000];
 
         for (uint8 i; i < 4; ++i) {
             try this.getPoolLiquidity(token0, token1, uint24(fees[i])) returns (uint128 nextLiquidity) {

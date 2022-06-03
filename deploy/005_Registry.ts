@@ -8,9 +8,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const { deployer } = await getNamedAccounts();
 
+  const maxTwapDeviation = 300;
+  const twapDuration = 3;
+
   await deploy('Registry', {
     from: deployer,
-    args: [deployer],
+    args: [deployer, maxTwapDeviation, twapDuration],
     log: true,
     autoMine: true,
   });

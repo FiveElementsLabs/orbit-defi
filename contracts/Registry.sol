@@ -4,10 +4,13 @@ pragma abicoder v2;
 
 import '../interfaces/IRegistry.sol';
 
-/// @title Stores all the contract addresses
+/// @title Stores all the governance variables
 contract Registry is IRegistry {
     address public override governance;
     address public override positionManagerFactoryAddress;
+    int24 public override maxTwapDeviation;
+    uint32 public override twapDuration;
+
     mapping(address => bool) public whitelistedKeepers;
     mapping(bytes32 => Entry) public modules;
     bytes32[] public moduleKeys;
@@ -32,8 +35,23 @@ contract Registry is IRegistry {
     ///@param isActive true if module is switched on, false otherwise
     event ModuleSwitched(bytes32 moduleId, bool isActive);
 
-    constructor(address _governance) {
+    constructor(
+        address _governance,
+        int24 _maxTwapDeviation,
+        uint32 _twapDuration
+    ) {
+        require(_governance != address(0), 'Registry::constructor: governance cannot be address(0).');
+        require(_twapDuration != 0, 'Registry::constructor: twapDuration cannot be 0.');
+
         governance = _governance;
+        maxTwapDeviation = _maxTwapDeviation;
+        twapDuration = _twapDuration;
+    }
+
+    ///@notice modifier to check if the sender is the governance contract
+    modifier onlyGovernance() {
+        require(msg.sender == governance, 'Registry::onlyGovernance: Call must come from governance.');
+        _;
     }
 
     ///@notice sets the Position manager factory address
@@ -133,6 +151,19 @@ contract Registry is IRegistry {
         modules[_id].activatedByDefault = _activatedByDefault;
     }
 
+    ///@notice set oracle price deviation threshold
+    ///@param _maxTwapDeviation the new oracle price deviation threshold
+    function setMaxTwapDeviation(int24 _maxTwapDeviation) external onlyGovernance {
+        maxTwapDeviation = _maxTwapDeviation;
+    }
+
+    ///@notice set twap duration
+    ///@param _twapDuration the new twap duration
+    function setTwapDuration(uint32 _twapDuration) external onlyGovernance {
+        require(_twapDuration != 0, 'Registry::setTwapDuration: Twap duration cannot be 0.');
+        twapDuration = _twapDuration;
+    }
+
     ///@notice Get the address of a module for a given key
     ///@param _id keccak256 of module id string
     ///@return address of the module
@@ -163,11 +194,5 @@ contract Registry is IRegistry {
     ///@return bool true if whitelisted, false otherwise
     function isWhitelistedKeeper(address _keeper) public view override returns (bool) {
         return whitelistedKeepers[_keeper];
-    }
-
-    ///@notice modifier to check if the sender is the governance contract
-    modifier onlyGovernance() {
-        require(msg.sender == governance, 'Registry::onlyGovernance: Call must come from governance.');
-        _;
     }
 }
