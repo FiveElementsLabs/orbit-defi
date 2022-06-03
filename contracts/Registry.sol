@@ -11,7 +11,7 @@ contract Registry is IRegistry {
     int24 public override maxTwapDeviation;
     uint32 public override twapDuration;
 
-    address[] public whitelistedKeepers;
+    mapping(address => bool) public whitelistedKeepers;
     mapping(bytes32 => Entry) public modules;
     bytes32[] public moduleKeys;
 
@@ -117,7 +117,14 @@ contract Registry is IRegistry {
     ///@param _keeper address of the new keeper
     function addKeeperToWhitelist(address _keeper) external override onlyGovernance {
         require(!isWhitelistedKeeper(_keeper), 'Registry::addKeeperToWhitelist: Keeper is already whitelisted.');
-        whitelistedKeepers.push(_keeper);
+        whitelistedKeepers[_keeper] = true;
+    }
+
+    ///@notice remove a whitelisted keeper
+    ///@param _keeper address of the keeper to remove
+    function removeKeeperFromWhitelist(address _keeper) external override onlyGovernance {
+        require(isWhitelistedKeeper(_keeper), 'Registry::addKeeperToWhitelist: Keeper is not whitelisted.');
+        whitelistedKeepers[_keeper] = false;
     }
 
     ///@notice Get the keys for all modules
@@ -186,12 +193,6 @@ contract Registry is IRegistry {
     ///@param _keeper address to check
     ///@return bool true if whitelisted, false otherwise
     function isWhitelistedKeeper(address _keeper) public view override returns (bool) {
-        uint256 whitelistedKeeperLength = whitelistedKeepers.length;
-        for (uint256 i; i < whitelistedKeeperLength; ++i) {
-            if (whitelistedKeepers[i] == _keeper) {
-                return true;
-            }
-        }
-        return false;
+        return whitelistedKeepers[_keeper];
     }
 }

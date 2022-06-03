@@ -84,8 +84,6 @@ contract ZapOut is IZapOut {
     ) internal returns (uint256 amountOut) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
-        ERC20Helper._approveToken(tokenIn, Storage.uniswapAddressHolder.swapRouterAddress(), amountIn);
-
         uint24 bestFee = _findBestFee(tokenIn, tokenOut);
 
         SwapHelper.checkDeviation(
@@ -101,6 +99,8 @@ contract ZapOut is IZapOut {
             Storage.registry.twapDuration()
         );
 
+        ERC20Helper._approveToken(tokenIn, Storage.uniswapAddressHolder.swapRouterAddress(), amountIn);
+
         amountOut = ISwapRouter(Storage.uniswapAddressHolder.swapRouterAddress()).exactInputSingle(
             ISwapRouter.ExactInputSingleParams({
                 tokenIn: tokenIn,
@@ -109,7 +109,7 @@ contract ZapOut is IZapOut {
                 recipient: address(this),
                 deadline: block.timestamp,
                 amountIn: amountIn,
-                amountOutMinimum: 1,
+                amountOutMinimum: 0,
                 sqrtPriceLimitX96: 0
             })
         );

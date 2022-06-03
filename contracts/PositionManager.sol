@@ -243,12 +243,13 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
         returns (uint256)
     {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
+        AaveReserve storage aaveUserReserves = Storage.aaveUserReserves[token];
         require(
-            Storage.aaveUserReserves[token].positionShares[id] > 0,
+            aaveUserReserves.positionShares[id] != 0,
             'PositionManager::getOldPositionData: positionShares does not exist'
         );
 
-        return Storage.aaveUserReserves[token].tokenIds[id];
+        return aaveUserReserves.tokenIds[id];
     }
 
     ///@notice removes position data from aave positions array

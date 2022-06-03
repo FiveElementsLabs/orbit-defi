@@ -57,9 +57,11 @@ contract IdleLiquidityModule is BaseModule {
             (, , address token0, address token1, uint24 fee, , , , , , , ) = INonfungiblePositionManager(
                 uniswapAddressHolder.nonfungiblePositionManagerAddress()
             ).positions(tokenId);
-
-            ///@dev calc tickLower and tickUpper with the same delta as the position but with the pool tick in center
-            (int24 tickLower, int24 tickUpper) = _calcTick(tokenId);
+            ///@dev calc tickLower and tickUpper with the same delta as the position but with tick of the pool in center
+            (int24 tickLower, int24 tickUpper) = _calcTick(
+                tokenId,
+                uniswapAddressHolder.nonfungiblePositionManagerAddress()
+            );
 
             ///@dev call closePositionAction
             (, uint256 amount0Closed, uint256 amount1Closed) = IClosePosition(address(positionManager)).closePosition(
@@ -100,9 +102,13 @@ contract IdleLiquidityModule is BaseModule {
     ///@param tokenId tokenId of the position
     ///@return int24 tickLower
     ///@return int24 tickUpper
-    function _calcTick(uint256 tokenId) internal view returns (int24, int24) {
+    function _calcTick(uint256 tokenId, address nonfungiblePositionManagerAddress)
+        internal
+        view
+        returns (int24, int24)
+    {
         (, , , , uint24 fee, int24 tickLower, int24 tickUpper, , , , , ) = INonfungiblePositionManager(
-            uniswapAddressHolder.nonfungiblePositionManagerAddress()
+            nonfungiblePositionManagerAddress
         ).positions(tokenId);
 
         int24 tickDelta = tickUpper.sub(tickLower);
@@ -110,7 +116,7 @@ contract IdleLiquidityModule is BaseModule {
         IUniswapV3Pool pool = IUniswapV3Pool(
             UniswapNFTHelper._getPoolFromTokenId(
                 tokenId,
-                INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()),
+                INonfungiblePositionManager(nonfungiblePositionManagerAddress),
                 uniswapAddressHolder.uniswapV3FactoryAddress()
             )
         );

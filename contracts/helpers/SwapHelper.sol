@@ -52,7 +52,7 @@ library SwapHelper {
         uint256 amount0In,
         uint256 amount1In
     ) internal pure returns (uint256 amountToSwap, bool token0In) {
-        require(amount0In > 0 || amount1In > 0, 'SwapHelper::calcAmountToSwap: at least one amountIn should be > 0');
+        require(amount0In != 0 || amount1In != 0, 'SwapHelper::calcAmountToSwap: at least one amountIn should be != 0');
 
         if (tickPool <= tickLower) {
             amountToSwap = amount0In;

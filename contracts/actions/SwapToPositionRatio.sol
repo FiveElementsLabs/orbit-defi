@@ -40,13 +40,14 @@ contract SwapToPositionRatio is ISwapToPositionRatio {
     {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
-        address poolAddress = UniswapNFTHelper._getPool(
-            Storage.uniswapAddressHolder.uniswapV3FactoryAddress(),
-            inputs.token0Address,
-            inputs.token1Address,
-            inputs.fee
+        IUniswapV3Pool pool = IUniswapV3Pool(
+            UniswapNFTHelper._getPool(
+                Storage.uniswapAddressHolder.uniswapV3FactoryAddress(),
+                inputs.token0Address,
+                inputs.token1Address,
+                inputs.fee
+            )
         );
-        IUniswapV3Pool pool = IUniswapV3Pool(poolAddress);
         (, int24 tickPool, , , , , ) = pool.slot0();
 
         SwapHelper.checkDeviation(pool, Storage.registry.maxTwapDeviation(), Storage.registry.twapDuration());
