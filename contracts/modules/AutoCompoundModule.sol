@@ -15,9 +15,9 @@ import '../helpers/UniswapNFTHelper.sol';
 import '../utils/Storage.sol';
 
 contract AutoCompoundModule is BaseModule {
-    using SafeMath for uint256;
+    IUniswapAddressHolder public immutable addressHolder;
 
-    IUniswapAddressHolder addressHolder;
+    using SafeMath for uint256;
 
     ///@notice constructor of autoCompoundModule
     ///@param _addressHolder the address of the uniswap address holder contract
@@ -26,7 +26,6 @@ contract AutoCompoundModule is BaseModule {
         require(_addressHolder != address(0), 'AutoCompoundModule::Constructor:addressHolder cannot be 0');
         require(_registry != address(0), 'AutoCompoundModule::Constructor:registry cannot be 0');
         addressHolder = IUniswapAddressHolder(_addressHolder);
-        registry = IRegistry(_registry);
     }
 
     ///@notice executes our recipe for autocompounding

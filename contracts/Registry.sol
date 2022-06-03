@@ -57,12 +57,17 @@ contract Registry is IRegistry {
     ///@notice sets the Position manager factory address
     ///@param _positionManagerFactory the address of the position manager factory
     function setPositionManagerFactory(address _positionManagerFactory) external onlyGovernance {
+        require(
+            _positionManagerFactory != address(0),
+            'Registry::setPositionManagerFactory: New position manager factory cannot be the null address'
+        );
         positionManagerFactoryAddress = _positionManagerFactory;
     }
 
     ///@notice change the address of the governance
     ///@param _governance the address of the new governance
     function changeGovernance(address _governance) external onlyGovernance {
+        require(_governance != address(0), 'Registry::changeGovernance: New governance cannot be the null address');
         governance = _governance;
         emit GovernanceChanged(_governance);
     }
@@ -181,7 +186,8 @@ contract Registry is IRegistry {
     ///@param _keeper address to check
     ///@return bool true if whitelisted, false otherwise
     function isWhitelistedKeeper(address _keeper) public view override returns (bool) {
-        for (uint256 i = 0; i < whitelistedKeepers.length; i++) {
+        uint256 whitelistedKeeperLength = whitelistedKeepers.length;
+        for (uint256 i; i < whitelistedKeeperLength; ++i) {
             if (whitelistedKeepers[i] == _keeper) {
                 return true;
             }

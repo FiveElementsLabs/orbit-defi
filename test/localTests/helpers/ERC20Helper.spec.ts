@@ -104,18 +104,6 @@ describe('TestERC20Helper', () => {
   });
 
   describe('TestERC20Helper - withdrawTokens', function () {
-    it('should give transfer amount exceeds allowance', async function () {
-      await tokenEth.connect(owner).transfer(TestERC20Helper.address, '100000000000000');
-
-      await expect(
-        TestERC20Helper.connect(owner).withdrawTokens(
-          tokenEth.address,
-          owner.address,
-          ethers.utils.parseEther('100000')
-        )
-      ).to.be.revertedWith('ERC20: transfer amount exceeds allowance');
-    });
-
     it('withdraws tokens from owner to ', async function () {
       await mintSTDAmount(tokenEth);
       await tokenEth.connect(owner).approve(TestERC20Helper.address, ethers.utils.parseEther('100000000000000'));

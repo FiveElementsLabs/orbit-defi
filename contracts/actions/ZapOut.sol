@@ -41,7 +41,7 @@ contract ZapOut is IZapOut {
                 liquidity: liquidity,
                 amount0Min: 0,
                 amount1Min: 0,
-                deadline: block.timestamp + 120
+                deadline: block.timestamp
             })
         );
 
@@ -107,7 +107,7 @@ contract ZapOut is IZapOut {
                 tokenOut: tokenOut,
                 fee: bestFee,
                 recipient: address(this),
-                deadline: block.timestamp + 120,
+                deadline: block.timestamp,
                 amountIn: amountIn,
                 amountOutMinimum: 1,
                 sqrtPriceLimitX96: 0
@@ -123,7 +123,7 @@ contract ZapOut is IZapOut {
         uint128 bestLiquidity;
         uint16[4] memory fees = [100, 500, 3_000, 10_000];
 
-        for (uint8 i = 0; i < 4; i++) {
+        for (uint8 i; i < 4; ++i) {
             try this.getPoolLiquidity(token0, token1, uint24(fees[i])) returns (uint128 nextLiquidity) {
                 if (nextLiquidity > bestLiquidity) {
                     bestLiquidity = nextLiquidity;

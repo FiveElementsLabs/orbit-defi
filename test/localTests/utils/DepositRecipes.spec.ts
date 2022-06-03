@@ -401,7 +401,6 @@ describe('DepositRecipes.sol', function () {
       await DepositRecipes.connect(user).depositUniNft([tokenId]);
       const moduleData = await PositionManager.getModuleInfo(tokenId, AutoCompoundModule.address);
 
-      console.log('autocompound address: ', AutoCompoundModule.address);
       expect(moduleData[0]).to.be.equal(true);
       expect(moduleData[1]).to.be.equal(hre.ethers.utils.formatBytes32String('5'));
     });

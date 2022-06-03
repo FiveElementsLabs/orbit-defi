@@ -49,7 +49,7 @@ library ERC20Helper {
         address from,
         uint256 amount
     ) internal returns (uint256) {
-        uint256 needed = 0;
+        uint256 needed;
         uint256 balance = _getBalance(token, address(this));
         if (balance < amount) {
             require(amount - balance <= _getBalance(token, from), 'Not enough balance to pull tokens');
@@ -65,8 +65,8 @@ library ERC20Helper {
         return needed;
     }
 
-    ///@notice withdraw the tokens from the vault and send them to the user
-    ///@param token address of the token
+    ///@notice withdraw the tokens from the vault and send them to the user. Send all if the amount is greater than the vault's balance.
+    ///@param token address of the token to withdraw
     ///@param to address of the user
     ///@param amount amount of tokens to withdraw
     function _withdrawTokens(
@@ -75,12 +75,13 @@ library ERC20Helper {
         uint256 amount
     ) internal returns (uint256 amountOut) {
         uint256 balance = _getBalance(token, address(this));
-        if (balance < amount) {
+
+        if (amount >= balance) {
             amountOut = balance;
         } else {
             amountOut = amount;
         }
-        IERC20(token).safeTransferFrom(address(this), to, amountOut);
+        IERC20(token).safeTransfer(to, amountOut);
     }
 
     ///@notice get the balance of the token for the given address

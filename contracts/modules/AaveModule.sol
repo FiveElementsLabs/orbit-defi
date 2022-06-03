@@ -21,8 +21,8 @@ import '../../interfaces/actions/IIncreaseLiquidity.sol';
 import '../../interfaces/ILendingPool.sol';
 
 contract AaveModule is BaseModule {
-    IAaveAddressHolder public aaveAddressHolder;
-    IUniswapAddressHolder public uniswapAddressHolder;
+    IAaveAddressHolder public immutable aaveAddressHolder;
+    IUniswapAddressHolder public immutable uniswapAddressHolder;
     using SignedSafeMath for int24;
 
     constructor(
@@ -37,15 +37,31 @@ contract AaveModule is BaseModule {
     ///@notice deposit a position in an Aave lending pool
     ///@param positionManager address of the position manager
     ///@param tokenId id of the Uniswap position to deposit
-
-    function depositIfNeeded(address positionManager, uint256 tokenId) public activeModule(positionManager, tokenId) {
+    function depositIfNeeded(address positionManager, uint256 tokenId)
+        public
+        activeModule(positionManager, tokenId)
+        onlyWhitelistedKeeper
+    {
         (, bytes32 data) = IPositionManager(positionManager).getModuleInfo(tokenId, address(this));
 
         require(data != bytes32(0), 'AaveModule::depositIfNeeded: module data cannot be empty');
 
         uint24 rebalanceDistance = MathHelper.fromUint256ToUint24(uint256(data));
         ///@dev move token to aave only if the position's range is outside of the tick of the pool
-        if (_checkDistanceFromRange(tokenId) > 0 && rebalanceDistance <= _checkDistanceFromRange(tokenId)) {
+        if (
+            UniswapNFTHelper._checkDistanceFromRange(
+                tokenId,
+                uniswapAddressHolder.nonfungiblePositionManagerAddress(),
+                uniswapAddressHolder.uniswapV3FactoryAddress()
+            ) >
+            0 &&
+            rebalanceDistance <=
+            UniswapNFTHelper._checkDistanceFromRange(
+                tokenId,
+                uniswapAddressHolder.nonfungiblePositionManagerAddress(),
+                uniswapAddressHolder.uniswapV3FactoryAddress()
+            )
+        ) {
             _depositToAave(positionManager, tokenId);
         }
     }
@@ -100,7 +116,7 @@ contract AaveModule is BaseModule {
             INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress())
         );
 
-        address toAaveToken = address(0);
+        address toAaveToken;
         if (tickPool > tickLower && tickPool > tickUpper) toAaveToken = token0;
         else if (tickPool < tickLower && tickPool < tickUpper) toAaveToken = token1;
 
@@ -177,50 +193,15 @@ contract AaveModule is BaseModule {
         IPositionManager(positionManager).pushPositionId(tokenId);
     }
 
-    ///@notice checkDistance from ticklower tickupper from tick of the pools
-    ///@param tokenId tokenId of the position
-    ///@return int24 distance from ticklower tickupper from tick of the pools and return the minimum distance
-    function _checkDistanceFromRange(uint256 tokenId) internal view returns (uint24) {
-        (
-            ,
-            ,
-            address token0,
-            address token1,
-            uint24 fee,
-            int24 tickLower,
-            int24 tickUpper,
-            ,
-            ,
-            ,
-            ,
-
-        ) = INonfungiblePositionManager(address(uniswapAddressHolder.nonfungiblePositionManagerAddress())).positions(
-                tokenId
-            );
-
-        IUniswapV3Pool pool = IUniswapV3Pool(
-            UniswapNFTHelper._getPool(address(uniswapAddressHolder.uniswapV3FactoryAddress()), token0, token1, fee)
-        );
-        (, int24 tick, , , , , ) = pool.slot0();
-
-        if (tick > tickUpper) {
-            return MathHelper.fromInt24ToUint24(tick.sub(tickUpper));
-        } else if (tick < tickLower) {
-            return MathHelper.fromInt24ToUint24(tickLower.sub(tick));
-        } else {
-            return 0;
-        }
-    }
-
     ///@notice finds the best fee tier on which to perform a swap
     ///@param token0 address of first token
     ///@param token1 address of second token
     ///@return fee suggested fee tier
     function _findBestFee(address token0, address token1) internal view returns (uint24 fee) {
-        uint128 bestLiquidity = 0;
+        uint128 bestLiquidity;
         uint16[4] memory fees = [100, 500, 3000, 10000];
 
-        for (uint256 i = 0; i < 4; i++) {
+        for (uint256 i; i < 4; ++i) {
             try this.getPoolLiquidity(token0, token1, uint24(fees[i])) returns (uint128 nextLiquidity) {
                 if (nextLiquidity > bestLiquidity) {
                     bestLiquidity = nextLiquidity;
