@@ -324,17 +324,15 @@ describe('ZapOut.sol', function () {
       const tokenId = mintReceipt.events[mintReceipt.events.length - 1].args.tokenId.toNumber();
 
       await registry.setMaxTwapDeviation(10);
-      const tickBefore1 = (await PoolEthDai500.slot0()).tick;
-      const tickBefore2 = (await PoolUsdcDai500.slot0()).tick;
+
+      const tickBefore1 = (await PoolEthDai3000.slot0()).tick;
+      const tickBefore2 = (await PoolUsdcDai3000.slot0()).tick;
 
       // This zap should succeed
       await ZapOutFallback.connect(user).zapOut(tokenId, tokenDai.address);
 
-      const tickAfter1 = (await PoolEthDai500.slot0()).tick;
-      const tickAfter2 = (await PoolUsdcDai500.slot0()).tick;
-
-      console.log('TICKS 1: ', tickBefore1, tickAfter1);
-      console.log('TICKS 2: ', tickBefore2, tickAfter2);
+      const tickAfter1 = (await PoolEthDai3000.slot0()).tick;
+      const tickAfter2 = (await PoolUsdcDai3000.slot0()).tick;
 
       expect(tickAfter1).to.not.be.eq(tickBefore1);
       expect(tickAfter2).to.not.be.eq(tickBefore2);

@@ -12,8 +12,6 @@ import '../utils/Storage.sol';
 import '../../interfaces/IPositionManager.sol';
 import '../../interfaces/actions/IZapOut.sol';
 
-import 'hardhat/console.sol';
-
 ///@notice ZapOut allows users to close positions and withdraw to a single output token
 contract ZapOut is IZapOut {
     ///@notice emitted when a UniswapNFT is zapped out
@@ -35,7 +33,6 @@ contract ZapOut is IZapOut {
         );
 
         (address token0, address token1, , , ) = UniswapNFTHelper._getTokens(tokenId, nonfungiblePositionManager);
-
         (, , , , , , , uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(tokenId);
 
         nonfungiblePositionManager.decreaseLiquidity(
@@ -90,7 +87,6 @@ contract ZapOut is IZapOut {
         ERC20Helper._approveToken(tokenIn, Storage.uniswapAddressHolder.swapRouterAddress(), amountIn);
 
         uint24 bestFee = _findBestFee(tokenIn, tokenOut);
-        console.log('bestFee', (bestFee));
 
         SwapHelper.checkDeviation(
             IUniswapV3Pool(
