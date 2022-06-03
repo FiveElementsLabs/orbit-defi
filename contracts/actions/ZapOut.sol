@@ -103,6 +103,7 @@ contract ZapOut is IZapOut {
     }
 
     ///@notice finds the best fee tier on which to perform a swap
+    ///@dev this only tracks the currently in range liquidity, disregarding the range that could be reached with our swap
     ///@param token0 address of first token
     ///@param token1 address of second token
     ///@return fee suggested fee tier
