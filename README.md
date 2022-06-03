@@ -71,7 +71,7 @@ npx hardhat test ./test/actions/Mint.spec.tx
 
 ## Security
 
-If you find bugs, please [contact us on Discord](https://discord.gg/WVpsDphE).
+If you find bugs, please [contact us on Discord](https://discord.gg/WVpsDphE). Alternatively, you can open an issue here on GitHub or send an email to [vincenzo@fiveelementslabs.com](mailto:vincenzo@fiveelementslabs.com).
 
 ## Documentation
 
@@ -79,4 +79,7 @@ You can read more about Orbit DeFi on our [documentation website](https://fiveel
 
 ## Licensing
 
-The primary license for Orbit Vault is the Open Source License [MIT](https://spdx.org/licenses/MIT.html).
+The primary license for Orbit DeFi is the GNU General Public License v2.0 (GPLv2).
+You can [read the full LICENSE here](./LICENSE).
+
+If you need to get in touch, please send an email to [vincenzo@fiveelementslabs.com](mailto:vincenzo@fiveelementslabs.com) or [Join our Discord server](https://discord.gg/WVpsDphE).

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL v2
 
 pragma solidity >=0.6.0 <0.8.0;
 
