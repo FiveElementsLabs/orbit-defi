@@ -7,8 +7,11 @@
   "scripts": {
     "node": "npx hardhat node",
     "deploy:mumbai": "npx hardhat --network mumbai deploy",
-    "post_deploy:mumbai": "npx hardhat --network mumbai deploy --tags PostDeploy",
-    "deploy:polygon": "npx hardhat --network polygon deploy"
+    "postDeploy:mumbai": "npx hardhat --network mumbai deploy --tags PostDeploy",
+    "verify:mumbai": "npx hardhat --network mumbai etherscan-verify --sleep",
+    "deploy:polygon": "npx hardhat --network polygon deploy",
+    "postDeploy:polygon": "npx hardhat --network polygon deploy --tags PostDeploy",
+    "verify:polygon": "npx hardhat --network polygon etherscan-verify --sleep"
   },
   "devDependencies": {
     "@aave/protocol-v2": "^1.0.1",

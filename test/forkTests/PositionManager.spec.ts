@@ -88,7 +88,7 @@ describe('PositionManager.sol', function () {
     await mintSTDAmount(tokenDai);
 
     //LendingPool contract
-    LendingPool = await ethers.getContractAtFromArtifact(LendingPooljson, '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9');
+    LendingPool = await ethers.getContractAt(LendingPooljson.abi, '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9');
 
     //deploy our contracts
     Registry = (await RegistryFixture(user.address)).registryFixture;

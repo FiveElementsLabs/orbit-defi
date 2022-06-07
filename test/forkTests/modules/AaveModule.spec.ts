@@ -83,20 +83,20 @@ describe('AaveModule.sol', function () {
     await mintSTDAmount(tokenEth);
     await mintSTDAmount(tokenUsdc);
 
-    NonFungiblePositionManager = (await ethers.getContractAtFromArtifact(
-      NonFungiblePositionManagerjson,
+    NonFungiblePositionManager = (await ethers.getContractAt(
+      NonFungiblePositionManagerjson.abi,
       '0xC36442b4a4522E871399CD717aBDD847Ab11FE88'
     )) as INonfungiblePositionManager;
 
-    Pool0 = (await ethers.getContractAtFromArtifact(
-      UniswapV3Pooljson,
+    Pool0 = (await ethers.getContractAt(
+      UniswapV3Pooljson.abi,
       '0x99ac8cA7087fA4A2A1FB6357269965A2014ABc35'
     )) as IUniswapV3Pool;
 
     //deploy SwapRouter
-    swapRouter = await ethers.getContractAtFromArtifact(SwapRouterjson, '0xE592427A0AEce92De3Edee1F18E0157C05861564');
+    swapRouter = await ethers.getContractAt(SwapRouterjson.abi, '0xE592427A0AEce92De3Edee1F18E0157C05861564');
     //LendingPool contract
-    LendingPool = await ethers.getContractAtFromArtifact(LendingPooljson, '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9');
+    LendingPool = await ethers.getContractAt(LendingPooljson.abi, '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9');
 
     //deploy our contracts
     const registry = (await RegistryFixture(user.address)).registryFixture;
@@ -234,9 +234,9 @@ describe('AaveModule.sol', function () {
     abiCoder = ethers.utils.defaultAbiCoder;
 
     const aUsdcAddress = (await LendingPool.getReserveData(usdcMock.address)).aTokenAddress;
-    aUsdc = await ethers.getContractAtFromArtifact(ATokenjson, aUsdcAddress);
+    aUsdc = await ethers.getContractAt(ATokenjson.abi, aUsdcAddress);
     const aWbtcAddress = (await LendingPool.getReserveData(wbtcMock.address)).aTokenAddress;
-    aWbtc = await ethers.getContractAtFromArtifact(ATokenjson, aWbtcAddress);
+    aWbtc = await ethers.getContractAt(ATokenjson.abi, aWbtcAddress);
 
     await registry.setMaxTwapDeviation(1000000);
   });

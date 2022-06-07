@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL v2
+// SPDX-License-Identifier: GPL-2.0-or-later
 
 struct ModulesToggle {
     address module;

@@ -56,7 +56,7 @@ describe('AaveDeposit.sol', function () {
     //deploy first pool
     Pool0 = (await poolFixture(tokenEth, tokenUsdc, 3000, Factory)).pool;
     //LendingPool contract
-    LendingPool = await ethers.getContractAtFromArtifact(LendingPooljson, '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9');
+    LendingPool = await ethers.getContractAt(LendingPooljson.abi, '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9');
 
     //mint 1e30 token, you can call with arbitrary amount
     await mintSTDAmount(tokenEth);
@@ -120,7 +120,7 @@ describe('AaveDeposit.sol', function () {
       const tx = await AaveDepositFallback.connect(user).depositToAave(usdcMock.address, 10000);
 
       const aUsdcAddress = (await LendingPool.getReserveData(usdcMock.address)).aTokenAddress;
-      const aUsdc = await ethers.getContractAtFromArtifact(ATokenjson, aUsdcAddress);
+      const aUsdc = await ethers.getContractAt(ATokenjson.abi, aUsdcAddress);
       expect((await aUsdc.balanceOf(PositionManager.address)).toNumber()).to.be.closeTo(10000, 10);
 
       const events = (await tx.wait()).events;
