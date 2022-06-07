@@ -2,32 +2,32 @@ import { ethers } from 'hardhat';
 import { Config } from '../deploy/000_Config';
 
 async function main() {
-  const provider = new ethers.providers.JsonRpcProvider(process.env.ALCHEMY_POLYGON || '');
+  const provider = new ethers.providers.JsonRpcProvider(process.env.ALCHEMY_POLYGON);
   const signer = new ethers.Wallet(process.env.POLYGON_PRIVATE_KEY || '', provider);
   const AbiCoder = ethers.utils.defaultAbiCoder;
 
-  const Timelock = await ethers.getContractAt('Timelock', '0x984f2B53e0305FEd33CC3b2eA8baeeAB112Ac217', signer);
-
-  /* 
-    /// @param target the target contract address
-    /// @param value the value to be sent
-    /// @param signature the signature of the transaction to be enqueued
-    /// @param data the data of the transaction to be enqueued
-    /// @param eta the minimum timestamp at which the transaction can be executed
-    /// @return the hash of the transaction in bytes
-    */
+  const timelockAddress = '0xc64f6d596806F7D3893fB3c65729EdFF3597B2C9';
+  const Timelock = await ethers.getContractAt('Timelock', timelockAddress, signer);
 
   // Specific call
-  const RegistryAddress = '0x4005F86cBa82659D5d62f354124d84C4969C4F47';
-  const DepositRecipesAddress = '0x661395770aD7654D124621f72b8189bF30065350';
-  const contractIdKeccak = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('DepositRecipes'));
+  const RegistryAddress = '0x38B2c4da0F5d1a3512e4CBfb24DbA1652674b7ea';
+  const signature = 'addNewContract(bytes32,address,bytes32,bool)';
+
+  const contractIdKeccak = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('PositionManagerFactory'));
+  const contractAddress = '0x31196Fbda9111a345e133EE1C247C94EDb6A7a7A';
+  const moduleData = ethers.utils.hexZeroPad(ethers.utils.hexlify(0), 32);
+  const moduleState = true;
 
   // General call parameters
   const target = RegistryAddress;
   const msgValue = 0;
-  const signature = 'addNewContract(bytes, address)';
-  const data = AbiCoder.encode(['bytes32', 'address'], [contractIdKeccak, DepositRecipesAddress]);
-  const eta = 1652279150;
+  const data = AbiCoder.encode(
+    ['bytes32', 'address', 'bytes32', 'bool'],
+    [contractIdKeccak, contractAddress, moduleData, moduleState]
+  );
+
+  // PASTE THIS FROM THE QUEUE TX TIMESTAMP ETA:
+  const eta = 1654625287;
 
   await (
     await Timelock.executeTransaction(target, msgValue, signature, data, eta, {
@@ -35,8 +35,7 @@ async function main() {
       gasLimit: Config.gasLimit,
     })
   ).wait();
-
-  console.log('Transaction executed');
+  console.log('Transaction queued');
 }
 
 main()
