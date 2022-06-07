@@ -25,6 +25,18 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const PositionManagerFactory = await ethers.getContract('PositionManagerFactory');
 
+  await registry.addNewContract(
+    hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('PositionManagerFactory')),
+    PositionManagerFactory.address,
+    ethers.utils.hexZeroPad(ethers.utils.hexlify(0), 32),
+    true,
+    {
+      gasPrice: Config.gasPrice,
+      gasLimit: Config.gasLimit,
+    }
+  );
+  await new Promise((resolve) => setTimeout(resolve, Config.sleep));
+
   await registry.setPositionManagerFactory(PositionManagerFactory.address, {
     gasPrice: Config.gasPrice,
     gasLimit: Config.gasLimit,
