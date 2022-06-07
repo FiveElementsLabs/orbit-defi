@@ -1,6 +1,6 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
-import hre, { ethers } from 'hardhat';
+import { ethers } from 'hardhat';
 import { Config } from './000_Config';
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
@@ -25,16 +25,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const PositionManagerFactory = await ethers.getContract('PositionManagerFactory');
 
-  await registry.addNewContract(
-    hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('PositionManagerFactory')),
-    PositionManagerFactory.address,
-    {
-      gasPrice: Config.gasPrice,
-      gasLimit: Config.gasLimit,
-    }
-  );
-  await new Promise((resolve) => setTimeout(resolve, Config.sleep));
-
   await registry.setPositionManagerFactory(PositionManagerFactory.address, {
     gasPrice: Config.gasPrice,
     gasLimit: Config.gasLimit,
@@ -44,5 +34,5 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 
 export default func;
-
 func.tags = ['PositionManagerFactory'];
+func.dependencies = ['Registry', 'DiamondCutFacet', 'UniswapAddressHolder', 'AaveAddressHolder'];
