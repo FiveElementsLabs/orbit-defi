@@ -1,20 +1,25 @@
 import { ethers } from 'hardhat';
 
 async function main() {
-  const provider = new ethers.providers.JsonRpcProvider(process.env.ALCHEMY_MUMBAI || '');
-  const signer = new ethers.Wallet(process.env.TEST_PRIVATE_KEY || '', provider);
+  try {
+    const provider = new ethers.providers.JsonRpcProvider(process.env.ALCHEMY_POLYGON || '');
+    const signer = new ethers.Wallet(process.env.POLYGON_PRIVATE_KEY || '', provider);
 
-  const PositionManagerFactory = await ethers.getContractAt(
-    'PositionManagerFactory',
-    '0x69465fE66FB8E2cE2ddc7d0d5E657Fb2141DF013',
-    signer
-  );
+    const PositionManagerFactory = await ethers.getContractAt(
+      'PositionManagerFactory',
+      '0x31196Fbda9111a345e133EE1C247C94EDb6A7a7A',
+      signer
+    );
 
-  await PositionManagerFactory.create({ gasLimit: 1000000 });
+    await PositionManagerFactory.create({ gasLimit: 1000000 });
+    console.log('PositionManager created. Now getting all PM addresses...');
 
-  await new Promise((resolve) => setTimeout(resolve, 10000));
+    await new Promise((resolve) => setTimeout(resolve, 10000));
 
-  console.log(await PositionManagerFactory.getAllPositionManagers());
+    console.log('All PM addresses: ', await PositionManagerFactory.getAllPositionManagers());
+  } catch (error: any) {
+    throw new Error(error?.message);
+  }
 }
 
 main()
