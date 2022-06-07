@@ -8,10 +8,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await getNamedAccounts();
 
   const UniswapAddressHolder = await deployments.get('UniswapAddressHolder');
+  const registry = await deployments.get('Registry');
 
   await deploy('AutoCompoundModule', {
     from: deployer,
-    args: [UniswapAddressHolder.address],
+    args: [UniswapAddressHolder.address, registry.address],
     log: true,
     autoMine: true,
   });
@@ -19,4 +20,4 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 export default func;
 func.tags = ['Module'];
-func.dependencies = ['UniswapAddressHolder'];
+func.dependencies = ['UniswapAddressHolder', 'Registry'];

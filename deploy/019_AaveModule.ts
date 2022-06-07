@@ -9,10 +9,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const AaveAddressHolder = await deployments.get('AaveAddressHolder');
   const UniswapAddressHolder = await deployments.get('UniswapAddressHolder');
+  const registry = await deployments.get('Registry');
 
   await deploy('AaveModule', {
     from: deployer,
-    args: [AaveAddressHolder.address, UniswapAddressHolder.address],
+    args: [AaveAddressHolder.address, UniswapAddressHolder.address, registry.address],
     log: true,
     autoMine: true,
   });
@@ -20,4 +21,4 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 export default func;
 func.tags = ['Module'];
-func.dependencies = ['UniswapAddressHolder', 'AaveAddressHolder'];
+func.dependencies = ['UniswapAddressHolder', 'AaveAddressHolder', 'Registry'];
