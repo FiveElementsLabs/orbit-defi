@@ -29,13 +29,14 @@ async function main() {
   // PASTE THIS FROM THE QUEUE TX TIMESTAMP ETA:
   const eta = 1654625287;
 
-  await (
+  const tx = await (
     await Timelock.executeTransaction(target, msgValue, signature, data, eta, {
       gasPrice: Config.gasPrice,
       gasLimit: Config.gasLimit,
     })
   ).wait();
-  console.log('Transaction queued');
+
+  console.log(`Transaction executed: ${tx?.hash}`);
 }
 
 main()
