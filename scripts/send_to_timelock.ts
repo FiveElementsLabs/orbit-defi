@@ -30,11 +30,14 @@ async function main() {
   console.log(`ETA: ${new Date(eta * 1000)}`);
   console.log('ETA TIMESTAMP: KEEP THIS TO EXECUTE CALL: ', eta);
 
-  await Timelock.queueTransaction(target, msgValue, signature, data, eta, {
-    gasPrice: Config.gasPrice,
-    gasLimit: Config.gasLimit,
-  });
-  console.log('Transaction queued');
+  const tx = await (
+    await Timelock.queueTransaction(target, msgValue, signature, data, eta, {
+      gasPrice: Config.gasPrice,
+      gasLimit: Config.gasLimit,
+    })
+  ).wait();
+
+  console.log(`Transaction queued: ${tx?.hash}`);
 }
 
 main()
