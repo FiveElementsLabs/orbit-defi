@@ -9,6 +9,7 @@ import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import './SafeInt24Math.sol';
+import './MathHelper.sol';
 
 ///@title library to help with swap amounts calculations
 library SwapHelper {
@@ -106,6 +107,14 @@ library SwapHelper {
         secondsAgo[1] = 0; // 0 is the most recent observation
 
         (int56[] memory tickCumulatives, ) = pool.observe(secondsAgo);
-        return int24((tickCumulatives[1] - tickCumulatives[0]) / twapDuration);
+
+        return
+            MathHelper.fromUint256ToInt24(
+                (
+                    MathHelper.fromInt56ToUint256(tickCumulatives[1]).sub(
+                        MathHelper.fromInt56ToUint256(tickCumulatives[0])
+                    )
+                ).div(uint256(twapDuration))
+            );
     }
 }
