@@ -66,8 +66,6 @@ contract AutoCompoundModule is BaseModule {
         (, bytes32 data) = IPositionManager(positionManagerAddress).getModuleInfo(tokenId, address(this));
         require(data != bytes32(0), 'AutoCompoundModule::_checkIfCompoundIsNeeded: module data cannot be empty');
 
-        //uint256 feesThreshold = uint256(data);
-
         (uint160 sqrtPriceX96, , , , , , ) = IUniswapV3Pool(
             UniswapNFTHelper._getPoolFromTokenId(
                 tokenId,
