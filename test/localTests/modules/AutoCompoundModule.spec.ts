@@ -206,6 +206,7 @@ describe('AutoCompoundModule.sol', function () {
     const positionPost = await NonFungiblePositionManager.positions(2);
     expect(positionPost.liquidity).to.lt(position.liquidity);
   });
+
   it('should be able to autocompound fees', async function () {
     //do some trades to accrue fees
     for (let i = 0; i < 20; i++) {
@@ -231,8 +232,9 @@ describe('AutoCompoundModule.sol', function () {
 
   it('should revert if position Manager does not exist', async function () {
     await PositionManager.connect(user).setModuleData(2, autoCompound.address, abiCoder.encode(['uint256'], [30]));
-    await expect(autoCompound.connect(user).autoCompoundFees(Factory.address, 2));
+    await expect(autoCompound.connect(user).autoCompoundFees(Factory.address, 2)).to.be.reverted;
   });
+
   it('should revert if caller is not a whitelistedkeeper', async function () {
     await expect(autoCompound.connect(liquidityProvider).autoCompoundFees(PositionManager.address, 2)).to.be.reverted;
   });
