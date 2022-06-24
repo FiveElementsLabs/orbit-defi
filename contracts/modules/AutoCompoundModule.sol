@@ -56,39 +56,37 @@ contract AutoCompoundModule is BaseModule {
             .updateUncollectedFees(tokenId);
 
         address nonfungiblePositionManagerAddress = addressHolder.nonfungiblePositionManagerAddress();
-        address uniswapV3FactoryAddress = addressHolder.uniswapV3FactoryAddress();
 
         (uint256 amount0, uint256 amount1) = UniswapNFTHelper._getAmountsfromTokenId(
             tokenId,
             INonfungiblePositionManager(nonfungiblePositionManagerAddress),
-            uniswapV3FactoryAddress
+            addressHolder.uniswapV3FactoryAddress()
         );
 
         (, bytes32 data) = IPositionManager(positionManagerAddress).getModuleInfo(tokenId, address(this));
         require(data != bytes32(0), 'AutoCompoundModule::_checkIfCompoundIsNeeded: module data cannot be empty');
 
-        uint256 feesThreshold = uint256(data);
+        //uint256 feesThreshold = uint256(data);
 
         (uint160 sqrtPriceX96, , , , , , ) = IUniswapV3Pool(
             UniswapNFTHelper._getPoolFromTokenId(
                 tokenId,
                 INonfungiblePositionManager(nonfungiblePositionManagerAddress),
-                uniswapV3FactoryAddress
+                addressHolder.uniswapV3FactoryAddress()
             )
         ).slot0();
 
         //returns true if the value of uncollected fees * 100 is greater than amount in the position * threshold:
-        //  (((uncollectedFees0 * sqrtPriceX96) / 2**96 + (uncollectedFees1 * 2**96) / sqrtPriceX96) * 100 >
-        //  ((amount0 * sqrtPriceX96) / 2**96 + (amount1 * 2**96) / sqrtPriceX96) * feesThreshold)
-        return ((
-            (uncollectedFees0.mul(uint256(sqrtPriceX96))).div(2**96).add(
-                uncollectedFees1.mul(2**96).div(uint256(sqrtPriceX96)).mul(100)
-            )
-        ) >
+        //  ((uncollectedFees0 * sqrtPriceX96) / 2**96 + (uncollectedFees1 * 2**96) / sqrtPriceX96)) * 100 >
+        //  ((amount0 * sqrtPriceX96) / 2**96 + (amount1 * 2**96) / sqrtPriceX96)) * feesThreshold
+        return
             (
-                amount0.mul(uint256(sqrtPriceX96)).div(2**96).add(amount1.mul(2**96).div(uint256(sqrtPriceX96))).mul(
-                    feesThreshold
+                uncollectedFees0.mul(uint256(sqrtPriceX96)).div(2**96).add(
+                    uncollectedFees1.mul(2**96).div(uint256(sqrtPriceX96))
                 )
-            ));
+            ).mul(100) >
+            (amount0.mul(uint256(sqrtPriceX96)).div(2**96).add(amount1.mul(2**96).div(uint256(sqrtPriceX96)))).mul(
+                uint256(data)
+            );
     }
 }
