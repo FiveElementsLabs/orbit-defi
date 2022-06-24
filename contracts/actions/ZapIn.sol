@@ -24,19 +24,19 @@ contract ZapIn is IZapIn {
     event ZappedIn(address indexed positionManager, uint256 tokenId, address tokenIn, uint256 amountIn);
 
     ///@notice mints a uni NFT with a single input token, the token in input can be different from the two position tokens
-    ///@param tokenIn address of input token
-    ///@param amountIn amount of input token
     ///@param token0 address token0 of the pool
     ///@param token1 address token1 of the pool
+    ///@param token0In true if token0 is the input token, false if token1 is the input token
+    ///@param amountIn amount of input token
     ///@param tickLower lower bound of desired position
     ///@param tickUpper upper bound of desired position
     ///@param fee fee tier of the pool
     ///@return tokenId of minted NFT
     function zapIn(
-        address tokenIn,
-        uint256 amountIn,
         address token0,
         address token1,
+        bool token0In,
+        uint256 amountIn,
         int24 tickLower,
         int24 tickUpper,
         uint24 fee
@@ -44,12 +44,16 @@ contract ZapIn is IZapIn {
         require(token0 != token1, 'ZapIn::zapIn: token0 and token1 cannot be the same');
         require(amountIn > 0, 'ZapIn::zapIn: tokenIn cannot be 0');
 
-        (token0, token1) = _reorderTokens(token0, token1);
+        //(token0, token1, token0In) = _reorderTokens(token0, token1, token0In);
 
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
-        ERC20Helper._pullTokensIfNeeded(tokenIn, Storage.owner, amountIn);
-        ERC20Helper._approveToken(tokenIn, Storage.uniswapAddressHolder.swapRouterAddress(), amountIn);
+        ERC20Helper._pullTokensIfNeeded(token0In ? token0 : token1, Storage.owner, amountIn);
+        ERC20Helper._approveToken(
+            token0In ? token0 : token1,
+            Storage.uniswapAddressHolder.swapRouterAddress(),
+            amountIn
+        );
 
         (, int24 tickPool, , , , , ) = IUniswapV3Pool(
             UniswapNFTHelper._getPool(Storage.uniswapAddressHolder.uniswapV3FactoryAddress(), token0, token1, fee)
@@ -63,58 +67,41 @@ contract ZapIn is IZapIn {
             Storage.registry.twapDuration()
         );
 
-        uint256 amountInTo0;
-        uint256 amountInTo1;
+        (uint256 amountToSwap, ) = SwapHelper.calcAmountToSwap(
+            tickPool,
+            tickLower,
+            tickUpper,
+            token0In ? amountIn : 0,
+            token0In ? 0 : amountIn
+        );
 
-        // If we are in range, calculate fractions of tokenIn to swap.
-        // Otherwise, set amount0 or amount1 to 0 according to the out-of-range direction
-        if (tickLower <= tickPool && tickUpper >= tickPool) {
-            amountInTo0 = amountIn.mul(1e18).div(
-                SwapHelper.getRatioFromRange(tickPool, tickLower, tickUpper).add(1e18)
-            );
-            amountInTo1 = amountIn.sub(amountInTo0);
-        } else if (tickLower < tickPool && tickUpper < tickPool) {
-            amountInTo1 = amountIn;
-        } else {
-            amountInTo0 = amountIn;
-        }
-
-        //if token in input is not the token0 of the pool, we need to swap it
-        if (tokenIn != token0 && amountInTo0 != 0) {
-            amountInTo0 = ISwapRouter(Storage.uniswapAddressHolder.swapRouterAddress()).exactInputSingle(
+        uint256 amountSwapped;
+        if (amountToSwap != 0) {
+            amountSwapped = ISwapRouter(Storage.uniswapAddressHolder.swapRouterAddress()).exactInputSingle(
                 ISwapRouter.ExactInputSingleParams({
-                    tokenIn: tokenIn,
-                    tokenOut: token0,
+                    tokenIn: token0In ? token0 : token1,
+                    tokenOut: token0In ? token1 : token0,
                     fee: fee,
                     recipient: address(this),
                     deadline: block.timestamp + 120,
-                    amountIn: amountInTo0,
+                    amountIn: amountToSwap,
                     amountOutMinimum: 1,
                     sqrtPriceLimitX96: 0
                 })
             );
         }
 
-        //if token in input is not the token1 of the pool, we need to swap it
-        if (tokenIn != token1 && amountInTo1 != 0) {
-            ERC20Helper._approveToken(tokenIn, Storage.uniswapAddressHolder.swapRouterAddress(), amountIn);
-            amountInTo1 = ISwapRouter(Storage.uniswapAddressHolder.swapRouterAddress()).exactInputSingle(
-                ISwapRouter.ExactInputSingleParams({
-                    tokenIn: tokenIn,
-                    tokenOut: token1,
-                    fee: fee,
-                    recipient: address(this),
-                    deadline: block.timestamp + 120,
-                    amountIn: amountInTo1,
-                    amountOutMinimum: 1,
-                    sqrtPriceLimitX96: 0
-                })
-            );
-        }
+        (tokenId, , ) = _mint(
+            token0,
+            token1,
+            fee,
+            tickLower,
+            tickUpper,
+            token0In ? amountIn.sub(amountToSwap) : amountSwapped,
+            token0In ? amountSwapped : amountIn.sub(amountToSwap)
+        );
 
-        (tokenId, , ) = _mint(token0, token1, fee, tickLower, tickUpper, amountInTo0, amountInTo1);
-
-        emit ZappedIn(address(this), tokenId, tokenIn, amountIn);
+        emit ZappedIn(address(this), tokenId, token0In ? token0 : token1, amountIn);
     }
 
     ///@notice mints a UniswapV3 position NFT
@@ -168,16 +155,30 @@ contract ZapIn is IZapIn {
         IPositionManager(address(this)).middlewareDeposit(tokenId);
     }
 
-    ///@notice orders token addresses
-    ///@param token0 address of token0
-    ///@param token1 address of token1
-    ///@return address first token address
-    ///@return address second token address
-    function _reorderTokens(address token0, address token1) internal pure returns (address, address) {
-        if (token0 > token1) {
-            return (token1, token0);
-        } else {
-            return (token0, token1);
-        }
-    }
+    // ///@notice orders token addresses
+    // ///@param token0 address of token0
+    // ///@param token1 address of token1
+    // ///@param token0In true if token0 is the input token
+    // ///@return address first token address
+    // ///@return address second token address
+    // ///@return bool new token0 is the input token
+    // function _reorderTokens(
+    //     address token0,
+    //     address token1,
+    //     bool token0In
+    // )
+    //     internal
+    //     pure
+    //     returns (
+    //         address,
+    //         address,
+    //         bool
+    //     )
+    // {
+    //     if (token0 > token1) {
+    //         return (token1, token0, !token0In);
+    //     } else {
+    //         return (token0, token1, token0In);
+    //     }
+    // }
 }

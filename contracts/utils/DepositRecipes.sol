@@ -78,26 +78,26 @@ contract DepositRecipes {
         );
     }
 
-    ///@notice mints a uni NFT with a single input token, the token in input can be different from the two position tokens
-    ///@param tokenIn address of input token
-    ///@param amountIn amount of input token
+    ///@notice mints a uni NFT with a single input token, tokens must be passed correctly ordered
     ///@param token0 address token0 of the pool
     ///@param token1 address token1 of the pool
+    ///@param token0In true if the input token is token0, false if the input token is token1
+    ///@param amountIn amount of input token
     ///@param tickLower lower bound of desired position
     ///@param tickUpper upper bound of desired position
     ///@param fee fee tier of the pool
     ///@return tokenId of minted NFT
     function zapInUniNft(
-        address tokenIn,
-        uint256 amountIn,
         address token0,
         address token1,
+        bool token0In,
+        uint256 amountIn,
         int24 tickLower,
         int24 tickUpper,
         uint24 fee
     ) external returns (uint256 tokenId) {
         address positionManagerAddress = positionManagerFactory.userToPositionManager(msg.sender);
 
-        (tokenId) = IZapIn(positionManagerAddress).zapIn(tokenIn, amountIn, token0, token1, tickLower, tickUpper, fee);
+        (tokenId) = IZapIn(positionManagerAddress).zapIn(token0, token1, token0In, amountIn, tickLower, tickUpper, fee);
     }
 }
