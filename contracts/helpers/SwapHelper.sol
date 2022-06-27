@@ -55,10 +55,13 @@ library SwapHelper {
     ) internal pure returns (uint256 amountToSwap, bool token0In) {
         require(amount0In != 0 || amount1In != 0, 'SwapHelper::calcAmountToSwap: at least one amountIn should be != 0');
 
+        //if tickPoolool >= tickUpper, then my range is under the current tick, so my position will all be in token1
         if (tickPool >= tickUpper) {
             amountToSwap = amount0In;
             token0In = true;
-        } else if (tickPool <= tickLower) {
+        }
+        //if tickPoolool <= tickUpper, then my range is over the current tick, so my position will all be in token1
+        else if (tickPool <= tickLower) {
             amountToSwap = amount1In;
             token0In = false;
         } else {
