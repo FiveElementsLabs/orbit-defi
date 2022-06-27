@@ -1,6 +1,6 @@
 import '@nomiclabs/hardhat-ethers';
 import { expect } from 'chai';
-import { ContractFactory, Contract } from 'ethers';
+import { Contract, BigNumber } from 'ethers';
 import { ethers } from 'hardhat';
 import hre from 'hardhat';
 import {
@@ -274,7 +274,10 @@ describe('ZapOut.sol', function () {
       await ZapOutFallback.connect(user).zapOut(tokenId, tokenUsdc.address);
 
       await expect(NonFungiblePositionManager.ownerOf(tokenId)).to.be.reverted;
-      expect(await tokenUsdc.balanceOf(user.address)).to.be.gt(usdcBalance);
+      expect(await tokenUsdc.balanceOf(user.address)).to.be.closeTo(
+        usdcBalance.add(BigNumber.from(2e6)),
+        BigNumber.from(1e6 * 0.01)
+      );
     });
 
     it('should revert if user is not owner of position', async function () {
@@ -357,6 +360,49 @@ describe('ZapOut.sol', function () {
       await expect(ZapOutFallback.connect(user).zapOut(tokenId2, tokenDai.address)).to.be.revertedWith(
         'SwapHelper::checkDeviation: Price deviation is too high'
       );
+    });
+
+    it('should correctly exit a position for nonzero tick of a pool', async function () {
+      //make some trades to change the tick of the pool
+      let poolTick = Math.round((await PoolEthUsdc500.slot0())[1] / 10) * 10;
+      const swapAmount = '0x' + (1e14).toString(16);
+      while (poolTick > -500 && poolTick < 500) {
+        tokenEth.connect(liquidityProvider).approve(SwapRouter.address, swapAmount);
+        await SwapRouter.connect(liquidityProvider).exactInputSingle([
+          tokenEth.address,
+          tokenUsdc.address,
+          500,
+          liquidityProvider.address,
+          Date.now() + 1000,
+          swapAmount,
+          0,
+          0,
+        ]);
+        poolTick = Math.round((await PoolEthUsdc500.slot0())[1] / 10) * 10;
+      }
+      await registry.setMaxTwapDeviation(2 ** 23 - 1);
+      await PositionManager.withdrawERC20(tokenEth.address);
+      await PositionManager.withdrawERC20(tokenUsdc.address);
+      const beforeLength = await PositionManager.getAllUniPositions();
+      const mintTx = await NonFungiblePositionManager.connect(user).mint({
+        token0: tokenEth.address,
+        token1: tokenUsdc.address,
+        fee: 500,
+        tickLower: poolTick - 600,
+        tickUpper: poolTick + 600,
+        amount0Desired: '0x' + (1e13).toString(16),
+        amount1Desired: '0x' + (1e14).toString(16),
+        amount0Min: 0,
+        amount1Min: 0,
+        recipient: PositionManager.address,
+        deadline: Date.now() + 1000,
+      });
+      const mintReceipt: any = await mintTx.wait();
+      const tokenId = mintReceipt.events[mintReceipt.events.length - 1].args.tokenId.toNumber();
+      await ZapOutFallback.connect(user).zapOut(tokenId, tokenEth.address);
+      const afterLength = await PositionManager.getAllUniPositions();
+      expect(Number(afterLength.length)).to.equal(Number(beforeLength.length));
+      await expect(NonFungiblePositionManager.positions(tokenId)).to.be.reverted;
     });
   });
 });
