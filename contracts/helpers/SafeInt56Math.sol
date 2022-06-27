@@ -3,11 +3,11 @@
 pragma solidity >=0.6.0 <0.8.0;
 
 /**
- * @title SafeInt24Math
+ * @title SafeInt56Math
  * @dev Signed math operations with safety checks that revert on error.
  */
-library SafeInt24Math {
-    int24 private constant _INT_24_MIN = type(int24).min;
+library SafeInt56Math {
+    int56 private constant _INT_56_MIN = type(int56).min;
 
     /**
      * @dev Returns the multiplication of two signed integers, reverting on
@@ -19,7 +19,7 @@ library SafeInt24Math {
      *
      * - Multiplication cannot overflow.
      */
-    function mul(int24 a, int24 b) internal pure returns (int24) {
+    function mul(int56 a, int56 b) internal pure returns (int56) {
         // Gas optimization: this is cheaper than requiring 'a' not being zero, but the
         // benefit is lost if 'b' is also tested.
         // See: https://github.com/OpenZeppelin/openzeppelin-contracts/pull/522
@@ -27,10 +27,10 @@ library SafeInt24Math {
             return 0;
         }
 
-        require(!(a == -1 && b == _INT_24_MIN), 'SafeInt24Math::mul: multiplication overflow');
+        require(!(a == -1 && b == _INT_56_MIN), 'SafeInt56Math::mul: multiplication overflow');
 
-        int24 c = a * b;
-        require(c / a == b, 'SafeInt24Math::mul: multiplication overflow');
+        int56 c = a * b;
+        require(c / a == b, 'SafeInt56Math::mul: multiplication overflow');
 
         return c;
     }
@@ -47,11 +47,11 @@ library SafeInt24Math {
      *
      * - The divisor cannot be zero.
      */
-    function div(int24 a, int24 b) internal pure returns (int24) {
-        require(b != 0, 'SafeInt24Math::div: division by zero');
-        require(!(b == -1 && a == _INT_24_MIN), 'SafeInt24Math::div: division overflow');
+    function div(int56 a, int56 b) internal pure returns (int56) {
+        require(b != 0, 'SafeInt56Math::div: division by zero');
+        require(!(b == -1 && a == _INT_56_MIN), 'SafeInt56Math::div: division overflow');
 
-        int24 c = a / b;
+        int56 c = a / b;
 
         return c;
     }
@@ -66,9 +66,9 @@ library SafeInt24Math {
      *
      * - Subtraction cannot overflow.
      */
-    function sub(int24 a, int24 b) internal pure returns (int24) {
-        int24 c = a - b;
-        require((b >= 0 && c <= a) || (b < 0 && c > a), 'SafeInt24Math::sub: subtraction overflow');
+    function sub(int56 a, int56 b) internal pure returns (int56) {
+        int56 c = a - b;
+        require((b >= 0 && c <= a) || (b < 0 && c > a), 'SafeInt56Math::sub: subtraction overflow');
 
         return c;
     }
@@ -83,9 +83,9 @@ library SafeInt24Math {
      *
      * - Addition cannot overflow.
      */
-    function add(int24 a, int24 b) internal pure returns (int24) {
-        int24 c = a + b;
-        require((b >= 0 && c >= a) || (b < 0 && c < a), 'SafeInt24Math::add: addition overflow');
+    function add(int56 a, int56 b) internal pure returns (int56) {
+        int56 c = a + b;
+        require((b >= 0 && c >= a) || (b < 0 && c < a), 'SafeInt56Math::add: addition overflow');
 
         return c;
     }
