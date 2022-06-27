@@ -16,7 +16,7 @@ library SwapHelper {
     using SignedSafeMath for int24;
     using SafeMath for uint256;
 
-    ///@notice calculate the ratio of the token amounts for a given position
+    ///@notice returns the amount of token1 needed for a mint for 1e18 token0
     ///@param tickPool tick of the pool
     ///@param tickLower lower tick of position
     ///@param tickUpper upper tick of position
@@ -55,10 +55,10 @@ library SwapHelper {
     ) internal pure returns (uint256 amountToSwap, bool token0In) {
         require(amount0In != 0 || amount1In != 0, 'SwapHelper::calcAmountToSwap: at least one amountIn should be != 0');
 
-        if (tickPool <= tickLower) {
+        if (tickPool >= tickUpper) {
             amountToSwap = amount0In;
             token0In = true;
-        } else if (tickPool >= tickUpper) {
+        } else if (tickPool <= tickLower) {
             amountToSwap = amount1In;
             token0In = false;
         } else {

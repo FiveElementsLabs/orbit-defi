@@ -42,9 +42,9 @@ contract ZapIn is IZapIn {
         uint24 fee
     ) public override returns (uint256 tokenId) {
         require(token0 != token1, 'ZapIn::zapIn: token0 and token1 cannot be the same');
-        require(amountIn > 0, 'ZapIn::zapIn: tokenIn cannot be 0');
+        require(amountIn != 0, 'ZapIn::zapIn: tokenIn cannot be 0');
 
-        //(token0, token1, token0In) = _reorderTokens(token0, token1, token0In);
+        (token0, token1, token0In) = _reorderTokens(token0, token1, token0In);
 
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
@@ -55,10 +55,6 @@ contract ZapIn is IZapIn {
             amountIn
         );
 
-        (, int24 tickPool, , , , , ) = IUniswapV3Pool(
-            UniswapNFTHelper._getPool(Storage.uniswapAddressHolder.uniswapV3FactoryAddress(), token0, token1, fee)
-        ).slot0();
-
         SwapHelper.checkDeviation(
             IUniswapV3Pool(
                 UniswapNFTHelper._getPool(Storage.uniswapAddressHolder.uniswapV3FactoryAddress(), token0, token1, fee)
@@ -68,16 +64,15 @@ contract ZapIn is IZapIn {
         );
 
         (uint256 amountToSwap, ) = SwapHelper.calcAmountToSwap(
-            tickPool,
+            _getPoolTick(token0, token1, fee),
             tickLower,
             tickUpper,
             token0In ? amountIn : 0,
             token0In ? 0 : amountIn
         );
 
-        uint256 amountSwapped;
         if (amountToSwap != 0) {
-            amountSwapped = ISwapRouter(Storage.uniswapAddressHolder.swapRouterAddress()).exactInputSingle(
+            ISwapRouter(Storage.uniswapAddressHolder.swapRouterAddress()).exactInputSingle(
                 ISwapRouter.ExactInputSingleParams({
                     tokenIn: token0In ? token0 : token1,
                     tokenOut: token0In ? token1 : token0,
@@ -97,8 +92,8 @@ contract ZapIn is IZapIn {
             fee,
             tickLower,
             tickUpper,
-            token0In ? amountIn.sub(amountToSwap) : amountSwapped,
-            token0In ? amountSwapped : amountIn.sub(amountToSwap)
+            IERC20(token0).balanceOf(address(this)),
+            IERC20(token1).balanceOf(address(this))
         );
 
         emit ZappedIn(address(this), tokenId, token0In ? token0 : token1, amountIn);
@@ -155,30 +150,41 @@ contract ZapIn is IZapIn {
         IPositionManager(address(this)).middlewareDeposit(tokenId);
     }
 
-    // ///@notice orders token addresses
-    // ///@param token0 address of token0
-    // ///@param token1 address of token1
-    // ///@param token0In true if token0 is the input token
-    // ///@return address first token address
-    // ///@return address second token address
-    // ///@return bool new token0 is the input token
-    // function _reorderTokens(
-    //     address token0,
-    //     address token1,
-    //     bool token0In
-    // )
-    //     internal
-    //     pure
-    //     returns (
-    //         address,
-    //         address,
-    //         bool
-    //     )
-    // {
-    //     if (token0 > token1) {
-    //         return (token1, token0, !token0In);
-    //     } else {
-    //         return (token0, token1, token0In);
-    //     }
-    // }
+    ///@notice orders token addresses
+    ///@param token0 address of token0
+    ///@param token1 address of token1
+    ///@param token0In true if token0 is the input token
+    ///@return address first token address
+    ///@return address second token address
+    ///@return bool new token0 is the input token
+    function _reorderTokens(
+        address token0,
+        address token1,
+        bool token0In
+    )
+        internal
+        pure
+        returns (
+            address,
+            address,
+            bool
+        )
+    {
+        if (token0 > token1) {
+            return (token1, token0, !token0In);
+        } else {
+            return (token0, token1, token0In);
+        }
+    }
+
+    function _getPoolTick(
+        address token0,
+        address token1,
+        uint24 fee
+    ) internal view returns (int24 tick) {
+        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+        (, tick, , , , , ) = IUniswapV3Pool(
+            UniswapNFTHelper._getPool(Storage.uniswapAddressHolder.uniswapV3FactoryAddress(), token0, token1, fee)
+        ).slot0();
+    }
 }

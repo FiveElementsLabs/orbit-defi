@@ -1,6 +1,6 @@
 import '@nomiclabs/hardhat-ethers';
 import { expect } from 'chai';
-import { Contract } from 'ethers';
+import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import hre from 'hardhat';
 import {
@@ -14,7 +14,14 @@ import {
   doAllApprovals,
   RegistryFixture,
 } from '../../shared/fixtures';
-import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, ZapIn, PositionManager } from '../../../typechain';
+import {
+  MockToken,
+  IUniswapV3Pool,
+  INonfungiblePositionManager,
+  ZapIn,
+  PositionManager,
+  Swap,
+} from '../../../typechain';
 
 describe('ZapIn.sol', function () {
   //GLOBAL VARIABLE - USE THIS
@@ -35,7 +42,7 @@ describe('ZapIn.sol', function () {
 
   let Factory: Contract; // the factory that will deploy all pools
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
-  let SwapRouter: Contract;
+  let SwapRouter: Contract; // SwapRouter contract by UniswapV3
   let ZapInFallback: ZapIn;
   let PositionManager: PositionManager;
   let registry: Contract;
@@ -222,13 +229,15 @@ describe('ZapIn.sol', function () {
   describe('ZapIn.sol', function () {
     it('should correctly mint a position', async function () {
       const beforeLength = await PositionManager.getAllUniPositions();
+      const poolTick = Math.round((await PoolUsdcDai500.slot0())[1] / 10) * 10;
+
       await ZapInFallback.connect(user).zapIn(
         tokenUsdc.address,
-        1000,
-        tokenUsdc.address,
         tokenDai.address,
-        -600,
-        600,
+        true,
+        1000,
+        poolTick - 600,
+        poolTick + 600,
         500
       );
       const afterLength = await PositionManager.getAllUniPositions();
@@ -238,10 +247,10 @@ describe('ZapIn.sol', function () {
     it('should mint a position with tokens with different decimals', async function () {
       const beforeLength = await PositionManager.getAllUniPositions();
       await ZapInFallback.connect(user).zapIn(
-        tokenDai.address,
-        1000000000000,
         tokenEth.address,
         tokenUsdc.address,
+        false,
+        1000000000000,
         -600,
         600,
         500
@@ -252,22 +261,16 @@ describe('ZapIn.sol', function () {
 
     it('should mint out of range', async function () {
       const beforeLength = await PositionManager.getAllUniPositions();
-      await ZapInFallback.connect(user).zapIn(
-        tokenUsdc.address,
-        100000000,
-        tokenEth.address,
-        tokenUsdc.address,
-        400,
-        500,
-        500
-      );
+      await PositionManager.withdrawERC20(tokenEth.address);
+      await PositionManager.withdrawERC20(tokenUsdc.address);
+      await ZapInFallback.connect(user).zapIn(tokenEth.address, tokenUsdc.address, false, 10000, 400, 500, 500);
       const afterLength = await PositionManager.getAllUniPositions();
       expect(Number(afterLength.length)).to.be.gt(Number(beforeLength.length));
     });
 
     it('should fail if amountIn is 0', async function () {
       await expect(
-        ZapInFallback.connect(user).zapIn(tokenUsdc.address, 0, tokenUsdc.address, tokenDai.address, -600, 600, 500)
+        ZapInFallback.connect(user).zapIn(tokenUsdc.address, tokenDai.address, false, 0, -600, 600, 500)
       ).to.be.revertedWith('ZapIn::zapIn: tokenIn cannot be 0');
     });
 
@@ -282,10 +285,10 @@ describe('ZapIn.sol', function () {
 
       // This zap should succeed
       await ZapInFallback.connect(user).zapIn(
-        tokenUsdc.address,
-        '0x' + (1e23).toString(16),
         tokenEth.address,
         tokenUsdc.address,
+        false,
+        '0x' + (1e23).toString(16),
         -600,
         600,
         500
@@ -297,15 +300,59 @@ describe('ZapIn.sol', function () {
       // This zap should fail because of maxTwapDeviation
       await expect(
         ZapInFallback.connect(user).zapIn(
-          tokenUsdc.address,
-          '0x' + (1e21).toString(16),
           tokenEth.address,
           tokenUsdc.address,
+          false,
+          '0x' + (1e21).toString(16),
           -600,
           600,
           500
         )
       ).to.be.revertedWith('SwapHelper::checkDeviation: Price deviation is too high');
+    });
+
+    it('should mint for any tick of the pool', async function () {
+      //make some trades to change the tick of the pool
+      let poolTick = Math.round((await PoolEthUsdc500.slot0())[1] / 10) * 10;
+      const swapAmount = '0x' + (1e25).toString(16);
+      while (poolTick > -500 && poolTick < 500) {
+        tokenEth.connect(liquidityProvider).approve(SwapRouter.address, swapAmount);
+        await SwapRouter.connect(liquidityProvider).exactInputSingle([
+          tokenEth.address,
+          tokenUsdc.address,
+          500,
+          liquidityProvider.address,
+          Date.now() + 1000,
+          swapAmount,
+          0,
+          0,
+        ]);
+        poolTick = Math.round((await PoolEthUsdc500.slot0())[1] / 10) * 10;
+      }
+      await registry.setMaxTwapDeviation(2 ** 23 - 1);
+      const beforeLength = await PositionManager.getAllUniPositions();
+      const amount = 1e6;
+      await PositionManager.withdrawERC20(tokenEth.address);
+      await PositionManager.withdrawERC20(tokenUsdc.address);
+      await ZapInFallback.connect(user).zapIn(
+        tokenEth.address,
+        tokenUsdc.address,
+        false,
+        amount,
+        poolTick - 600,
+        poolTick + 600,
+        500
+      );
+      const afterLength = await PositionManager.getAllUniPositions();
+      expect(Number(afterLength.length)).to.be.gt(Number(beforeLength.length));
+      expect(await tokenEth.balanceOf(PositionManager.address)).to.be.closeTo(
+        BigNumber.from(0),
+        BigNumber.from((amount * 1e12) / 500)
+      );
+      expect(await tokenUsdc.balanceOf(PositionManager.address)).to.be.closeTo(
+        BigNumber.from(0),
+        BigNumber.from(amount / 500)
+      );
     });
   });
 });
