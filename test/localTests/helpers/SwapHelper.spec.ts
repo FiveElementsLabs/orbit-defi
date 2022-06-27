@@ -51,24 +51,8 @@ describe('SwapHelper.sol', function () {
 
   describe('calcAmountToSwap', function () {
     it('should swap all to one token if poolTick is under tickLower', async function () {
+      //range is over the pool tick => after swap, all my position should be in token0
       const tickPool = -400;
-      const tickLower = -20;
-      const tickUpper = 600;
-      const amount0In = '0x' + (1e5).toString(16);
-      const amount1In = '0x' + (5e5).toString(16);
-      const [amountToSwap, token0In] = await MockSwapHelper.calcAmountToSwap(
-        tickPool,
-        tickLower,
-        tickUpper,
-        amount0In,
-        amount1In
-      );
-      expect(amountToSwap).to.equal(amount0In);
-      expect(token0In).to.equal(true);
-    });
-
-    it('should swap all to one token if poolTick is over tickUpper', async function () {
-      const tickPool = 800;
       const tickLower = -20;
       const tickUpper = 600;
       const amount0In = '0x' + (1e5).toString(16);
@@ -82,6 +66,24 @@ describe('SwapHelper.sol', function () {
       );
       expect(amountToSwap).to.equal(amount1In);
       expect(token0In).to.equal(false);
+    });
+
+    it('should swap all to one token if poolTick is over tickUpper', async function () {
+      //range is under the pool tick => after swap, all my position should be in token1
+      const tickPool = 800;
+      const tickLower = -20;
+      const tickUpper = 600;
+      const amount0In = '0x' + (1e5).toString(16);
+      const amount1In = '0x' + (5e5).toString(16);
+      const [amountToSwap, token0In] = await MockSwapHelper.calcAmountToSwap(
+        tickPool,
+        tickLower,
+        tickUpper,
+        amount0In,
+        amount1In
+      );
+      expect(amountToSwap).to.equal(amount0In);
+      expect(token0In).to.equal(true);
     });
 
     it('should calculate amount to swap to 50/50 if amount1 is higher', async function () {

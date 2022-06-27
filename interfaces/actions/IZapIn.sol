@@ -7,7 +7,7 @@ interface IZapIn {
     function zapIn(
         address token0,
         address token1,
-        bool token0In,
+        bool isToken0In,
         uint256 amountIn,
         int24 tickLower,
         int24 tickUpper,

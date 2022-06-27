@@ -26,7 +26,7 @@ contract ZapIn is IZapIn {
     ///@notice mints a uni NFT with a single input token, the token in input can be different from the two position tokens
     ///@param token0 address token0 of the pool
     ///@param token1 address token1 of the pool
-    ///@param token0In true if token0 is the input token, false if token1 is the input token
+    ///@param isToken0In true if token0 is the input token, false if token1 is the input token
     ///@param amountIn amount of input token
     ///@param tickLower lower bound of desired position
     ///@param tickUpper upper bound of desired position
@@ -35,7 +35,7 @@ contract ZapIn is IZapIn {
     function zapIn(
         address token0,
         address token1,
-        bool token0In,
+        bool isToken0In,
         uint256 amountIn,
         int24 tickLower,
         int24 tickUpper,
@@ -44,13 +44,13 @@ contract ZapIn is IZapIn {
         require(token0 != token1, 'ZapIn::zapIn: token0 and token1 cannot be the same');
         require(amountIn != 0, 'ZapIn::zapIn: tokenIn cannot be 0');
 
-        (token0, token1, token0In) = _reorderTokens(token0, token1, token0In);
+        (token0, token1, isToken0In) = _reorderTokens(token0, token1, isToken0In);
 
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
-        ERC20Helper._pullTokensIfNeeded(token0In ? token0 : token1, Storage.owner, amountIn);
+        ERC20Helper._pullTokensIfNeeded(isToken0In ? token0 : token1, Storage.owner, amountIn);
         ERC20Helper._approveToken(
-            token0In ? token0 : token1,
+            isToken0In ? token0 : token1,
             Storage.uniswapAddressHolder.swapRouterAddress(),
             amountIn
         );
@@ -67,15 +67,15 @@ contract ZapIn is IZapIn {
             _getPoolTick(token0, token1, fee),
             tickLower,
             tickUpper,
-            token0In ? amountIn : 0,
-            token0In ? 0 : amountIn
+            isToken0In ? amountIn : 0,
+            isToken0In ? 0 : amountIn
         );
 
         if (amountToSwap != 0) {
             ISwapRouter(Storage.uniswapAddressHolder.swapRouterAddress()).exactInputSingle(
                 ISwapRouter.ExactInputSingleParams({
-                    tokenIn: token0In ? token0 : token1,
-                    tokenOut: token0In ? token1 : token0,
+                    tokenIn: isToken0In ? token0 : token1,
+                    tokenOut: isToken0In ? token1 : token0,
                     fee: fee,
                     recipient: address(this),
                     deadline: block.timestamp + 120,
@@ -96,7 +96,7 @@ contract ZapIn is IZapIn {
             IERC20(token1).balanceOf(address(this))
         );
 
-        emit ZappedIn(address(this), tokenId, token0In ? token0 : token1, amountIn);
+        emit ZappedIn(address(this), tokenId, isToken0In ? token0 : token1, amountIn);
     }
 
     ///@notice mints a UniswapV3 position NFT
@@ -153,14 +153,14 @@ contract ZapIn is IZapIn {
     ///@notice orders token addresses
     ///@param token0 address of token0
     ///@param token1 address of token1
-    ///@param token0In true if token0 is the input token
+    ///@param isToken0In true if token0 is the input token
     ///@return address first token address
     ///@return address second token address
     ///@return bool new token0 is the input token
     function _reorderTokens(
         address token0,
         address token1,
-        bool token0In
+        bool isToken0In
     )
         internal
         pure
@@ -171,9 +171,9 @@ contract ZapIn is IZapIn {
         )
     {
         if (token0 > token1) {
-            return (token1, token0, !token0In);
+            return (token1, token0, !isToken0In);
         } else {
-            return (token0, token1, token0In);
+            return (token0, token1, isToken0In);
         }
     }
 

@@ -81,7 +81,7 @@ contract DepositRecipes {
     ///@notice mints a uni NFT with a single input token, tokens must be passed correctly ordered
     ///@param token0 address token0 of the pool
     ///@param token1 address token1 of the pool
-    ///@param token0In true if the input token is token0, false if the input token is token1
+    ///@param isToken0In true if the input token is token0, false if the input token is token1
     ///@param amountIn amount of input token
     ///@param tickLower lower bound of desired position
     ///@param tickUpper upper bound of desired position
@@ -90,7 +90,7 @@ contract DepositRecipes {
     function zapInUniNft(
         address token0,
         address token1,
-        bool token0In,
+        bool isToken0In,
         uint256 amountIn,
         int24 tickLower,
         int24 tickUpper,
@@ -98,6 +98,14 @@ contract DepositRecipes {
     ) external returns (uint256 tokenId) {
         address positionManagerAddress = positionManagerFactory.userToPositionManager(msg.sender);
 
-        (tokenId) = IZapIn(positionManagerAddress).zapIn(token0, token1, token0In, amountIn, tickLower, tickUpper, fee);
+        (tokenId) = IZapIn(positionManagerAddress).zapIn(
+            token0,
+            token1,
+            isToken0In,
+            amountIn,
+            tickLower,
+            tickUpper,
+            fee
+        );
     }
 }

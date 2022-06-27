@@ -481,10 +481,10 @@ describe('DepositRecipes.sol', function () {
       const tickLower = 0 - 60 * 1000;
       const tickUpper = 0 + 60 * 1000;
       const zapInTx = await DepositRecipes.connect(user).zapInUniNft(
-        tokenEth.address,
-        amountIn,
         tokenDai.address,
         tokenUsdc.address,
+        false,
+        amountIn,
         tickLower,
         tickUpper,
         fee
@@ -512,9 +512,9 @@ describe('DepositRecipes.sol', function () {
       const tickUpper = 0 + 60 * 1000;
       const zapInTx = await DepositRecipes.connect(user).zapInUniNft(
         tokenEth.address,
-        amountIn,
-        tokenEth.address,
         tokenUsdc.address,
+        true,
+        amountIn,
         tickLower,
         tickUpper,
         fee
@@ -544,9 +544,9 @@ describe('DepositRecipes.sol', function () {
       await expect(
         DepositRecipes.connect(user).zapInUniNft(
           tokenEth.address,
-          amountIn,
-          tokenEth.address,
           tokenUsdc.address,
+          true,
+          amountIn,
           tickLower,
           tickUpper,
           fee
