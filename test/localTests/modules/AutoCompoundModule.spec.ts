@@ -1,6 +1,6 @@
 import '@nomiclabs/hardhat-ethers';
 import { expect } from 'chai';
-import { ContractFactory, Contract } from 'ethers';
+import { Contract } from 'ethers';
 import { AbiCoder } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import hre from 'hardhat';
@@ -8,8 +8,6 @@ import {
   tokensFixture,
   poolFixture,
   mintSTDAmount,
-  routerFixture,
-  getSelectors,
   RegistryFixture,
   deployUniswapContracts,
   deployContract,
