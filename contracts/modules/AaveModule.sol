@@ -23,7 +23,7 @@ import '../../interfaces/ILendingPool.sol';
 contract AaveModule is BaseModule {
     IAaveAddressHolder public immutable aaveAddressHolder;
     IUniswapAddressHolder public immutable uniswapAddressHolder;
-    using SignedSafeMath for int24;
+    using SafeInt24Math for int24;
 
     ///@notice emitted when a deposit on aave is made
     ///@param positionManager address of positionManager which deposited

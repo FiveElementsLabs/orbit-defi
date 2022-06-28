@@ -9,11 +9,13 @@ import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 import '@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol';
 import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import './SafeInt24Math.sol';
+import './SafeInt56Math.sol';
 import './MathHelper.sol';
 
 ///@title library to help with swap amounts calculations
 library SwapHelper {
-    using SignedSafeMath for int24;
+    using SafeInt24Math for int24;
+    using SafeInt56Math for int56;
     using SafeMath for uint256;
 
     ///@notice returns the amount of token1 needed for a mint for 1e18 token0
@@ -111,13 +113,6 @@ library SwapHelper {
 
         (int56[] memory tickCumulatives, ) = pool.observe(secondsAgo);
 
-        return
-            MathHelper.fromUint256ToInt24(
-                (
-                    MathHelper.fromInt56ToUint256(tickCumulatives[1]).sub(
-                        MathHelper.fromInt56ToUint256(tickCumulatives[0])
-                    )
-                ).div(uint256(twapDuration))
-            );
+        return MathHelper.fromInt56ToInt24(tickCumulatives[1].sub(tickCumulatives[0]).div(int56(twapDuration)));
     }
 }

@@ -21,7 +21,7 @@ contract IdleLiquidityModule is BaseModule {
     uint256 constant deltaAmountSwapped = 10;
     ///@notice uniswap address holder
     IUniswapAddressHolder public immutable uniswapAddressHolder;
-    using SignedSafeMath for int24;
+    using SafeInt24Math for int24;
 
     event rebalanced(
         address indexed positionManager,
