@@ -19,7 +19,7 @@ contract AutoCompoundModule is BaseModule {
 
     using SafeMath for uint256;
 
-    ///@notice emitted when a keeper performsm an autocompound
+    ///@notice emitted when a keeper performs an autocompound
     ///@param positionManager address of the called position manager
     ///@param tokenId tokenId of the position
     ///@param amount0 amount of token0 autocompounded

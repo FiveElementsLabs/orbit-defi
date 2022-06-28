@@ -23,6 +23,12 @@ contract IdleLiquidityModule is BaseModule {
     IUniswapAddressHolder public immutable uniswapAddressHolder;
     using SafeInt24Math for int24;
 
+    ///@notice emitted when a position is rebalanced
+    ///@param positionManager address of the called position manager
+    ///@param closedPosition tokenId of the closed position
+    ///@param mintedPosition tokenId of the minted position
+    ///@param amount0 amount of token0 minted
+    ///@param amount1 amount of token1 minted
     event rebalanced(
         address indexed positionManager,
         uint256 closedPosition,
