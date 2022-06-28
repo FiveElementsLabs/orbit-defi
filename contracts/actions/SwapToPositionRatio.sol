@@ -97,8 +97,7 @@ contract SwapToPositionRatio is ISwapToPositionRatio {
         address token0Address,
         address token1Address,
         uint24 fee,
-        uint256 amount0In,
-        bool token0AddressIn
+        uint256 amount0In
     ) internal returns (uint256 amount1Out) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         ISwapRouter swapRouter = ISwapRouter(Storage.uniswapAddressHolder.swapRouterAddress());

@@ -25,6 +25,34 @@ contract AaveModule is BaseModule {
     IUniswapAddressHolder public immutable uniswapAddressHolder;
     using SignedSafeMath for int24;
 
+    ///@notice emitted when a deposit on aave is made
+    ///@param positionManager address of positionManager which deposited
+    ///@param tokenId id of the uniswap NFT from which liquidity is being withdrawn
+    ///@param tokenDeposited address of the token deposited to aave
+    ///@param amountDeposited amount of tokenDeposited deposited to aave
+    ///@param aaveId id of the opened aave position
+    event DepositedToAave(
+        address indexed positionManager,
+        uint256 tokenId,
+        address tokenDeposited,
+        uint256 amountDeposited,
+        uint256 aaveId
+    );
+
+    ///@notice emitted when a deposit on aave is made
+    ///@param positionManager address of positionManager which withdrawed
+    ///@param tokenId id of the uniswap NFT to which liquidity is being deposited
+    ///@param tokenWithdrawn address of the token withdrawn from aave
+    ///@param amountWithdrawn amount of tokenWithdrawn withdrawn from aave
+    ///@param aaveId id of the closed aave position
+    event WithdrawnFromAave(
+        address indexed positionManager,
+        uint256 tokenId,
+        address tokenWithdrawn,
+        uint256 amountWithdrawn,
+        uint256 aaveId
+    );
+
     constructor(
         address _aaveAddressHolder,
         address _uniswapAddressHolder,
@@ -161,6 +189,8 @@ contract AaveModule is BaseModule {
 
         IPositionManager(positionManager).pushTokenIdToAave(toAaveToken, id, tokenId);
         IPositionManager(positionManager).removePositionId(tokenId);
+
+        emit DepositedToAave(positionManager, tokenId, token0, amount0Collected, id);
     }
 
     ///@notice return a position to Uniswap
@@ -194,6 +224,8 @@ contract AaveModule is BaseModule {
         IIncreaseLiquidity(positionManager).increaseLiquidity(tokenId, amount0Out, amount1Out);
         IPositionManager(positionManager).removeTokenIdFromAave(token, id);
         IPositionManager(positionManager).pushPositionId(tokenId);
+
+        emit WithdrawnFromAave(positionManager, tokenId, token, amountWithdrawn, id);
     }
 
     ///@notice finds the best fee tier on which to perform a swap

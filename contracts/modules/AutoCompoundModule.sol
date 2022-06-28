@@ -19,6 +19,13 @@ contract AutoCompoundModule is BaseModule {
 
     using SafeMath for uint256;
 
+    ///@notice emitted when a keeper performsm an autocompound
+    ///@param positionManager address of the called position manager
+    ///@param tokenId tokenId of the position
+    ///@param amount0 amount of token0 autocompounded
+    ///@param amount1 amount of token1 autocompounded
+    event AutoCompounded(address indexed positionManager, uint256 tokenId, uint256 amount0, uint256 amount1);
+
     ///@notice constructor of autoCompoundModule
     ///@param _addressHolder the address of the uniswap address holder contract
     ///@param _registry the address of the registry contract
@@ -31,28 +38,29 @@ contract AutoCompoundModule is BaseModule {
     ///@notice executes our recipe for autocompounding
     ///@param positionManager address of the position manager
     ///@param tokenId id of the token to autocompound
-    function autoCompoundFees(IPositionManager positionManager, uint256 tokenId)
+    function autoCompoundFees(address positionManager, uint256 tokenId)
         public
         onlyWhitelistedKeeper
-        activeModule(address(positionManager), tokenId)
+        activeModule(positionManager, tokenId)
     {
         ///@dev check if compound need to be done
-        if (_checkIfCompoundIsNeeded(address(positionManager), tokenId)) {
-            (uint256 amount0Desired, uint256 amount1Desired) = ICollectFees(address(positionManager)).collectFees(
+        if (_checkIfCompoundIsNeeded(positionManager, tokenId)) {
+            (uint256 amount0Desired, uint256 amount1Desired) = ICollectFees(positionManager).collectFees(
                 tokenId,
                 false
             );
 
-            IIncreaseLiquidity(address(positionManager)).increaseLiquidity(tokenId, amount0Desired, amount1Desired);
+            IIncreaseLiquidity(positionManager).increaseLiquidity(tokenId, amount0Desired, amount1Desired);
+            emit AutoCompounded(positionManager, tokenId, amount0Desired, amount1Desired);
         }
     }
 
     ///@notice checks the position status
-    ///@param positionManagerAddress address of the position manager
+    ///@param positionManager address of the position manager
     ///@param tokenId token id of the position
     ///@return true if the position needs to be collected
-    function _checkIfCompoundIsNeeded(address positionManagerAddress, uint256 tokenId) internal returns (bool) {
-        (uint256 uncollectedFees0, uint256 uncollectedFees1) = IUpdateUncollectedFees(positionManagerAddress)
+    function _checkIfCompoundIsNeeded(address positionManager, uint256 tokenId) internal returns (bool) {
+        (uint256 uncollectedFees0, uint256 uncollectedFees1) = IUpdateUncollectedFees(positionManager)
             .updateUncollectedFees(tokenId);
 
         address nonfungiblePositionManagerAddress = addressHolder.nonfungiblePositionManagerAddress();
@@ -63,7 +71,7 @@ contract AutoCompoundModule is BaseModule {
             addressHolder.uniswapV3FactoryAddress()
         );
 
-        (, bytes32 data) = IPositionManager(positionManagerAddress).getModuleInfo(tokenId, address(this));
+        (, bytes32 data) = IPositionManager(positionManager).getModuleInfo(tokenId, address(this));
         require(data != bytes32(0), 'AutoCompoundModule::_checkIfCompoundIsNeeded: module data cannot be empty');
 
         (uint160 sqrtPriceX96, , , , , , ) = IUniswapV3Pool(
