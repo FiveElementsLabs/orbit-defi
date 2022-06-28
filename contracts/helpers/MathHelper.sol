@@ -4,7 +4,7 @@ pragma solidity 0.7.6;
 
 library MathHelper {
     ///@dev cast uint24 to int24
-    function fromUint24ToInt24(uint24 value) internal pure returns (int24 z) {
+    function fromUint24ToInt24(uint24 value) internal pure returns (int24) {
         require(
             uint256(value) <= uint256(type(int24).max),
             "MathHelper::fromUint24ToInt24: value doesn't fit in 24 bits"
