@@ -27,14 +27,18 @@ library MathHelper {
     }
 
     ///@dev cast uint256 to uint24
-    function fromUint256ToUint24(uint256 value) internal pure returns (uint24) {
-        require(value <= uint256(type(uint24).max), "MathHelper::fromUint256ToUint24: value doesn't fit in 24 bits");
-        return uint24(value);
+    function fromUint256ToUint24(uint256 value) internal pure returns (uint24 out) {
+        require((out = uint24(value)) == value, "MathHelper::fromUint256ToUint24: value doesn't fit in 24 bits");
     }
 
     ///@dev cast uint256 to int24
     function fromUint256ToInt24(uint256 value) internal pure returns (int24) {
         require(value <= uint256(type(int24).max), "MathHelper::fromUint256ToInt24: value doesn't fit in 24 bits");
         return int24(value);
+    }
+
+    ///@dev cast uint56 to int24
+    function fromInt56ToInt24(int56 value) internal pure returns (int24 out) {
+        require((out = int24(value)) == value, "MathHelper::fromInt56ToInt24: value doesn't fit in 24 bits");
     }
 }

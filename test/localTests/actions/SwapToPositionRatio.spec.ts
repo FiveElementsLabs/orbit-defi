@@ -1,6 +1,6 @@
 import '@nomiclabs/hardhat-ethers';
 import { expect } from 'chai';
-import { ContractFactory, Contract, BigNumber } from 'ethers';
+import { Contract } from 'ethers';
 import { AbiCoder } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import hre from 'hardhat';
@@ -8,7 +8,6 @@ import {
   tokensFixture,
   poolFixture,
   mintSTDAmount,
-  getSelectors,
   RegistryFixture,
   deployUniswapContracts,
   deployContract,
@@ -16,13 +15,8 @@ import {
   getPositionManager,
   doAllApprovals,
 } from '../../shared/fixtures';
-import {
-  MockToken,
-  IUniswapV3Pool,
-  INonfungiblePositionManager,
-  SwapToPositionRatio,
-  PositionManager,
-} from '../../../typechain';
+import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, PositionManager } from '../../../typechain';
+import UniswapV3Pool from '@uniswap/v3-core/artifacts/contracts/UniswapV3Pool.sol/UniswapV3Pool.json';
 
 describe('SwapToPositionRatio.sol', function () {
   //GLOBAL VARIABLE - USE THIS
@@ -266,6 +260,109 @@ describe('SwapToPositionRatio.sol', function () {
           tickUpper: tickUpper,
         })
       ).to.be.reverted;
+    });
+
+    it('should swap for positive pool ticks', async function () {
+      //create pool with negative tick
+      const tx = await Factory.createPool(tokenEth.address, tokenUsdc.address, 500);
+      const receipt = (await tx.wait()) as any;
+      const poolEthUsdc500 = new ethers.Contract(
+        receipt.events[0].args.pool,
+        UniswapV3Pool['abi'],
+        user
+      ) as IUniswapV3Pool;
+
+      let startTick = 12300;
+      const price = Math.pow(1.0001, startTick);
+      await poolEthUsdc500.initialize('0x' + (Math.sqrt(price) * Math.pow(2, 96)).toString(16));
+      await poolEthUsdc500.increaseObservationCardinalityNext(100);
+
+      //mint a position in this pool
+      await NonFungiblePositionManager.connect(liquidityProvider).mint(
+        {
+          token0: tokenEth.address,
+          token1: tokenUsdc.address,
+          fee: 500,
+          tickLower: 0 - 60 * 24,
+          tickUpper: 0 + 60 * 193,
+          amount0Desired: '0x' + (1e26).toString(16),
+          amount1Desired: '0x' + (1e26).toString(16),
+          amount0Min: 0,
+          amount1Min: 0,
+          recipient: liquidityProvider.address,
+          deadline: Date.now() + 1000,
+        },
+        { gasLimit: 670000 }
+      );
+      await poolEthUsdc500.increaseObservationCardinalityNext(1);
+
+      //call swap to position ratio
+      const tickLower = 60;
+      const tickUpper = 60 * 200;
+      const amount0In = 1e5;
+      const amount1In = 2e5;
+
+      await SwapToPositionRatioFallback.connect(user).swapToPositionRatio({
+        token0Address: tokenEth.address,
+        token1Address: tokenUsdc.address,
+        fee: 500,
+        amount0In: amount0In,
+        amount1In: amount1In,
+        tickLower: tickLower,
+        tickUpper: tickUpper,
+      });
+    });
+
+    it('should swap for negative pool ticks', async function () {
+      //create pool with negative tick
+      const tx = await Factory.createPool(tokenEth.address, tokenUsdc.address, 10000);
+      const receipt = (await tx.wait()) as any;
+
+      const poolEthUsdc10000 = new ethers.Contract(
+        receipt.events[0].args.pool,
+        UniswapV3Pool['abi'],
+        user
+      ) as IUniswapV3Pool;
+
+      let startTick = -500;
+      const price = Math.pow(1.0001, startTick);
+      await poolEthUsdc10000.initialize('0x' + (Math.sqrt(price) * Math.pow(2, 96)).toString(16));
+      await poolEthUsdc10000.increaseObservationCardinalityNext(100);
+
+      //mint a position in this pool
+      await NonFungiblePositionManager.connect(liquidityProvider).mint(
+        {
+          token0: tokenEth.address,
+          token1: tokenUsdc.address,
+          fee: 10000,
+          tickLower: 0 - 60 * 1000,
+          tickUpper: 0 + 60 * 1000,
+          amount0Desired: '0x' + (1e26).toString(16),
+          amount1Desired: '0x' + (1e26).toString(16),
+          amount0Min: 0,
+          amount1Min: 0,
+          recipient: liquidityProvider.address,
+          deadline: Date.now() + 1000,
+        },
+        { gasLimit: 670000 }
+      );
+      await poolEthUsdc10000.increaseObservationCardinalityNext(1);
+
+      //call swap to position ratio
+      const tickLower = -800;
+      const tickUpper = 600;
+      const amount0In = 1e5;
+      const amount1In = 2e5;
+
+      await SwapToPositionRatioFallback.connect(user).swapToPositionRatio({
+        token0Address: tokenEth.address,
+        token1Address: tokenUsdc.address,
+        fee: 10000,
+        amount0In: amount0In,
+        amount1In: amount1In,
+        tickLower: tickLower,
+        tickUpper: tickUpper,
+      });
     });
   });
 });
