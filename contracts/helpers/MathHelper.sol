@@ -29,7 +29,6 @@ library MathHelper {
     ///@dev cast uint256 to uint24
     function fromUint256ToUint24(uint256 value) internal pure returns (uint24 out) {
         require((out = uint24(value)) == value, "MathHelper::fromUint256ToUint24: value doesn't fit in 24 bits");
-        return uint24(value);
     }
 
     ///@dev cast uint256 to int24
