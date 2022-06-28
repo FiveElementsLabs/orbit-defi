@@ -52,7 +52,7 @@ contract SwapToPositionRatio is ISwapToPositionRatio {
 
         SwapHelper.checkDeviation(pool, Storage.registry.maxTwapDeviation(), Storage.registry.twapDuration());
 
-        (uint256 amountToSwap, bool token0AddressIn) = SwapHelper.calcAmountToSwap(
+        (uint256 amountToSwap, bool isToken0In) = SwapHelper.calcAmountToSwap(
             tickPool,
             inputs.tickLower,
             inputs.tickUpper,
@@ -61,19 +61,18 @@ contract SwapToPositionRatio is ISwapToPositionRatio {
         );
 
         if (amountToSwap != 0) {
-            uint256 amountSwapped = swap(
-                token0AddressIn ? inputs.token0Address : inputs.token1Address,
-                token0AddressIn ? inputs.token1Address : inputs.token0Address,
+            uint256 amountSwapped = _swap(
+                isToken0In ? inputs.token0Address : inputs.token1Address,
+                isToken0In ? inputs.token1Address : inputs.token0Address,
                 inputs.fee,
-                amountToSwap,
-                token0AddressIn
+                amountToSwap
             );
 
             ///@notice return the new amount of the token swapped and the token returned
             ///@dev token0AddressIn true amount 0 - amountToSwap  ------ amount 1 + amountSwapped
             ///@dev token0AddressIn false amount 0 + amountSwapped  ------ amount 1 - amountToSwap
-            amount0Out = token0AddressIn ? inputs.amount0In - amountToSwap : inputs.amount0In + amountSwapped;
-            amount1Out = token0AddressIn ? inputs.amount1In + amountSwapped : inputs.amount1In - amountToSwap;
+            amount0Out = isToken0In ? inputs.amount0In.sub(amountToSwap) : inputs.amount0In.add(amountSwapped);
+            amount1Out = isToken0In ? inputs.amount1In.add(amountSwapped) : inputs.amount1In.sub(amountToSwap);
 
             emit SwappedToPositionRatio(
                 address(this),
@@ -88,34 +87,33 @@ contract SwapToPositionRatio is ISwapToPositionRatio {
         }
     }
 
-    ///@notice swaps token0 for token1
-    ///@param token0Address address of first token
-    ///@param token1Address address of second token
+    ///@notice performs a swap
+    ///@param tokenIn address of input token
+    ///@param tokenOut address of output
     ///@param fee fee tier of the pool
-    ///@param amount0In amount of token0 to swap
-    function swap(
-        address token0Address,
-        address token1Address,
+    ///@param amountIn amount of tokenIn to swap
+    function _swap(
+        address tokenIn,
+        address tokenOut,
         uint24 fee,
-        uint256 amount0In
-    ) internal returns (uint256 amount1Out) {
+        uint256 amountIn
+    ) internal returns (uint256 amountOut) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         ISwapRouter swapRouter = ISwapRouter(Storage.uniswapAddressHolder.swapRouterAddress());
 
-        ERC20Helper._approveToken(token0Address, address(swapRouter), type(uint256).max);
-        ERC20Helper._approveToken(token1Address, address(swapRouter), type(uint256).max);
+        ERC20Helper._approveToken(tokenIn, address(swapRouter), type(uint256).max);
 
         ISwapRouter.ExactInputSingleParams memory swapParams = ISwapRouter.ExactInputSingleParams({
-            tokenIn: token0Address,
-            tokenOut: token1Address,
+            tokenIn: tokenIn,
+            tokenOut: tokenOut,
             fee: fee,
             recipient: address(this),
             deadline: block.timestamp,
-            amountIn: amount0In,
+            amountIn: amountIn,
             amountOutMinimum: 0,
             sqrtPriceLimitX96: 0
         });
 
-        amount1Out = swapRouter.exactInputSingle(swapParams);
+        amountOut = swapRouter.exactInputSingle(swapParams);
     }
 }

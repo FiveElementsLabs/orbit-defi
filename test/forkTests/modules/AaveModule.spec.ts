@@ -255,7 +255,7 @@ describe('AaveModule.sol', function () {
           fee: 3000,
           recipient: trader.address,
           deadline: Date.now() + 1000,
-          amountIn: '0x' + (1e18).toString(16),
+          amountIn: '0x' + (1e14).toString(16),
           amountOutMinimum: 0,
           sqrtPriceLimitX96: 0,
         });
@@ -265,7 +265,7 @@ describe('AaveModule.sol', function () {
 
       const tx = await AaveModule.connect(user).depositIfNeeded(PositionManager.address, tokenId);
       const events = (await tx.wait()).events;
-      aaveId = abiCoder.decode(['address', 'uint256', 'uint256'], events[events.length - 1].data)[1];
+      aaveId = events[events.length - 1].args.aaveId;
 
       expect(await aWbtc.balanceOf(PositionManager.address)).to.gt(0);
     });

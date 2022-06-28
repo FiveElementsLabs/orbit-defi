@@ -83,7 +83,7 @@ contract IdleLiquidityModule is BaseModule {
         );
 
         ///@dev call swapToPositionAction to perform the swap
-        (uint256 token0Swapped, uint256 token1Swapped) = ISwapToPositionRatio(positionManager).swapToPositionRatio(
+        (uint256 amount0Swapped, uint256 amount1Swapped) = ISwapToPositionRatio(positionManager).swapToPositionRatio(
             ISwapToPositionRatio.SwapToPositionInput(
                 token0,
                 token1,
@@ -97,18 +97,10 @@ contract IdleLiquidityModule is BaseModule {
 
         ///@dev call mintAction
         (uint256 mintedPosition, , ) = IMint(positionManager).mint(
-            IMint.MintInput(
-                token0,
-                token1,
-                fee,
-                tickLower,
-                tickUpper,
-                token0Swapped - deltaAmountSwapped,
-                token1Swapped - deltaAmountSwapped
-            )
+            IMint.MintInput(token0, token1, fee, tickLower, tickUpper, amount0Swapped, amount1Swapped)
         );
 
-        emit rebalanced(positionManager, tokenId, mintedPosition, amount0, amount1);
+        emit rebalanced(positionManager, tokenId, mintedPosition, amount0Swapped, amount1Swapped);
     }
 
     ///@notice calc tickLower and tickUpper with the same delta as the position but with tick of the pool in center
