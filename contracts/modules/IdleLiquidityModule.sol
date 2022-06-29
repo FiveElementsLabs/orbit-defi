@@ -64,6 +64,10 @@ contract IdleLiquidityModule is BaseModule {
         }
     }
 
+    ///@notice check if the position needs to be rebalanced
+    ///@param positionManager address of the position manager
+    ///@param tokenId tokenId of the position
+    ///@return true if the position needs to be rebalanced, false otherwise
     function isRebalanceNeeded(address positionManager, uint256 tokenId) public view returns (bool) {
         uint24 tickDistance = UniswapNFTHelper._checkDistanceFromRange(
             tokenId,
@@ -75,6 +79,9 @@ contract IdleLiquidityModule is BaseModule {
         return tickDistance >= MathHelper.fromUint256ToUint24(uint256(rebalanceDistance));
     }
 
+    ///@notice rebalances the position by swapping the tokens
+    ///@param positionManager address of the position manager
+    ///@param tokenId tokenId of the position
     function _rebalance(address positionManager, uint256 tokenId) internal {
         (, , address token0, address token1, uint24 fee, , , , , , , ) = INonfungiblePositionManager(
             uniswapAddressHolder.nonfungiblePositionManagerAddress()
