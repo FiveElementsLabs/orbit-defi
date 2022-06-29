@@ -29,7 +29,7 @@ contract IdleLiquidityModule is BaseModule {
     ///@param mintedPosition tokenId of the minted position
     ///@param amount0 amount of token0 minted
     ///@param amount1 amount of token1 minted
-    event rebalanced(
+    event positionRebalanced(
         address indexed positionManager,
         uint256 closedPosition,
         uint256 mintedPosition,
@@ -106,7 +106,7 @@ contract IdleLiquidityModule is BaseModule {
             IMint.MintInput(token0, token1, fee, tickLower, tickUpper, amount0Swapped, amount1Swapped)
         );
 
-        emit rebalanced(positionManager, tokenId, mintedPosition, amount0Swapped, amount1Swapped);
+        emit positionRebalanced(positionManager, tokenId, mintedPosition, amount0Swapped, amount1Swapped);
     }
 
     ///@notice calc tickLower and tickUpper with the same delta as the position but with tick of the pool in center
