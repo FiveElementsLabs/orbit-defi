@@ -16,6 +16,7 @@ import '../utils/Storage.sol';
 
 contract AutoCompoundModule is BaseModule {
     IUniswapAddressHolder public immutable addressHolder;
+    uint256 public constant Q96 = 2**96;
 
     using SafeMath for uint256;
 
@@ -43,8 +44,10 @@ contract AutoCompoundModule is BaseModule {
         onlyWhitelistedKeeper
         activeModule(positionManager, tokenId)
     {
+        (uint256 uncollectedFees0, uint256 uncollectedFees1) = IUpdateUncollectedFees(positionManager)
+            .updateUncollectedFees(tokenId);
         ///@dev check if compound need to be done
-        if (_checkIfCompoundIsNeeded(positionManager, tokenId)) {
+        if (isCompoundNeeded(positionManager, tokenId, uncollectedFees0, uncollectedFees1)) {
             (uint256 amount0Desired, uint256 amount1Desired) = ICollectFees(positionManager).collectFees(
                 tokenId,
                 false
@@ -59,10 +62,12 @@ contract AutoCompoundModule is BaseModule {
     ///@param positionManager address of the position manager
     ///@param tokenId token id of the position
     ///@return true if the position needs to be collected
-    function _checkIfCompoundIsNeeded(address positionManager, uint256 tokenId) internal returns (bool) {
-        (uint256 uncollectedFees0, uint256 uncollectedFees1) = IUpdateUncollectedFees(positionManager)
-            .updateUncollectedFees(tokenId);
-
+    function isCompoundNeeded(
+        address positionManager,
+        uint256 tokenId,
+        uint256 uncollectedFees0,
+        uint256 uncollectedFees1
+    ) public view returns (bool) {
         address nonfungiblePositionManagerAddress = addressHolder.nonfungiblePositionManagerAddress();
 
         (uint256 amount0, uint256 amount1) = UniswapNFTHelper._getAmountsfromTokenId(
@@ -82,17 +87,30 @@ contract AutoCompoundModule is BaseModule {
             )
         ).slot0();
 
-        //returns true if the value of uncollected fees * 100 is greater than amount in the position * threshold:
-        //  ((uncollectedFees0 * sqrtPriceX96) / 2**96 + (uncollectedFees1 * 2**96) / sqrtPriceX96)) * 100 >
-        //  ((amount0 * sqrtPriceX96) / 2**96 + (amount1 * 2**96) / sqrtPriceX96)) * feesThreshold
-        return
-            (
-                uncollectedFees0.mul(uint256(sqrtPriceX96)).div(2**96).add(
-                    uncollectedFees1.mul(2**96).div(uint256(sqrtPriceX96))
-                )
-            ).mul(100) >
-            (amount0.mul(uint256(sqrtPriceX96)).div(2**96).add(amount1.mul(2**96).div(uint256(sqrtPriceX96)))).mul(
-                uint256(data)
-            );
+        return _isThresholdReached(amount0, amount1, uncollectedFees0, uncollectedFees1, sqrtPriceX96, uint256(data));
+    }
+
+    ///@notice returns true if the value of uncollected fees * 100 is greater than amount in the position * threshold:
+    //  ((uncollectedFees0 * sqrtPriceX96) / 2**96 + (uncollectedFees1 * 2**96) / sqrtPriceX96)) * 100 >
+    //  ((amount0 * sqrtPriceX96) / 2**96 + (amount1 * 2**96) / sqrtPriceX96)) * feesThreshold
+    ///@param amount0 amount of token0 in the position
+    ///@param amount1 amount of token1 in the position
+    ///@param uncollectedFees0 amount of token0 uncollected fees
+    ///@param uncollectedFees1 amount of token1 uncollected fees
+    ///@param sqrtPriceX96 sqrt of the price of the token in the position
+    ///@param threshold percentage of fees that is needed at minimum to trigger a collect
+    function _isThresholdReached(
+        uint256 amount0,
+        uint256 amount1,
+        uint256 uncollectedFees0,
+        uint256 uncollectedFees1,
+        uint256 sqrtPriceX96,
+        uint256 threshold
+    ) internal pure returns (bool) {
+        uint256 uncollectedFees = uncollectedFees0.mul(sqrtPriceX96).div(Q96).add(
+            uncollectedFees1.mul(Q96).div(sqrtPriceX96)
+        );
+        uint256 amount = amount0.mul(sqrtPriceX96).div(Q96).add(amount1.mul(Q96).div(sqrtPriceX96));
+        return uncollectedFees.mul(100) > amount.mul(threshold);
     }
 }
