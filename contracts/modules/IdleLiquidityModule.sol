@@ -51,13 +51,20 @@ contract IdleLiquidityModule is BaseModule {
     }
 
     ///@notice check if the position is out of range and rebalance it by swapping the tokens as necessary
-    ///@param tokenId tokenId of the position
     ///@param positionManager address of the position manager
-    function rebalance(uint256 tokenId, address positionManager)
+    ///@param tokenId tokenId of the position
+    function rebalance(address positionManager, uint256 tokenId)
         public
         onlyWhitelistedKeeper
         activeModule(positionManager, tokenId)
     {
+        ///@dev can rebalance only if the pool tick is outside the position range, and it is far enough from it
+        if (isRebalanceNeeded(positionManager, tokenId)) {
+            _rebalance(positionManager, tokenId);
+        }
+    }
+
+    function isRebalanceNeeded(address positionManager, uint256 tokenId) public view returns (bool) {
         uint24 tickDistance = UniswapNFTHelper._checkDistanceFromRange(
             tokenId,
             uniswapAddressHolder.nonfungiblePositionManagerAddress(),
@@ -65,11 +72,7 @@ contract IdleLiquidityModule is BaseModule {
         );
         (, bytes32 rebalanceDistance) = IPositionManager(positionManager).getModuleInfo(tokenId, address(this));
         require(rebalanceDistance != bytes32(0), 'IdleLiquidityModule:: rebalance: Rebalance distance is 0');
-
-        ///@dev can rebalance only if the pool tick is outside the position range, and it is far enough from it
-        if (tickDistance >= MathHelper.fromUint256ToUint24(uint256(rebalanceDistance))) {
-            _rebalance(positionManager, tokenId);
-        }
+        return tickDistance >= MathHelper.fromUint256ToUint24(uint256(rebalanceDistance));
     }
 
     function _rebalance(address positionManager, uint256 tokenId) internal {
