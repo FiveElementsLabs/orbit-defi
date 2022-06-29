@@ -243,7 +243,7 @@ describe('AaveModule.sol', function () {
 
   describe('AaveModule - depositToAave', function () {
     it('should not deposit to aave if position is in range', async function () {
-      await AaveModule.connect(user).depositIfNeeded(PositionManager.address, tokenId);
+      await AaveModule.connect(user).deposit(PositionManager.address, tokenId);
       expect(await NonFungiblePositionManager.ownerOf(tokenId)).to.equal(PositionManager.address);
     });
 
@@ -263,7 +263,7 @@ describe('AaveModule.sol', function () {
 
       expect((await Pool0.slot0()).tick).to.gt(tickUpper);
 
-      const tx = await AaveModule.connect(user).depositIfNeeded(PositionManager.address, tokenId);
+      const tx = await AaveModule.connect(user).deposit(PositionManager.address, tokenId);
       const events = (await tx.wait()).events;
       aaveId = events[events.length - 1].args.aaveId;
 
@@ -271,7 +271,7 @@ describe('AaveModule.sol', function () {
     });
 
     it('should not return to position if still out of range', async function () {
-      await AaveModule.connect(user).withdrawIfNeeded(PositionManager.address, wbtcMock.address, aaveId);
+      await AaveModule.connect(user).withdraw(PositionManager.address, wbtcMock.address, aaveId);
       expect(await aWbtc.balanceOf(PositionManager.address)).to.gt(0);
     });
 
@@ -294,7 +294,7 @@ describe('AaveModule.sol', function () {
 
       const positions = await PositionManager.connect(user).getAavePositionsArray();
 
-      const tx = await AaveModule.connect(user).withdrawIfNeeded(
+      const tx = await AaveModule.connect(user).withdraw(
         PositionManager.address,
         positions[0].tokenToAave,
         positions[0].id

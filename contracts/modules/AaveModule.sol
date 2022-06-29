@@ -65,32 +65,13 @@ contract AaveModule is BaseModule {
     ///@notice deposit a position in an Aave lending pool
     ///@param positionManager address of the position manager
     ///@param tokenId id of the Uniswap position to deposit
-    function depositIfNeeded(address positionManager, uint256 tokenId)
+    function deposit(address positionManager, uint256 tokenId)
         public
         activeModule(positionManager, tokenId)
         onlyWhitelistedKeeper
     {
-        (, bytes32 data) = IPositionManager(positionManager).getModuleInfo(tokenId, address(this));
-
-        require(data != bytes32(0), 'AaveModule::depositIfNeeded: module data cannot be empty');
-
-        uint24 rebalanceDistance = MathHelper.fromUint256ToUint24(uint256(data));
-        address nonfungiblePositionManager = uniswapAddressHolder.nonfungiblePositionManagerAddress();
         ///@dev move token to aave only if the position's range is outside of the tick of the pool
-        if (
-            UniswapNFTHelper._checkDistanceFromRange(
-                tokenId,
-                nonfungiblePositionManager,
-                uniswapAddressHolder.uniswapV3FactoryAddress()
-            ) >
-            0 &&
-            rebalanceDistance <=
-            UniswapNFTHelper._checkDistanceFromRange(
-                tokenId,
-                nonfungiblePositionManager,
-                uniswapAddressHolder.uniswapV3FactoryAddress()
-            )
-        ) {
+        if (isDepositNeeded(positionManager, tokenId)) {
             _depositToAave(positionManager, tokenId);
         }
     }
@@ -99,16 +80,44 @@ contract AaveModule is BaseModule {
     ///@param positionManager address of the position manager
     ///@param token address of the token of Aave position
     ///@param id id of the Aave position to withdraw
-    function withdrawIfNeeded(
+    function withdraw(
         address positionManager,
         address token,
         uint256 id
     ) public onlyWhitelistedKeeper {
         require(token != address(0), 'AaveModule::withdrawIfNeeded: token cannot be address 0');
 
-        address nonfungiblePositionManager = uniswapAddressHolder.nonfungiblePositionManagerAddress();
-
         uint256 tokenId = IPositionManager(positionManager).getTokenIdFromAavePosition(token, id);
+
+        if (isWithdrawNeeded(tokenId)) {
+            _returnToUniswap(positionManager, token, id, tokenId);
+        }
+    }
+
+    ///@notice checks if the position needs to be deposited to aave
+    ///@param positionManager address of the position manager
+    ///@param tokenId id of the Uniswap position to deposit
+    ///@return true if the position needs to be deposited to aave
+    function isDepositNeeded(address positionManager, uint256 tokenId) public view returns (bool) {
+        (, bytes32 data) = IPositionManager(positionManager).getModuleInfo(tokenId, address(this));
+
+        require(data != bytes32(0), 'AaveModule::isDepositNeeded: module data cannot be empty');
+
+        uint24 rebalanceDistance = MathHelper.fromUint256ToUint24(uint256(data));
+        uint24 distanceFromRange = UniswapNFTHelper._checkDistanceFromRange(
+            tokenId,
+            uniswapAddressHolder.nonfungiblePositionManagerAddress(),
+            uniswapAddressHolder.uniswapV3FactoryAddress()
+        );
+
+        return distanceFromRange > 0 && rebalanceDistance <= distanceFromRange;
+    }
+
+    ///@notice checks if the position needs to be withdrawn from aave
+    ///@param tokenId id of the Uniswap position to withdraw
+    ///@return true if the position needs to be withdrawn from aave
+    function isWithdrawNeeded(uint256 tokenId) public view returns (bool) {
+        address nonfungiblePositionManager = uniswapAddressHolder.nonfungiblePositionManagerAddress();
         (, int24 tickPool, , , , , ) = IUniswapV3Pool(
             UniswapNFTHelper._getPoolFromTokenId(
                 tokenId,
@@ -121,9 +130,7 @@ contract AaveModule is BaseModule {
             tokenId,
             INonfungiblePositionManager(nonfungiblePositionManager)
         );
-        if (tickPool > tickLower && tickPool < tickUpper) {
-            _returnToUniswap(positionManager, token, id, tokenId);
-        }
+        return tickPool > tickLower && tickPool < tickUpper;
     }
 
     ///@notice deposit a uni v3 position to an Aave lending pool
