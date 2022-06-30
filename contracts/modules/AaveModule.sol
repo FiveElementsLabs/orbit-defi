@@ -85,7 +85,7 @@ contract AaveModule is BaseModule {
         address token,
         uint256 id
     ) public onlyWhitelistedKeeper {
-        require(token != address(0), 'AaveModule::withdrawIfNeeded: token cannot be address 0');
+        require(token != address(0), 'AaveModule::moveToUniswap: token cannot be address 0');
 
         uint256 tokenId = IPositionManager(positionManager).getTokenIdFromAavePosition(token, id);
 
@@ -158,12 +158,12 @@ contract AaveModule is BaseModule {
         if (tickPool > tickLower && tickPool > tickUpper) toAaveToken = token0;
         else if (tickPool < tickLower && tickPool < tickUpper) toAaveToken = token1;
 
-        require(toAaveToken != address(0), 'AaveModule::_depositToAave: position is in range.');
+        require(toAaveToken != address(0), 'AaveModule::_moveToAave: position is in range.');
 
         require(
             ILendingPool(aaveAddressHolder.lendingPoolAddress()).getReserveData(toAaveToken).aTokenAddress !=
                 address(0),
-            'AaveModule::_depositToAave: Aave token not found.'
+            'AaveModule::_moveToAave: Aave token not found.'
         );
 
         (uint256 amount0ToDecrease, uint256 amount1ToDecrease) = UniswapNFTHelper._getAmountsfromTokenId(
@@ -210,7 +210,7 @@ contract AaveModule is BaseModule {
         uint256 id,
         uint256 tokenId
     ) internal {
-        uint256 amountWithdrawn = IAaveWithdraw(positionManager).withdrawFromAave(token, id);
+        uint256 amountWithdrawn = IAaveWithdraw(positionManager).withdrawFromAave(token, id, 10_000, false);
         (address token0, address token1, uint24 fee, int24 tickLower, int24 tickUpper) = UniswapNFTHelper._getTokens(
             tokenId,
             INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress())

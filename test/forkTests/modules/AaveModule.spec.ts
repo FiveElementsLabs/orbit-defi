@@ -1,6 +1,6 @@
 import '@nomiclabs/hardhat-ethers';
 import { expect } from 'chai';
-import { ContractFactory, Contract } from 'ethers';
+import { Contract } from 'ethers';
 import { AbiCoder } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import hre from 'hardhat';
@@ -71,13 +71,7 @@ describe('AaveModule.sol', function () {
     tokenUsdc = (await tokensFixture('USDC', 6)).tokenFixture;
 
     //deploy factory, used for pools
-    const uniswapFactoryFactory = new ContractFactory(
-      UniswapV3Factoryjson['abi'],
-      UniswapV3Factoryjson['bytecode'],
-      user
-    );
-    Factory = (await uniswapFactoryFactory.deploy()) as Contract;
-    await Factory.deployed();
+    Factory = await ethers.getContractAt(UniswapV3Factoryjson.abi, '0x1f98431c8ad98523631ae4a59f267346ea31f984');
 
     //mint 1e30 token, you can call with arbitrary amount
     await mintSTDAmount(tokenEth);
