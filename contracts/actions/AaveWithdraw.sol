@@ -29,7 +29,7 @@ contract AaveWithdraw is IAaveWithdraw {
     ///@param token token address
     ///@param id position to withdraw from
     ///@param partToWithdraw percentage of token to withdraw in base points
-
+    ///@param returnTokensToUser true if withdrawn tokens are sent to positionManager owner
     ///@return amountWithdrawn amount of token withdrawn from aave
     function withdrawFromAave(
         address token,
