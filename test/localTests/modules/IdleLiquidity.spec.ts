@@ -1,21 +1,14 @@
 import '@nomiclabs/hardhat-ethers';
 import { expect } from 'chai';
-import { ContractFactory, Contract } from 'ethers';
+import { Contract } from 'ethers';
 import { AbiCoder } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import hre from 'hardhat';
-import UniswapV3Factoryjson from '@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json';
-import NonFungiblePositionManagerjson from '@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json';
-import NonFungiblePositionManagerDescriptorjson from '@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json';
-import PositionManagerjson from '../../../artifacts/contracts/PositionManager.sol/PositionManager.json';
-import SwapRouterjson from '@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json';
 import {
-  NonFungiblePositionManagerDescriptorBytecode,
   tokensFixture,
   poolFixture,
   mintSTDAmount,
   routerFixture,
-  getSelectors,
   RegistryFixture,
   deployUniswapContracts,
   deployContract,
@@ -196,7 +189,7 @@ describe('IdleLiquidityModule.sol', function () {
         abiCoder.encode(['uint24'], [2])
       );
       // rebalance
-      await IdleLiquidityModule.rebalance(tokenId, PositionManager.address);
+      await IdleLiquidityModule.rebalance(PositionManager.address, tokenId);
 
       await expect(NonFungiblePositionManager.ownerOf(tokenId)).to.be.reverted;
       expect(await NonFungiblePositionManager.ownerOf(tokenId.add(1))).to.equal(PositionManager.address);
@@ -210,7 +203,7 @@ describe('IdleLiquidityModule.sol', function () {
         IdleLiquidityModule.address,
         abiCoder.encode(['uint24'], [100])
       );
-      await expect(IdleLiquidityModule.rebalance(tokenId.add(1), PositionManager.address)).to.be.reverted;
+      await expect(IdleLiquidityModule.rebalance(PositionManager.address, tokenId.add(1))).to.be.reverted;
     });
   });
 });

@@ -25,13 +25,13 @@ contract AaveModule is BaseModule {
     IUniswapAddressHolder public immutable uniswapAddressHolder;
     using SafeInt24Math for int24;
 
-    ///@notice emitted when a deposit on aave is made
+    ///@notice emitted when a uniswap position liquidity is moved to aave
     ///@param positionManager address of positionManager which deposited
     ///@param tokenId id of the uniswap NFT from which liquidity is being withdrawn
     ///@param tokenDeposited address of the token deposited to aave
     ///@param amountDeposited amount of tokenDeposited deposited to aave
     ///@param aaveId id of the opened aave position
-    event DepositedToAave(
+    event MovedToAave(
         address indexed positionManager,
         uint256 tokenId,
         address tokenDeposited,
@@ -39,13 +39,13 @@ contract AaveModule is BaseModule {
         uint256 aaveId
     );
 
-    ///@notice emitted when a deposit on aave is made
+    ///@notice emitted when a aave position liquidity is moved to uniswap
     ///@param positionManager address of positionManager which withdrawed
     ///@param tokenId id of the uniswap NFT to which liquidity is being deposited
     ///@param tokenWithdrawn address of the token withdrawn from aave
     ///@param amountWithdrawn amount of tokenWithdrawn withdrawn from aave
     ///@param aaveId id of the closed aave position
-    event WithdrawnFromAave(
+    event MovedToUniswap(
         address indexed positionManager,
         uint256 tokenId,
         address tokenWithdrawn,
@@ -62,53 +62,62 @@ contract AaveModule is BaseModule {
         uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
     }
 
-    ///@notice deposit a position in an Aave lending pool
+    ///@notice deposit a uniswap position liquidity in an Aave lending pool
     ///@param positionManager address of the position manager
     ///@param tokenId id of the Uniswap position to deposit
-    function depositIfNeeded(address positionManager, uint256 tokenId)
+    function moveToAave(address positionManager, uint256 tokenId)
         public
         activeModule(positionManager, tokenId)
         onlyWhitelistedKeeper
     {
-        (, bytes32 data) = IPositionManager(positionManager).getModuleInfo(tokenId, address(this));
-
-        require(data != bytes32(0), 'AaveModule::depositIfNeeded: module data cannot be empty');
-
-        uint24 rebalanceDistance = MathHelper.fromUint256ToUint24(uint256(data));
-        address nonfungiblePositionManager = uniswapAddressHolder.nonfungiblePositionManagerAddress();
         ///@dev move token to aave only if the position's range is outside of the tick of the pool
-        if (
-            UniswapNFTHelper._checkDistanceFromRange(
-                tokenId,
-                nonfungiblePositionManager,
-                uniswapAddressHolder.uniswapV3FactoryAddress()
-            ) >
-            0 &&
-            rebalanceDistance <=
-            UniswapNFTHelper._checkDistanceFromRange(
-                tokenId,
-                nonfungiblePositionManager,
-                uniswapAddressHolder.uniswapV3FactoryAddress()
-            )
-        ) {
-            _depositToAave(positionManager, tokenId);
+        if (isMoveToAaveNeeded(positionManager, tokenId)) {
+            _moveToAave(positionManager, tokenId);
         }
     }
 
-    ///@notice check if withdraw is needed and execute
+    ///@notice move liquidity deposited on aave back to its uniswap position
     ///@param positionManager address of the position manager
     ///@param token address of the token of Aave position
     ///@param id id of the Aave position to withdraw
-    function withdrawIfNeeded(
+    function moveToUniswap(
         address positionManager,
         address token,
         uint256 id
     ) public onlyWhitelistedKeeper {
         require(token != address(0), 'AaveModule::withdrawIfNeeded: token cannot be address 0');
 
-        address nonfungiblePositionManager = uniswapAddressHolder.nonfungiblePositionManagerAddress();
-
         uint256 tokenId = IPositionManager(positionManager).getTokenIdFromAavePosition(token, id);
+
+        if (isMoveToUniswapNeeded(tokenId)) {
+            _moveToUniswap(positionManager, token, id, tokenId);
+        }
+    }
+
+    ///@notice checks if the position needs to be deposited to aave
+    ///@param positionManager address of the position manager
+    ///@param tokenId id of the Uniswap position to deposit
+    ///@return true if the position needs to be deposited to aave
+    function isMoveToAaveNeeded(address positionManager, uint256 tokenId) public view returns (bool) {
+        (, bytes32 data) = IPositionManager(positionManager).getModuleInfo(tokenId, address(this));
+
+        require(data != bytes32(0), 'AaveModule::isDepositNeeded: module data cannot be empty');
+
+        uint24 rebalanceDistance = MathHelper.fromUint256ToUint24(uint256(data));
+        uint24 distanceFromRange = UniswapNFTHelper._checkDistanceFromRange(
+            tokenId,
+            uniswapAddressHolder.nonfungiblePositionManagerAddress(),
+            uniswapAddressHolder.uniswapV3FactoryAddress()
+        );
+
+        return distanceFromRange > 0 && rebalanceDistance <= distanceFromRange;
+    }
+
+    ///@notice checks if the position needs to be withdrawn from aave
+    ///@param tokenId id of the Uniswap position to withdraw
+    ///@return true if the position needs to be sent back to uniswap
+    function isMoveToUniswapNeeded(uint256 tokenId) public view returns (bool) {
+        address nonfungiblePositionManager = uniswapAddressHolder.nonfungiblePositionManagerAddress();
         (, int24 tickPool, , , , , ) = IUniswapV3Pool(
             UniswapNFTHelper._getPoolFromTokenId(
                 tokenId,
@@ -121,15 +130,13 @@ contract AaveModule is BaseModule {
             tokenId,
             INonfungiblePositionManager(nonfungiblePositionManager)
         );
-        if (tickPool > tickLower && tickPool < tickUpper) {
-            _returnToUniswap(positionManager, token, id, tokenId);
-        }
+        return tickPool > tickLower && tickPool < tickUpper;
     }
 
-    ///@notice deposit a uni v3 position to an Aave lending pool
+    ///@notice deposit a uni v3 position's liquidity to an Aave lending pool
     ///@param positionManager address of the position manager
     ///@param tokenId id of the Uniswap position to deposit
-    function _depositToAave(address positionManager, uint256 tokenId) internal {
+    function _moveToAave(address positionManager, uint256 tokenId) internal {
         (, , address token0, address token1, , , , , , , , ) = INonfungiblePositionManager(
             uniswapAddressHolder.nonfungiblePositionManagerAddress()
         ).positions(tokenId);
@@ -190,14 +197,14 @@ contract AaveModule is BaseModule {
         IPositionManager(positionManager).pushTokenIdToAave(toAaveToken, id, tokenId);
         IPositionManager(positionManager).removePositionId(tokenId);
 
-        emit DepositedToAave(positionManager, tokenId, token0, amount0Collected, id);
+        emit MovedToAave(positionManager, tokenId, token0, amount0Collected, id);
     }
 
-    ///@notice return a position to Uniswap
+    ///@notice return an aave position's liquidity to Uniswap nft
     ///@param positionManager address of the position manager
     ///@param token address of the token of Aave position
     ///@param id id of the Aave position to withdraw
-    function _returnToUniswap(
+    function _moveToUniswap(
         address positionManager,
         address token,
         uint256 id,
@@ -225,7 +232,7 @@ contract AaveModule is BaseModule {
         IPositionManager(positionManager).removeTokenIdFromAave(token, id);
         IPositionManager(positionManager).pushPositionId(tokenId);
 
-        emit WithdrawnFromAave(positionManager, tokenId, token, amountWithdrawn, id);
+        emit MovedToUniswap(positionManager, tokenId, token, amountWithdrawn, id);
     }
 
     ///@notice finds the best fee tier on which to perform a swap
