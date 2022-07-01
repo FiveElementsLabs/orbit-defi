@@ -131,9 +131,17 @@ contract AaveModule is BaseModule {
             INonfungiblePositionManager(nonfungiblePositionManager)
         );
 
-        (bool isActive, ) = IPositionManager(positionManager).getModuleInfo(tokenId, address(this));
+        (bool isActive, bytes32 data) = IPositionManager(positionManager).getModuleInfo(tokenId, address(this));
 
-        return (tickPool > tickLower && tickPool < tickUpper) || !isActive;
+        // only withdraw if the tick is 10% of the move to aave distance away from being back in range
+        int24 minimumTickVariation = int24(MathHelper.fromUint256ToUint24(uint256(data))).mul(10).div(100);
+
+        if (
+            (tickPool > tickLower.sub(minimumTickVariation) && tickPool < tickUpper.add(minimumTickVariation)) ||
+            !isActive
+        ) {
+            return true;
+        } else revert('AaveModule::isMoveToUniswapNeeded: not needed.');
     }
 
     ///@notice deposit a uni v3 position's liquidity to an Aave lending pool
@@ -158,8 +166,8 @@ contract AaveModule is BaseModule {
         );
 
         address toAaveToken;
-        if (tickPool > tickLower && tickPool > tickUpper) toAaveToken = token0;
-        else if (tickPool < tickLower && tickPool < tickUpper) toAaveToken = token1;
+        if (tickPool > tickLower && tickPool > tickUpper) toAaveToken = token1;
+        else if (tickPool < tickLower && tickPool < tickUpper) toAaveToken = token0;
 
         require(toAaveToken != address(0), 'AaveModule::_moveToAave: position is in range.');
 
@@ -181,26 +189,41 @@ contract AaveModule is BaseModule {
             false
         );
 
-        toAaveToken == token0
-            ? amount0Collected += ISwap(positionManager).swap(
-                token1,
-                toAaveToken,
-                _findBestFee(token1, toAaveToken),
-                amount1Collected
-            )
-            : amount1Collected += ISwap(positionManager).swap(
-            token0,
-            toAaveToken,
-            _findBestFee(token0, toAaveToken),
-            amount0Collected
-        );
+        if (toAaveToken == token0) {
+            if (amount1Collected != 0) {
+                amount0Collected += ISwap(positionManager).swap(
+                    token1,
+                    toAaveToken,
+                    _findBestFee(token1, toAaveToken),
+                    amount1Collected
+                );
+            }
+        } else {
+            if (amount0Collected != 0) {
+                amount1Collected += ISwap(positionManager).swap(
+                    token0,
+                    toAaveToken,
+                    _findBestFee(token0, toAaveToken),
+                    amount0Collected
+                );
+            }
+        }
 
-        (uint256 id, ) = IAaveDeposit(positionManager).depositToAave(token0, amount0Collected);
+        (uint256 id, ) = IAaveDeposit(positionManager).depositToAave(
+            toAaveToken,
+            toAaveToken == token0 ? amount0Collected : amount1Collected
+        );
 
         IPositionManager(positionManager).pushTokenIdToAave(toAaveToken, id, tokenId);
         IPositionManager(positionManager).removePositionId(tokenId);
 
-        emit MovedToAave(positionManager, tokenId, token0, amount0Collected, id);
+        emit MovedToAave(
+            positionManager,
+            tokenId,
+            toAaveToken,
+            toAaveToken == token0 ? amount0Collected : amount1Collected,
+            id
+        );
     }
 
     ///@notice return an aave position's liquidity to Uniswap nft
