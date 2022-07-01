@@ -258,7 +258,6 @@ describe('AaveModule.sol', function () {
       expect((await Pool0.slot0()).tick).to.gt(tickUpper);
 
       const tx = await AaveModule.connect(user).moveToAave(PositionManager.address, tokenId);
-      console.log(await tx.wait());
       const events = (await tx.wait()).events;
       aaveId = events[events.length - 1].args.aaveId;
 
