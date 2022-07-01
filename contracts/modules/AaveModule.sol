@@ -89,7 +89,7 @@ contract AaveModule is BaseModule {
 
         uint256 tokenId = IPositionManager(positionManager).getTokenIdFromAavePosition(token, id);
 
-        if (isMoveToUniswapNeeded(tokenId)) {
+        if (isMoveToUniswapNeeded(positionManager, tokenId)) {
             _moveToUniswap(positionManager, token, id, tokenId);
         }
     }
@@ -116,7 +116,7 @@ contract AaveModule is BaseModule {
     ///@notice checks if the position needs to be withdrawn from aave
     ///@param tokenId id of the Uniswap position to withdraw
     ///@return true if the position needs to be sent back to uniswap
-    function isMoveToUniswapNeeded(uint256 tokenId) public view returns (bool) {
+    function isMoveToUniswapNeeded(address positionManager, uint256 tokenId) public view returns (bool) {
         address nonfungiblePositionManager = uniswapAddressHolder.nonfungiblePositionManagerAddress();
         (, int24 tickPool, , , , , ) = IUniswapV3Pool(
             UniswapNFTHelper._getPoolFromTokenId(
@@ -130,7 +130,10 @@ contract AaveModule is BaseModule {
             tokenId,
             INonfungiblePositionManager(nonfungiblePositionManager)
         );
-        return tickPool > tickLower && tickPool < tickUpper;
+
+        (bool isActive, ) = IPositionManager(positionManager).getModuleInfo(tokenId, address(this));
+
+        return (tickPool > tickLower && tickPool < tickUpper) || !isActive;
     }
 
     ///@notice deposit a uni v3 position's liquidity to an Aave lending pool

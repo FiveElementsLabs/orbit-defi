@@ -258,6 +258,7 @@ describe('AaveModule.sol', function () {
       expect((await Pool0.slot0()).tick).to.gt(tickUpper);
 
       const tx = await AaveModule.connect(user).moveToAave(PositionManager.address, tokenId);
+      console.log(await tx.wait());
       const events = (await tx.wait()).events;
       aaveId = events[events.length - 1].args.aaveId;
 
@@ -295,6 +296,31 @@ describe('AaveModule.sol', function () {
       );
       await tx.wait();
       expect(await wbtcMock.balanceOf(PositionManager.address)).to.equal(0);
+    });
+
+    it('should return a position to the user if he deactivates the module', async function () {
+      while ((await Pool0.slot0()).tick < tickUpper) {
+        await swapRouter.connect(trader).exactInputSingle({
+          tokenIn: usdcMock.address,
+          tokenOut: wbtcMock.address,
+          fee: 3000,
+          recipient: trader.address,
+          deadline: Date.now() + 1000,
+          amountIn: '0x' + (1e14).toString(16),
+          amountOutMinimum: 0,
+          sqrtPriceLimitX96: 0,
+        });
+      }
+
+      expect((await Pool0.slot0()).tick).to.gt(tickUpper);
+
+      const tx = await AaveModule.connect(user).moveToAave(PositionManager.address, tokenId);
+      const events = (await tx.wait()).events;
+      aaveId = events[events.length - 1].args.aaveId;
+      expect(await aWbtc.balanceOf(PositionManager.address)).to.gt(0);
+
+      await PositionManager.connect(user).toggleModule(tokenId, AaveModule.address, false);
+      await AaveModule.connect(user).moveToUniswap(PositionManager.address, wbtcMock.address, aaveId);
     });
   });
 });
