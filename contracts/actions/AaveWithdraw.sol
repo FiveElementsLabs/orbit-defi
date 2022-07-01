@@ -36,22 +36,20 @@ contract AaveWithdraw is IAaveWithdraw {
         uint256 id,
         uint256 partToWithdraw,
         bool returnTokensToUser
-    ) public override returns (uint256 amountWithdrawn) {
+    ) external override returns (uint256 amountWithdrawn) {
         require(
             partToWithdraw != 0 && partToWithdraw <= 10_000,
             'AaveWithdraw::withdrawFromAave: part to withdraw must be between 0 and 10000'
         );
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         require(
-            Storage.aaveUserReserves[token].positionShares[id] > 0,
+            Storage.aaveUserReserves[token].positionShares[id] != 0,
             'PositionManager::removeAavePosition: no position to withdraw!'
         );
 
-        uint256 amount = (_getAmount(token, id) * partToWithdraw) / 10_000;
-
         amountWithdrawn = ILendingPool(Storage.aaveAddressHolder.lendingPoolAddress()).withdraw(
             token,
-            amount,
+            (_getAmount(token, id) * partToWithdraw) / 10_000,
             returnTokensToUser ? Storage.owner : address(this)
         );
 
@@ -63,7 +61,7 @@ contract AaveWithdraw is IAaveWithdraw {
     ///@param token underlying token addrress
     ///@param id id of the aave position
     ///@return amount of underlying token
-    function _getAmount(address token, uint256 id) internal view returns (uint256 amount) {
+    function _getAmount(address token, uint256 id) internal view returns (uint256) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         IAToken aToken = IAToken(
             ILendingPool(PositionManagerStorage.getStorage().aaveAddressHolder.lendingPoolAddress())
@@ -71,7 +69,7 @@ contract AaveWithdraw is IAaveWithdraw {
                 .aTokenAddress
         );
 
-        amount =
+        return
             (aToken.balanceOf(address(this)) * Storage.aaveUserReserves[token].positionShares[id]) /
             Storage.aaveUserReserves[token].sharesEmitted;
     }

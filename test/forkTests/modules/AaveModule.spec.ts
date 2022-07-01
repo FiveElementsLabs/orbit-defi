@@ -360,7 +360,7 @@ describe('AaveModule.sol', function () {
       expect(await aUsdc.balanceOf(PositionManager.address)).to.equal(0);
     });
 
-    it('should return to position manager if it is still out of range but between +-10% of aaveDistance buffer', async function () {
+    it('should return to position manager if it is still out of range but between +-10% of aaveDistance buffer (lower side)', async function () {
       while ((await Pool0.slot0()).tick > tickLower) {
         await swapRouter.connect(trader).exactInputSingle({
           tokenIn: wbtcMock.address,
@@ -411,6 +411,70 @@ describe('AaveModule.sol', function () {
       let pool0Tick = (await Pool0.slot0()).tick;
       expect(pool0Tick).to.gt(tickLower - minimumTickVariation);
       expect(pool0Tick).to.lt(tickLower);
+
+      const positions = await PositionManager.connect(user).getAavePositionsArray();
+
+      tx = await AaveModule.connect(user).moveToUniswap(
+        PositionManager.address,
+        positions[0].tokenToAave,
+        positions[0].id
+      );
+      await tx.wait();
+      expect(await aUsdc.balanceOf(PositionManager.address)).to.equal(0);
+      expect(await aWbtc.balanceOf(PositionManager.address)).to.equal(0);
+    });
+
+    it('should return to position manager if it is still out of range but between +-10% of aaveDistance buffer (upper side)', async function () {
+      while ((await Pool0.slot0()).tick < tickUpper) {
+        await swapRouter.connect(trader).exactInputSingle({
+          tokenIn: usdcMock.address,
+          tokenOut: wbtcMock.address,
+          fee: 3000,
+          recipient: trader.address,
+          deadline: Date.now() + 1000,
+          amountIn: '0x' + (1e14).toString(16),
+          amountOutMinimum: 0,
+          sqrtPriceLimitX96: 0,
+        });
+      }
+
+      expect((await Pool0.slot0()).tick).to.gt(tickUpper);
+
+      let tx = await AaveModule.connect(user).moveToAave(PositionManager.address, tokenId);
+      const events = (await tx.wait()).events;
+      aaveId = events[events.length - 1].args.aaveId;
+
+      expect(await aWbtc.balanceOf(PositionManager.address)).to.equal(0);
+      expect(await aUsdc.balanceOf(PositionManager.address)).to.gt(0);
+      expect((await NonFungiblePositionManager.positions(tokenId)).liquidity.toNumber()).to.be.closeTo(0, 100);
+
+      let tick = (await Pool0.slot0()).tick;
+      let newTick: any;
+      let amountIn = 3e9;
+      let amountInBtc = 3e9;
+      while (tick >= tickUpper + minimumTickVariation) {
+        await swapRouter.connect(trader).exactInputSingle({
+          tokenIn: tick <= tickUpper ? usdcMock.address : wbtcMock.address,
+          tokenOut: tick <= tickUpper ? wbtcMock.address : usdcMock.address,
+          fee: 3000,
+          recipient: trader.address,
+          deadline: Date.now() + 1000,
+          amountIn: tick <= tickUpper ? amountIn : amountInBtc,
+          amountOutMinimum: 0,
+          sqrtPriceLimitX96: 0,
+        });
+
+        newTick = (await Pool0.slot0()).tick;
+        if (newTick > tick) {
+          amountIn = Math.ceil(amountIn / 10);
+          amountInBtc = Math.ceil(amountInBtc / 10);
+        }
+        tick = newTick;
+      }
+
+      let pool0Tick = (await Pool0.slot0()).tick;
+      expect(pool0Tick).to.lt(tickUpper + minimumTickVariation);
+      expect(pool0Tick).to.gt(tickUpper);
 
       const positions = await PositionManager.connect(user).getAavePositionsArray();
 
