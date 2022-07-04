@@ -210,6 +210,8 @@ contract AaveModule is BaseModule {
     ///@param positionManager address of the position manager
     ///@param tokenFromAave address of the token of Aave position
     ///@param id id of the Aave position to withdraw
+    ///@param tokenId tokenID of the position on uniswap
+    ///@param tokenData struct storing data of the position on uniswap
     function _moveToUniswap(
         address positionManager,
         address tokenFromAave,
@@ -238,6 +240,11 @@ contract AaveModule is BaseModule {
         emit MovedToUniswap(positionManager, tokenId, tokenFromAave, amountWithdrawn, id);
     }
 
+    ///@notice compute the address of the token to send to Aave
+    ///@param tokenId tokenID of the position to move to Aave
+    ///@param token0 address of the token0 coming from uniswap Lp
+    ///@param token1 address of the token1 coming from uniswap Lp
+    ///@return toAaveToken address of the token to deposit to Aave
     function _calcToAaveToken(
         INonfungiblePositionManager NonFungiblePositionManager,
         uint256 tokenId,
