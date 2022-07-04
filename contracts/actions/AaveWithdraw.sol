@@ -44,7 +44,7 @@ contract AaveWithdraw is IAaveWithdraw {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         require(
             Storage.aaveUserReserves[token].positionShares[id] != 0,
-            'PositionManager::removeAavePosition: no position to withdraw!'
+            'AaveWithdraw::withdrawFromAave: no position to withdraw!'
         );
 
         amountWithdrawn = ILendingPool(Storage.aaveAddressHolder.lendingPoolAddress()).withdraw(

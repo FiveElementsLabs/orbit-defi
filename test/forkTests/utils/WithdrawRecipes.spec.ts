@@ -299,7 +299,7 @@ describe('WithdrawRecipes.sol', function () {
         NonFungiblePositionManager.address,
         await UniswapAddressHolder.uniswapV3FactoryAddress()
       );
-      const tokenToAave = amount0Before < amount1Before ? wbtcMock : usdcMock;
+      const tokenToAave = amount0Before < amount1Before ? usdcMock : wbtcMock;
       const tx = await AaveModule.connect(user).moveToAave(PositionManager.address, tokenId);
       const events = (await tx.wait()).events;
       const aaveId = events[events.length - 1].args.aaveId;
