@@ -87,14 +87,13 @@ contract AaveWithdraw is IAaveWithdraw {
     ) internal {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
-        Storage.aaveUserReserves[token].sharesEmitted -=
-            (Storage.aaveUserReserves[token].positionShares[id] * partToWithdraw) /
-            10_000;
+        uint256 sharesWithdrawn = (Storage.aaveUserReserves[token].positionShares[id] * partToWithdraw) / 10_000;
+        Storage.aaveUserReserves[token].sharesEmitted -= sharesWithdrawn;
         if (partToWithdraw == 10_000) {
             Storage.aaveUserReserves[token].positionShares[id] = 0;
             Storage.aaveUserReserves[token].tokenIds[id] = 0;
         } else {
-            Storage.aaveUserReserves[token].positionShares[id] -= partToWithdraw;
+            Storage.aaveUserReserves[token].positionShares[id] -= sharesWithdrawn;
         }
     }
 }
