@@ -9,6 +9,7 @@ import '../helpers/UniswapNFTHelper.sol';
 import '../../interfaces/IPositionManager.sol';
 import '../../interfaces/IPositionManagerFactory.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
+import '../../interfaces/actions/IAaveWithdraw.sol';
 import '../../interfaces/actions/ICollectFees.sol';
 import '../../interfaces/actions/IClosePosition.sol';
 import '../../interfaces/actions/IDecreaseLiquidity.sol';
@@ -20,6 +21,15 @@ contract WithdrawRecipes {
     IUniswapAddressHolder public immutable uniswapAddressHolder;
 
     using SafeMath for uint256;
+
+    modifier onlyOwner(uint256 tokenId) {
+        require(
+            positionManagerFactory.userToPositionManager(msg.sender) ==
+                INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(tokenId),
+            'WithdrawRecipes::onlyOwner: Only owner can call this function'
+        );
+        _;
+    }
 
     constructor(address _positionManagerFactory, address _uniswapAddressHolder) {
         positionManagerFactory = IPositionManagerFactory(_positionManagerFactory);
@@ -57,18 +67,30 @@ contract WithdrawRecipes {
     }
 
     ///@notice remove a position from positionmanager zapping out
-    ///@param tokenId ID of the token to withdraw
+    ///@param tokenId ID of the NFT to zap out
     ///@param tokenOut address of the token to withdraw
     function zapOutUniNft(uint256 tokenId, address tokenOut) external onlyOwner(tokenId) {
         IZapOut(positionManagerFactory.userToPositionManager(msg.sender)).zapOut(tokenId, tokenOut);
     }
 
-    modifier onlyOwner(uint256 tokenId) {
+    function withdrawFromAave(
+        uint256 id,
+        address token,
+        uint256 partToWithdraw
+    )
+        external
+        onlyOwner(
+            IPositionManager(positionManagerFactory.userToPositionManager(msg.sender)).getTokenIdFromAavePosition(
+                token,
+                id
+            )
+        )
+    {
         require(
-            positionManagerFactory.userToPositionManager(msg.sender) ==
-                INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(tokenId),
-            'WithdrawRecipes::onlyOwner: Only owner can call this function'
+            partToWithdraw != 0 && partToWithdraw <= 10_000,
+            'WithdrawRecipes::withdrawFromAave: part to withdraw must be between 0 and 10000'
         );
-        _;
+        address positionManager = positionManagerFactory.userToPositionManager(msg.sender);
+        IAaveWithdraw(positionManager).withdrawFromAave(token, id, partToWithdraw, true);
     }
 }
