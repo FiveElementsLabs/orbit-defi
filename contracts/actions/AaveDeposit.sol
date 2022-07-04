@@ -28,7 +28,7 @@ contract AaveDeposit is IAaveDeposit {
     ///@param amount amount to deposit
     ///@return id of the deposited position
     ///@return shares emitted
-    function depositToAave(address token, uint256 amount) public override returns (uint256 id, uint256 shares) {
+    function depositToAave(address token, uint256 amount) external override returns (uint256 id, uint256 shares) {
         ILendingPool lendingPool = ILendingPool(
             PositionManagerStorage.getStorage().aaveAddressHolder.lendingPoolAddress()
         );

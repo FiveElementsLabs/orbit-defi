@@ -67,7 +67,8 @@ export default {
     hardhat: {
       forking: {
         enabled: true,
-        url: process.env.INFURA_MAINNET || '',
+        url: process.env.ALCHEMY_MAINNET || '',
+        blockNumber: 15000000,
         chainId: 31337,
       },
       mining: {

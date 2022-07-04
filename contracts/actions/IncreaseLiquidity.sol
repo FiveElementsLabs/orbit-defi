@@ -30,7 +30,7 @@ contract IncreaseLiquidity is IIncreaseLiquidity {
         address nonfungiblePositionManagerAddress = Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress();
 
         require(
-            amount0Desired > 0 || amount1Desired > 0,
+            amount0Desired != 0 || amount1Desired != 0,
             'IncreaseLiquidity::increaseLiquidity: Amounts cannot be both zero'
         );
 

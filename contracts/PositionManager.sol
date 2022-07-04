@@ -231,7 +231,7 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
         Storage.aaveUserReserves[token].tokenIds[id] = tokenId;
     }
 
-    ///@notice returns the old position data of an aave position
+    ///@notice returns the token id of a position on Aave
     ///@param token address of the token
     ///@param id ID of aave position
     ///@return tokenId of the position
@@ -246,7 +246,7 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
         AaveReserve storage aaveUserReserves = Storage.aaveUserReserves[token];
         require(
             aaveUserReserves.positionShares[id] != 0,
-            'PositionManager::getOldPositionData: positionShares does not exist'
+            'PositionManager::getTokenIdFromAavePosition: positionShares does not exist'
         );
 
         return aaveUserReserves.tokenIds[id];
