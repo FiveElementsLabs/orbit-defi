@@ -1,9 +1,9 @@
-import { Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import { Config } from '../deploy/000_Config';
 import { getSelectors } from '../test/shared/fixtures';
 
 async function main() {
+  //to be executed by a keeper (since only whitelisted can trigger fallback on positionManager)
   try {
     const provider = new ethers.providers.JsonRpcProvider(process.env.ALCHEMY_POLYGON || '');
     const signer = new ethers.Wallet(process.env.POLYGON_PRIVATE_KEY || '', provider);
@@ -49,10 +49,9 @@ async function main() {
       },
     ];
 
-    let positionManager: Contract;
+    const updateDiamond = await ethers.getContractAt('UpdateDiamond', Config.updateDiamond, signer);
     for (const manager of managers) {
-      positionManager = await ethers.getContractAt('PositionManager', manager, signer);
-      await positionManager.diamondCut(actions, '0x0000000000000000000000000000000000000000', 0);
+      await updateDiamond.updateDiamond(manager, actions);
     }
   } catch (error: any) {
     throw new Error(error?.message);

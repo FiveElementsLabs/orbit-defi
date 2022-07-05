@@ -9,6 +9,7 @@ export const Config = {
   uniswapAddressHolder: '0x3980A9AcedE960aA697a9695eBf5026f4b66574f',
   registry: '0x9d3a0625308fd5a4c52cf735fc9d6cca44f0505b',
   timelock: '0x7e349e0d4b7b59c4e913142b7a6034c014a99f89',
+  keeper: '0xc8714a094348d0f96d1945a75b58e286afd0fe34',
 };
 
 const func = () => {

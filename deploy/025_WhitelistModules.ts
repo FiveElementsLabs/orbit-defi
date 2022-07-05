@@ -122,6 +122,26 @@ const WhitelistModules: DeployFunction = async function (hre: HardhatRuntimeEnvi
   console.log(`Transaction queued: ${tx?.hash}`);
   await new Promise((resolve) => setTimeout(resolve, Config.sleep));
   console.log(':: Added WithdrawRecipes to Registry');
+
+  const UpdateDiamond = await ethers.getContract('UpdateDiamond');
+
+  contractIdKeccak = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('UpdateDiamond'));
+  data = AbiCoder.encode(['bytes32', 'address'], [contractIdKeccak, UpdateDiamond.address]);
+  eta = Math.floor(Date.now() / 1000) + 21750;
+
+  console.log(`ETA: ${new Date(eta * 1000)}`);
+  console.log('ETA TIMESTAMP: KEEP THIS TO EXECUTE CALL: ', eta);
+
+  tx = await (
+    await Timelock.queueTransaction(target, msgValue, signature, data, eta, {
+      gasPrice: Config.gasPrice,
+      gasLimit: Config.gasLimit,
+    })
+  ).wait();
+
+  console.log(`Transaction queued: ${tx?.hash}`);
+  await new Promise((resolve) => setTimeout(resolve, Config.sleep));
+  console.log(':: Added UpdateDiamond to Registry');
 };
 
 export default WhitelistModules;
