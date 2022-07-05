@@ -145,15 +145,15 @@ describe('SwapToPositionRatio.sol', function () {
       const amount0In = 1e5;
       const amount1In = 2e5;
 
-      await SwapToPositionRatioFallback.connect(user).swapToPositionRatio({
-        token0Address: tokenEth.address,
-        token1Address: tokenUsdc.address,
-        fee: 3000,
-        amount0In: amount0In,
-        amount1In: amount1In,
-        tickLower: tickLower,
-        tickUpper: tickUpper,
-      });
+      await SwapToPositionRatioFallback.connect(user).swapToPositionRatioV2(
+        tokenEth.address,
+        tokenUsdc.address,
+        3000,
+        amount0In,
+        amount1In,
+        tickLower,
+        tickUpper
+      );
     });
 
     it('should correctly swap to exact position ratio amount1In', async function () {
@@ -162,15 +162,15 @@ describe('SwapToPositionRatio.sol', function () {
       const amount0In = 2e5;
       const amount1In = 1e5;
 
-      await SwapToPositionRatioFallback.connect(user).swapToPositionRatio({
-        token0Address: tokenEth.address,
-        token1Address: tokenUsdc.address,
-        fee: 3000,
-        amount0In: amount0In,
-        amount1In: amount1In,
-        tickLower: tickLower,
-        tickUpper: tickUpper,
-      });
+      await SwapToPositionRatioFallback.connect(user).swapToPositionRatioV2(
+        tokenEth.address,
+        tokenUsdc.address,
+        3000,
+        amount0In,
+        amount1In,
+        tickLower,
+        tickUpper
+      );
     });
 
     it('should correctly return output', async function () {
@@ -179,15 +179,15 @@ describe('SwapToPositionRatio.sol', function () {
       const amount0In = 1e5;
       const amount1In = 2e5;
 
-      const tx = await SwapToPositionRatioFallback.connect(user).swapToPositionRatio({
-        token0Address: tokenEth.address,
-        token1Address: tokenUsdc.address,
-        fee: 3000,
-        amount0In: amount0In,
-        amount1In: amount1In,
-        tickLower: tickLower,
-        tickUpper: tickUpper,
-      });
+      const tx = await SwapToPositionRatioFallback.connect(user).swapToPositionRatioV2(
+        tokenEth.address,
+        tokenUsdc.address,
+        3000,
+        amount0In,
+        amount1In,
+        tickLower,
+        tickUpper
+      );
 
       const events = (await tx.wait()).events as any;
       const outputEvent = events[events.length - 1];
@@ -214,15 +214,15 @@ describe('SwapToPositionRatio.sol', function () {
       let amount0In = '0x' + (1e24).toString(16);
       let amount1In = '0x' + (1e24).toString(16);
 
-      await SwapToPositionRatioFallback.connect(user).swapToPositionRatio({
-        token0Address: tokenEth.address,
-        token1Address: tokenUsdc.address,
-        fee: 3000,
-        amount0In: amount0In,
-        amount1In: amount1In,
-        tickLower: tickLower,
-        tickUpper: tickUpper,
-      });
+      await SwapToPositionRatioFallback.connect(user).swapToPositionRatioV2(
+        tokenEth.address,
+        tokenUsdc.address,
+        3000,
+        amount0In,
+        amount1In,
+        tickLower,
+        tickUpper
+      );
 
       const tickAfter = (await Pool0.slot0()).tick;
       expect(tickAfter).to.not.be.eq(tickBefore);
@@ -231,15 +231,15 @@ describe('SwapToPositionRatio.sol', function () {
       amount0In = '0x' + (1e20).toString(16);
       amount1In = '0x' + (1e18).toString(16);
       await expect(
-        SwapToPositionRatioFallback.connect(user).swapToPositionRatio({
-          token0Address: tokenEth.address,
-          token1Address: tokenUsdc.address,
-          fee: 3000,
-          amount0In: amount0In,
-          amount1In: amount1In,
-          tickLower: tickLower,
-          tickUpper: tickUpper,
-        })
+        SwapToPositionRatioFallback.connect(user).swapToPositionRatioV2(
+          tokenEth.address,
+          tokenUsdc.address,
+          3000,
+          amount0In,
+          amount1In,
+          tickLower,
+          tickUpper
+        )
       ).to.be.revertedWith('SwapHelper::checkDeviation: Price deviation is too high');
     });
 
@@ -250,15 +250,15 @@ describe('SwapToPositionRatio.sol', function () {
       const amount1In = 5e5;
 
       await expect(
-        SwapToPositionRatioFallback.connect(user).swapToPositionRatio({
-          token0Address: tokenEth.address,
-          token1Address: tokenDai.address,
-          fee: 2348,
-          amount0In: amount0In,
-          amount1In: amount1In,
-          tickLower: tickLower,
-          tickUpper: tickUpper,
-        })
+        SwapToPositionRatioFallback.connect(user).swapToPositionRatioV2(
+          tokenEth.address,
+          tokenDai.address,
+          2348,
+          amount0In,
+          amount1In,
+          tickLower,
+          tickUpper
+        )
       ).to.be.reverted;
     });
 
@@ -302,15 +302,15 @@ describe('SwapToPositionRatio.sol', function () {
       const amount0In = 1e5;
       const amount1In = 2e5;
 
-      await SwapToPositionRatioFallback.connect(user).swapToPositionRatio({
-        token0Address: tokenEth.address,
-        token1Address: tokenUsdc.address,
-        fee: 500,
-        amount0In: amount0In,
-        amount1In: amount1In,
-        tickLower: tickLower,
-        tickUpper: tickUpper,
-      });
+      await SwapToPositionRatioFallback.connect(user).swapToPositionRatioV2(
+        tokenEth.address,
+        tokenUsdc.address,
+        500,
+        amount0In,
+        amount1In,
+        tickLower,
+        tickUpper
+      );
     });
 
     it('should swap for negative pool ticks', async function () {
@@ -354,15 +354,15 @@ describe('SwapToPositionRatio.sol', function () {
       const amount0In = 1e5;
       const amount1In = 2e5;
 
-      await SwapToPositionRatioFallback.connect(user).swapToPositionRatio({
-        token0Address: tokenEth.address,
-        token1Address: tokenUsdc.address,
-        fee: 10000,
-        amount0In: amount0In,
-        amount1In: amount1In,
-        tickLower: tickLower,
-        tickUpper: tickUpper,
-      });
+      await SwapToPositionRatioFallback.connect(user).swapToPositionRatioV2(
+        tokenEth.address,
+        tokenUsdc.address,
+        10000,
+        amount0In,
+        amount1In,
+        tickLower,
+        tickUpper
+      );
     });
   });
 });

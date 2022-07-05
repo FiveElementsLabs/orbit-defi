@@ -10,6 +10,7 @@ import '../../interfaces/IRegistry.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
 import '../../interfaces/actions/ICollectFees.sol';
 import '../../interfaces/actions/IIncreaseLiquidity.sol';
+import '../../interfaces/actions/ISwapToPositionRatio.sol';
 import '../../interfaces/actions/IUpdateUncollectedFees.sol';
 import '../helpers/UniswapNFTHelper.sol';
 import '../utils/Storage.sol';
@@ -51,6 +52,19 @@ contract AutoCompoundModule is BaseModule {
             (uint256 amount0Desired, uint256 amount1Desired) = ICollectFees(positionManager).collectFees(
                 tokenId,
                 false
+            );
+
+            (address token0, address token1, uint24 fee, int24 tickLower, int24 tickUpper) = UniswapNFTHelper
+                ._getTokens(tokenId, INonfungiblePositionManager(addressHolder.nonfungiblePositionManagerAddress()));
+
+            (amount0Desired, amount1Desired) = ISwapToPositionRatio(positionManager).swapToPositionRatioV2(
+                token0,
+                token1,
+                fee,
+                amount0Desired,
+                amount1Desired,
+                tickLower,
+                tickUpper
             );
 
             IIncreaseLiquidity(positionManager).increaseLiquidity(tokenId, amount0Desired, amount1Desired);

@@ -30,60 +30,56 @@ contract SwapToPositionRatio is ISwapToPositionRatio {
     );
 
     ///@notice performs swap to optimal ratio for the position at tickLower and tickUpper
-    ///@param inputs input bytes to be decoded according to SwapToPositionInput
+    ///@param token0 address of token0 of the position
+    ///@param token1 address of token1 of the position
+    ///@param fee fee tier of uniswap pool
+    ///@param amount0 amount of token0 in input
+    ///@param amount1 amount of token1 in input
+    ///@param tickLower lower bound of position range
+    ///@param tickUpper upper bound of position range
     ///@param amount0Out the new value of amount0
     ///@param amount1Out the new value of amount1
-    function swapToPositionRatio(SwapToPositionInput memory inputs)
-        public
-        override
-        returns (uint256 amount0Out, uint256 amount1Out)
-    {
+    function swapToPositionRatioV2(
+        address token0,
+        address token1,
+        uint24 fee,
+        uint256 amount0,
+        uint256 amount1,
+        int24 tickLower,
+        int24 tickUpper
+    ) public override returns (uint256 amount0Out, uint256 amount1Out) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
+        uint256 amountToSwap;
+        bool isToken0In;
+        {
+            IUniswapV3Pool pool = IUniswapV3Pool(
+                UniswapNFTHelper._getPool(Storage.uniswapAddressHolder.uniswapV3FactoryAddress(), token0, token1, fee)
+            );
+            (, int24 tickPool, , , , , ) = pool.slot0();
 
-        IUniswapV3Pool pool = IUniswapV3Pool(
-            UniswapNFTHelper._getPool(
-                Storage.uniswapAddressHolder.uniswapV3FactoryAddress(),
-                inputs.token0Address,
-                inputs.token1Address,
-                inputs.fee
-            )
-        );
-        (, int24 tickPool, , , , , ) = pool.slot0();
+            SwapHelper.checkDeviation(pool, Storage.registry.maxTwapDeviation(), Storage.registry.twapDuration());
 
-        SwapHelper.checkDeviation(pool, Storage.registry.maxTwapDeviation(), Storage.registry.twapDuration());
-
-        (uint256 amountToSwap, bool isToken0In) = SwapHelper.calcAmountToSwap(
-            tickPool,
-            inputs.tickLower,
-            inputs.tickUpper,
-            inputs.amount0In,
-            inputs.amount1In
-        );
+            (amountToSwap, isToken0In) = SwapHelper.calcAmountToSwap(tickPool, tickLower, tickUpper, amount0, amount1);
+        }
 
         if (amountToSwap != 0) {
             uint256 amountSwapped = _swap(
-                isToken0In ? inputs.token0Address : inputs.token1Address,
-                isToken0In ? inputs.token1Address : inputs.token0Address,
-                inputs.fee,
+                isToken0In ? token0 : token1,
+                isToken0In ? token1 : token0,
+                fee,
                 amountToSwap
             );
 
             ///@notice return the new amount of the token swapped and the token returned
             ///@dev token0AddressIn true amount 0 - amountToSwap  ------ amount 1 + amountSwapped
             ///@dev token0AddressIn false amount 0 + amountSwapped  ------ amount 1 - amountToSwap
-            amount0Out = isToken0In ? inputs.amount0In.sub(amountToSwap) : inputs.amount0In.add(amountSwapped);
-            amount1Out = isToken0In ? inputs.amount1In.add(amountSwapped) : inputs.amount1In.sub(amountToSwap);
+            amount0Out = isToken0In ? amount0.sub(amountToSwap) : amount0.add(amountSwapped);
+            amount1Out = isToken0In ? amount1.add(amountSwapped) : amount1.sub(amountToSwap);
 
-            emit SwappedToPositionRatio(
-                address(this),
-                inputs.token0Address,
-                inputs.token1Address,
-                amount0Out,
-                amount1Out
-            );
+            emit SwappedToPositionRatio(address(this), token0, token1, amount0Out, amount1Out);
         } else {
-            amount0Out = inputs.amount0In;
-            amount1Out = inputs.amount1In;
+            amount0Out = amount0;
+            amount1Out = amount1;
         }
     }
 

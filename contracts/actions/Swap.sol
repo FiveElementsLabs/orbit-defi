@@ -53,7 +53,7 @@ contract Swap is ISwap {
     ///@param token1Address address of second token
     ///@param fee fee tier of the pool
     ///@param amount0In amount of token0 to swap
-    function swap(
+    function swapV2(
         address token0Address,
         address token1Address,
         uint24 fee,
