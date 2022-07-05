@@ -1,9 +1,9 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { ethers } from 'hardhat';
-import { Config, START_TIME } from './000_Config';
+import { Config } from './000_Config';
 
-const PostDeployScript: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
+const WhitelistModules: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   // 1. whitelist modules and recipes
   // 2. set timelock as registry governance
   // 3. eventually change governance from deployer (on Factory etc.)
@@ -83,7 +83,7 @@ const PostDeployScript: DeployFunction = async function (hre: HardhatRuntimeEnvi
   await new Promise((resolve) => setTimeout(resolve, Config.sleep));
   console.log(':: Added AaveModule to Registry');
 
-  // Get recipes
+  // Send new recipes to timelock
   const DepositRecipes = await ethers.getContract('DepositRecipes');
   const WithdrawRecipes = await ethers.getContract('WithdrawRecipes');
 
@@ -122,10 +122,7 @@ const PostDeployScript: DeployFunction = async function (hre: HardhatRuntimeEnvi
   console.log(`Transaction queued: ${tx?.hash}`);
   await new Promise((resolve) => setTimeout(resolve, Config.sleep));
   console.log(':: Added WithdrawRecipes to Registry');
-
-  const END_TIME = Date.now();
-  console.log(`:: Deployment took ${(END_TIME - START_TIME) / 1000}s`);
 };
 
-export default PostDeployScript;
-PostDeployScript.tags = ['PostDeploy'];
+export default WhitelistModules;
+WhitelistModules.tags = ['PostDeploy'];
