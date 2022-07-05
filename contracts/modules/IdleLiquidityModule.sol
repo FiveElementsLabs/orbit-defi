@@ -99,16 +99,14 @@ contract IdleLiquidityModule is BaseModule {
         );
 
         ///@dev call swapToPositionAction to perform the swap
-        (uint256 amount0Swapped, uint256 amount1Swapped) = ISwapToPositionRatio(positionManager).swapToPositionRatio(
-            ISwapToPositionRatio.SwapToPositionInput(
-                token0,
-                token1,
-                fee,
-                amount0Closed,
-                amount1Closed,
-                tickLower,
-                tickUpper
-            )
+        (uint256 amount0Swapped, uint256 amount1Swapped) = ISwapToPositionRatio(positionManager).swapToPositionRatioV2(
+            token0,
+            token1,
+            fee,
+            amount0Closed,
+            amount1Closed,
+            tickLower,
+            tickUpper
         );
 
         ///@dev call mintAction

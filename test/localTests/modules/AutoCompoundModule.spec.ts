@@ -39,21 +39,13 @@ describe('AutoCompoundModule.sol', function () {
   //all the token used globally
   let tokenEth: MockToken, tokenUsdc: MockToken, tokenDai: MockToken;
 
-  //all the pools used globally
-  let Pool0: IUniswapV3Pool, Pool1: IUniswapV3Pool;
-
   //tokenId used globally on all test
   let tokenId: any;
 
   let Factory: Contract; // the factory that will deploy all pools
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
   let PositionManager: PositionManager; //Our smart vault named PositionManager
-  let Router: TestRouter; //Our router to perform swap
   let SwapRouter: Contract;
-  let collectFeesAction: Contract;
-  let increaseLiquidityAction: Contract;
-  let decreaseLiquidityAction: Contract;
-  let updateFeesAction: Contract;
   let autoCompound: Contract;
   let abiCoder: AbiCoder;
 
@@ -73,8 +65,8 @@ describe('AutoCompoundModule.sol', function () {
     [Factory, NonFungiblePositionManager, SwapRouter] = await deployUniswapContracts(tokenEth);
 
     //deploy first 2 pools
-    Pool0 = (await poolFixture(tokenEth, tokenUsdc, 3000, Factory)).pool;
-    Pool1 = (await poolFixture(tokenEth, tokenDai, 3000, Factory)).pool;
+    const Pool0 = (await poolFixture(tokenEth, tokenUsdc, 3000, Factory)).pool;
+    const Pool1 = (await poolFixture(tokenEth, tokenDai, 3000, Factory)).pool;
 
     //mint 1e30 token, you can call with arbitrary amount
     await mintSTDAmount(tokenEth);
@@ -99,7 +91,7 @@ describe('AutoCompoundModule.sol', function () {
       diamondCutFacet.address,
       uniswapAddressHolder.address,
       '0x0000000000000000000000000000000000000000',
-      ['CollectFees', 'IncreaseLiquidity', 'DecreaseLiquidity', 'UpdateUncollectedFees']
+      ['CollectFees', 'IncreaseLiquidity', 'DecreaseLiquidity', 'UpdateUncollectedFees', 'SwapToPositionRatio']
     );
 
     await registry.setPositionManagerFactory(PositionManagerFactory.address);

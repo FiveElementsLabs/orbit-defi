@@ -241,7 +241,7 @@ describe('ZapOut.sol', function () {
       const tokenId = mintReceipt.events[mintReceipt.events.length - 1].args.tokenId.toNumber();
       const daiBalance = await tokenDai.balanceOf(user.address);
 
-      await ZapOutFallback.connect(user).zapOut(tokenId, tokenDai.address);
+      await ZapOutFallback.connect(user).zapOutV2(tokenId, tokenDai.address);
 
       await expect(NonFungiblePositionManager.ownerOf(tokenId)).to.be.reverted;
       expect(await tokenDai.balanceOf(user.address)).to.be.gt(daiBalance);
@@ -271,7 +271,7 @@ describe('ZapOut.sol', function () {
       const tokenId = mintReceipt.events[mintReceipt.events.length - 1].args.tokenId.toNumber();
       const usdcBalance = await tokenUsdc.balanceOf(user.address);
 
-      await ZapOutFallback.connect(user).zapOut(tokenId, tokenUsdc.address);
+      await ZapOutFallback.connect(user).zapOutV2(tokenId, tokenUsdc.address);
 
       await expect(NonFungiblePositionManager.ownerOf(tokenId)).to.be.reverted;
       expect(await tokenUsdc.balanceOf(user.address)).to.be.closeTo(
@@ -281,7 +281,7 @@ describe('ZapOut.sol', function () {
     });
 
     it('should revert if user is not owner of position', async function () {
-      expect(ZapOutFallback.connect(user).zapOut(1, tokenDai.address)).to.be.reverted;
+      expect(ZapOutFallback.connect(user).zapOutV2(1, tokenDai.address)).to.be.reverted;
     });
 
     it('should revert if pool does not exist', async function () {
@@ -306,7 +306,7 @@ describe('ZapOut.sol', function () {
       });
       const mintReceipt: any = await mintTx.wait();
       const tokenId = mintReceipt.events[mintReceipt.events.length - 1].args.tokenId.toNumber();
-      expect(ZapOutFallback.connect(user).zapOut(tokenId, tokenUsdt.address)).to.be.reverted;
+      expect(ZapOutFallback.connect(user).zapOutV2(tokenId, tokenUsdt.address)).to.be.reverted;
     });
 
     it('should fail to zap if twap deviation is too high', async function () {
@@ -332,7 +332,7 @@ describe('ZapOut.sol', function () {
       const tickBefore2 = (await PoolUsdcDai3000.slot0()).tick;
 
       // This zap should succeed
-      await ZapOutFallback.connect(user).zapOut(tokenId, tokenDai.address);
+      await ZapOutFallback.connect(user).zapOutV2(tokenId, tokenDai.address);
 
       const tickAfter1 = (await PoolEthDai3000.slot0()).tick;
       const tickAfter2 = (await PoolUsdcDai3000.slot0()).tick;
@@ -357,7 +357,7 @@ describe('ZapOut.sol', function () {
       const tokenId2 = mintReceipt2.events[mintReceipt2.events.length - 1].args.tokenId.toNumber();
 
       // This zap should fail because of maxTwapDeviation
-      await expect(ZapOutFallback.connect(user).zapOut(tokenId2, tokenDai.address)).to.be.revertedWith(
+      await expect(ZapOutFallback.connect(user).zapOutV2(tokenId2, tokenDai.address)).to.be.revertedWith(
         'SwapHelper::checkDeviation: Price deviation is too high'
       );
     });
@@ -399,7 +399,7 @@ describe('ZapOut.sol', function () {
       });
       const mintReceipt: any = await mintTx.wait();
       const tokenId = mintReceipt.events[mintReceipt.events.length - 1].args.tokenId.toNumber();
-      await ZapOutFallback.connect(user).zapOut(tokenId, tokenEth.address);
+      await ZapOutFallback.connect(user).zapOutV2(tokenId, tokenEth.address);
       const afterLength = await PositionManager.getAllUniPositions();
       expect(Number(afterLength.length)).to.equal(Number(beforeLength.length));
       await expect(NonFungiblePositionManager.positions(tokenId)).to.be.reverted;

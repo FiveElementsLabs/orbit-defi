@@ -32,7 +32,7 @@ contract ZapIn is IZapIn {
     ///@param tickUpper upper bound of desired position
     ///@param fee fee tier of the pool
     ///@return tokenId of minted NFT
-    function zapIn(
+    function zapInV2(
         address token0,
         address token1,
         bool isToken0In,
