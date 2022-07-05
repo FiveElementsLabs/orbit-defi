@@ -1,5 +1,6 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
+import { Config } from './000_Config';
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
@@ -7,12 +8,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const { deployer } = await getNamedAccounts();
 
-  const UniswapAddressHolder = await deployments.get('UniswapAddressHolder');
-  const PositionManagerFactory = await deployments.get('PositionManagerFactory');
-
   await deploy('DepositRecipes', {
     from: deployer,
-    args: [UniswapAddressHolder.address, PositionManagerFactory.address],
+    args: [Config.uniswapAddressHolder, Config.positionManagerFactory],
     log: true,
     autoMine: true,
   });
@@ -20,4 +18,3 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 export default func;
 func.tags = ['Recipe', 'DepositRecipe'];
-func.dependencies = ['PositionManagerFactory', 'UniswapAddressHolder'];

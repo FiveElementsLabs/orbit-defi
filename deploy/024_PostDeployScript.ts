@@ -8,10 +8,10 @@ const PostDeployScript: DeployFunction = async function (hre: HardhatRuntimeEnvi
   // 2. set timelock as registry governance
   // 3. eventually change governance from deployer (on Factory etc.)
 
-  const { getNamedAccounts } = hre;
-  const { multiSig } = await getNamedAccounts();
+  const AbiCoder = ethers.utils.defaultAbiCoder;
 
-  const Registry = await ethers.getContract('Registry');
+  const Registry = await ethers.getContractAt('Registry', Config.registry);
+  const Timelock = await ethers.getContractAt('Timelock', Config.timelock);
 
   //get Modules Contracts
   const AutoCompoundModule = await ethers.getContract('AutoCompoundModule');
@@ -22,51 +22,64 @@ const PostDeployScript: DeployFunction = async function (hre: HardhatRuntimeEnvi
   // Remember to use `ethers.utils.hexZeroPad(ethers.utils.hexlify(1), 32)`
   // to send padded bytes values to the registry on addNewContract calls.
 
+  const signature = 'changeContract(bytes32,address)';
+
   // AutoCompound defaults: active with 2% threshold
-  const autoCompoundIsActiveByDefault = true;
-  const autoCompoundThreshold = ethers.utils.hexZeroPad(ethers.utils.hexlify(200), 32);
-  await Registry.addNewContract(
-    hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('AutoCompoundModule')),
-    AutoCompoundModule.address,
-    autoCompoundThreshold,
-    autoCompoundIsActiveByDefault,
-    {
+  let contractIdKeccak = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('AutoCompoundModule'));
+  const target = Registry.address;
+  const msgValue = 0;
+  let data = AbiCoder.encode(['bytes32', 'address'], [contractIdKeccak, AutoCompoundModule.address]);
+  let eta = Math.floor(Date.now() / 1000) + 21750;
+
+  console.log(`ETA: ${new Date(eta * 1000)}`);
+  console.log('ETA TIMESTAMP: KEEP THIS TO EXECUTE CALL: ', eta);
+
+  let tx = await (
+    await Timelock.queueTransaction(target, msgValue, signature, data, eta, {
       gasPrice: Config.gasPrice,
       gasLimit: Config.gasLimit,
-    }
-  );
+    })
+  ).wait();
+
+  console.log(`Transaction queued: ${tx?.hash}`);
   await new Promise((resolve) => setTimeout(resolve, Config.sleep));
   console.log(':: Added AutoCompoundModule to Registry');
 
   // IdleLiquidity defaults: active with 2% threshold
-  const idleLiquidityIsActiveByDefault = true;
-  const idleLiquidityThreshold = ethers.utils.hexZeroPad(ethers.utils.hexlify(200), 32);
-  await Registry.addNewContract(
-    hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('IdleLiquidityModule')),
-    IdleLiquidityModule.address,
-    idleLiquidityThreshold,
-    idleLiquidityIsActiveByDefault,
-    {
+  contractIdKeccak = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('IdleLiquidityModule'));
+  data = AbiCoder.encode(['bytes32', 'address'], [contractIdKeccak, IdleLiquidityModule.address]);
+  eta = Math.floor(Date.now() / 1000) + 21750;
+
+  console.log(`ETA: ${new Date(eta * 1000)}`);
+  console.log('ETA TIMESTAMP: KEEP THIS TO EXECUTE CALL: ', eta);
+
+  tx = await (
+    await Timelock.queueTransaction(target, msgValue, signature, data, eta, {
       gasPrice: Config.gasPrice,
       gasLimit: Config.gasLimit,
-    }
-  );
+    })
+  ).wait();
+
+  console.log(`Transaction queued: ${tx?.hash}`);
   await new Promise((resolve) => setTimeout(resolve, Config.sleep));
   console.log(':: Added IdleLiquidityModule to Registry');
 
   // Aave defaults: inactive with 5% threshold
-  const aaveIsActiveByDefault = false;
-  const aaveThreshold = ethers.utils.hexZeroPad(ethers.utils.hexlify(500), 32);
-  await Registry.addNewContract(
-    hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('AaveModule')),
-    AaveModule.address,
-    aaveThreshold,
-    aaveIsActiveByDefault,
-    {
+  contractIdKeccak = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('AaveModule'));
+  data = AbiCoder.encode(['bytes32', 'address'], [contractIdKeccak, AaveModule.address]);
+  eta = Math.floor(Date.now() / 1000) + 21750;
+
+  console.log(`ETA: ${new Date(eta * 1000)}`);
+  console.log('ETA TIMESTAMP: KEEP THIS TO EXECUTE CALL: ', eta);
+
+  tx = await (
+    await Timelock.queueTransaction(target, msgValue, signature, data, eta, {
       gasPrice: Config.gasPrice,
       gasLimit: Config.gasLimit,
-    }
-  );
+    })
+  ).wait();
+
+  console.log(`Transaction queued: ${tx?.hash}`);
   await new Promise((resolve) => setTimeout(resolve, Config.sleep));
   console.log(':: Added AaveModule to Registry');
 
@@ -74,48 +87,41 @@ const PostDeployScript: DeployFunction = async function (hre: HardhatRuntimeEnvi
   const DepositRecipes = await ethers.getContract('DepositRecipes');
   const WithdrawRecipes = await ethers.getContract('WithdrawRecipes');
 
-  await Registry.addNewContract(
-    hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('DepositRecipes')),
-    DepositRecipes.address,
-    ethers.utils.hexZeroPad(ethers.utils.hexlify(0), 32),
-    true,
-    {
+  contractIdKeccak = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('DepositRecipes'));
+  data = AbiCoder.encode(['bytes32', 'address'], [contractIdKeccak, DepositRecipes.address]);
+  eta = Math.floor(Date.now() / 1000) + 21750;
+
+  console.log(`ETA: ${new Date(eta * 1000)}`);
+  console.log('ETA TIMESTAMP: KEEP THIS TO EXECUTE CALL: ', eta);
+
+  tx = await (
+    await Timelock.queueTransaction(target, msgValue, signature, data, eta, {
       gasPrice: Config.gasPrice,
       gasLimit: Config.gasLimit,
-    }
-  );
+    })
+  ).wait();
+
+  console.log(`Transaction queued: ${tx?.hash}`);
   await new Promise((resolve) => setTimeout(resolve, Config.sleep));
   console.log(':: Added DepositRecipes to Registry');
 
-  await Registry.addNewContract(
-    hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('WithdrawRecipes')),
-    WithdrawRecipes.address,
-    ethers.utils.hexZeroPad(ethers.utils.hexlify(0), 32),
-    true,
-    {
+  contractIdKeccak = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('WithdrawRecipes'));
+  data = AbiCoder.encode(['bytes32', 'address'], [contractIdKeccak, WithdrawRecipes.address]);
+  eta = Math.floor(Date.now() / 1000) + 21750;
+
+  console.log(`ETA: ${new Date(eta * 1000)}`);
+  console.log('ETA TIMESTAMP: KEEP THIS TO EXECUTE CALL: ', eta);
+
+  tx = await (
+    await Timelock.queueTransaction(target, msgValue, signature, data, eta, {
       gasPrice: Config.gasPrice,
       gasLimit: Config.gasLimit,
-    }
-  );
+    })
+  ).wait();
+
+  console.log(`Transaction queued: ${tx?.hash}`);
   await new Promise((resolve) => setTimeout(resolve, Config.sleep));
   console.log(':: Added WithdrawRecipes to Registry');
-
-  // Set Timelock as Registry owner
-  const Timelock = await ethers.getContract('Timelock');
-  await Registry.changeGovernance(Timelock.address, {
-    gasPrice: Config.gasPrice,
-    gasLimit: Config.gasLimit,
-  });
-  await new Promise((resolve) => setTimeout(resolve, Config.sleep));
-  console.log(':: Changed Registry governance to Timelock');
-
-  // Set factory owner (has rights to push actions)
-  const PositionManagerFactory = await ethers.getContract('PositionManagerFactory');
-  await PositionManagerFactory.changeGovernance(multiSig, {
-    gasPrice: Config.gasPrice,
-    gasLimit: Config.gasLimit,
-  });
-  console.log(':: Changed PositionManagerFactory governance to multiSig');
 
   const END_TIME = Date.now();
   console.log(`:: Deployment took ${(END_TIME - START_TIME) / 1000}s`);

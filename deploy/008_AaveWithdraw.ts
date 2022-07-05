@@ -19,7 +19,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const AaveWithdraw = await ethers.getContract('AaveWithdraw');
 
-  const PositionManagerFactory = await ethers.getContract('PositionManagerFactory');
+  const PositionManagerFactory = await ethers.getContractAt('PositionManagerFactory', Config.positionManagerFactory);
 
   // add actions to diamond cut
   await PositionManagerFactory.pushActionData(AaveWithdraw.address, await getSelectors(AaveWithdraw), {
@@ -31,4 +31,3 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 export default func;
 func.tags = ['Action'];
-func.dependencies = ['PositionManagerFactory'];

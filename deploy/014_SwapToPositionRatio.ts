@@ -18,7 +18,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   });
 
   const swapToPositionRatioAction = await ethers.getContract('SwapToPositionRatio');
-  const PositionManagerFactory = await ethers.getContract('PositionManagerFactory');
+  const PositionManagerFactory = await ethers.getContractAt('PositionManagerFactory', Config.positionManagerFactory);
 
   // add actions to diamond cut
   await PositionManagerFactory.pushActionData(
@@ -34,4 +34,3 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 export default func;
 func.tags = ['Action'];
-func.dependencies = ['PositionManagerFactory'];

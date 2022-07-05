@@ -10,7 +10,7 @@ async function main() {
   const Timelock = await ethers.getContractAt('Timelock', timelockAddress, signer);
 
   // Specific call
-  const RegistryAddress = '0x38B2c4da0F5d1a3512e4CBfb24DbA1652674b7ea';
+  const RegistryAddress = Config.registry;
   const signature = 'addNewContract(bytes32,address,bytes32,bool)';
 
   const contractIdKeccak = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('PositionManagerFactory'));
