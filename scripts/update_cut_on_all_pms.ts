@@ -2,7 +2,6 @@ import { Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import { Config } from '../deploy/000_Config';
 import { getSelectors } from '../test/shared/fixtures';
-import { AaveWithdraw } from '../typechain';
 
 async function main() {
   try {
@@ -14,36 +13,46 @@ async function main() {
       Config.positionManagerFactory,
       signer
     );
+    const AaveWithdraw = await ethers.getContractAt('AaveWithdraw', Config.aaveWithdraw, signer);
+    const Swap = await ethers.getContractAt('Swap', Config.swap, signer);
+    const SwapToPositionRatio = await ethers.getContractAt('SwapToPositionRatio', Config.swapToPositionRatio, signer);
+    const ZapIn = await ethers.getContractAt('ZapIn', Config.zapIn, signer);
+    const ZapOut = await ethers.getContractAt('ZapOut', Config.zapOut, signer);
 
-      const managers = await PositionManagerFactory.getAllPositionManagers();
-      
-      const actions = [{
-          facetAddress: AaveWithdraw.address,
-          action: 0, //(0: add, 1: replace, 2: remove)
-          functionSelectors: getSelectors(AaveWithdraw)
-      }, {
-          facetAddress: Swap.address,
-          action: 0, //(0: add, 1: replace, 2: remove)
-          functionSelectors: getSelectors(Swap)
-      },{
-          facetAddress: SwapToPositionRatio.address,
-          action: 0, //(0: add, 1: replace, 2: remove)
-          functionSelectors: getSelectors(SwapToPositionRatio)
-      },{
-          facetAddress: ZapIn.address,
-          action: 0, //(0: add, 1: replace, 2: remove)
-          functionSelectors: getSelectors(ZapIn)
-      },{
-          facetAddress: ZapOut.address,
-          action: 0, //(0: add, 1: replace, 2: remove)
-          functionSelectors: getSelectors(ZapOut)
-          }];
-      
+    const managers = await PositionManagerFactory.getAllPositionManagers();
+
+    const actions = [
+      {
+        facetAddress: AaveWithdraw.address,
+        action: 0, //(0: add, 1: replace, 2: remove)
+        functionSelectors: getSelectors(AaveWithdraw),
+      },
+      {
+        facetAddress: Swap.address,
+        action: 0, //(0: add, 1: replace, 2: remove)
+        functionSelectors: getSelectors(Swap),
+      },
+      {
+        facetAddress: SwapToPositionRatio.address,
+        action: 0, //(0: add, 1: replace, 2: remove)
+        functionSelectors: getSelectors(SwapToPositionRatio),
+      },
+      {
+        facetAddress: ZapIn.address,
+        action: 0, //(0: add, 1: replace, 2: remove)
+        functionSelectors: getSelectors(ZapIn),
+      },
+      {
+        facetAddress: ZapOut.address,
+        action: 0, //(0: add, 1: replace, 2: remove)
+        functionSelectors: getSelectors(ZapOut),
+      },
+    ];
+
     let positionManager: Contract;
-      for (const manager of managers) {
-        positionManager = await ethers.getContractAt('PositionManager', manager, signer);
-          await positionManager.diamondCut(actions, "0x0000000000000000000000000000000000000000",0);
-      }
+    for (const manager of managers) {
+      positionManager = await ethers.getContractAt('PositionManager', manager, signer);
+      await positionManager.diamondCut(actions, '0x0000000000000000000000000000000000000000', 0);
     }
   } catch (error: any) {
     throw new Error(error?.message);
