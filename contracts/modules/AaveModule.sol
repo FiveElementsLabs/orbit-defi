@@ -222,13 +222,15 @@ contract AaveModule is BaseModule {
         uint256 amountWithdrawn = IAaveWithdraw(positionManager).withdrawFromAaveV2(tokenFromAave, id, 10_000, false);
 
         (uint256 amount0Out, uint256 amount1Out) = ISwapToPositionRatio(positionManager).swapToPositionRatioV2(
-            tokenData.token0,
-            tokenData.token1,
-            tokenData.fee,
-            tokenFromAave == tokenData.token0 ? amountWithdrawn : 0,
-            tokenFromAave == tokenData.token1 ? amountWithdrawn : 0,
-            tokenData.tickLower,
-            tokenData.tickUpper
+            ISwapToPositionRatio.SwapToPositionInput({
+                token0Address: tokenData.token0,
+                token1Address: tokenData.token1,
+                fee: tokenData.fee,
+                amount0In: tokenFromAave == tokenData.token0 ? amountWithdrawn : 0,
+                amount1In: tokenFromAave == tokenData.token1 ? amountWithdrawn : 0,
+                tickLower: tokenData.tickLower,
+                tickUpper: tokenData.tickUpper
+            })
         );
 
         IIncreaseLiquidity(positionManager).increaseLiquidity(tokenId, amount0Out, amount1Out);
