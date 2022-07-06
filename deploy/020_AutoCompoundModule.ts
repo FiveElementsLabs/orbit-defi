@@ -1,6 +1,5 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
-import { Config } from './000_Config';
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
@@ -8,9 +7,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const { deployer } = await getNamedAccounts();
 
+  const UniswapAddressHolder = await deployments.get('UniswapAddressHolder');
+  const registry = await deployments.get('Registry');
+
   await deploy('AutoCompoundModule', {
     from: deployer,
-    args: [Config.uniswapAddressHolder, Config.registry],
+    args: [UniswapAddressHolder.address, registry.address],
     log: true,
     autoMine: true,
   });
@@ -18,3 +20,4 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 export default func;
 func.tags = ['Module'];
+func.dependencies = ['UniswapAddressHolder', 'Registry'];

@@ -10,18 +10,18 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const { deployer } = await getNamedAccounts();
 
-  await deploy('ZapIn', {
+  await deploy('ZapOut', {
     from: deployer,
     args: [],
     log: true,
     autoMine: true,
   });
 
-  const zapInAction = await ethers.getContract('ZapIn');
-  const PositionManagerFactory = await ethers.getContract('PositionManagerFactory');
+  const zapOut = await ethers.getContract('ZapOut');
+  const PositionManagerFactory = await ethers.getContractAt('PositionManagerFactory', Config.positionManagerFactory);
 
   // add actions to diamond cut
-  await PositionManagerFactory.pushActionData(zapInAction.address, await getSelectors(zapInAction), {
+  await PositionManagerFactory.pushActionData(zapOut.address, await getSelectors(zapOut), {
     gasPrice: Config.gasPrice,
     gasLimit: Config.gasLimit,
   });
@@ -30,4 +30,3 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
 export default func;
 func.tags = ['Action'];
-func.dependencies = ['PositionManagerFactory'];

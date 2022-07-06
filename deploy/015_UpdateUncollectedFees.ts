@@ -10,21 +10,25 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const { deployer } = await getNamedAccounts();
 
-  await deploy('ZapIn', {
+  await deploy('UpdateUncollectedFees', {
     from: deployer,
     args: [],
     log: true,
     autoMine: true,
   });
+  const UpdateUncollectedFees = await ethers.getContract('UpdateUncollectedFees');
 
-  const zapInAction = await ethers.getContract('ZapIn');
   const PositionManagerFactory = await ethers.getContract('PositionManagerFactory');
 
   // add actions to diamond cut
-  await PositionManagerFactory.pushActionData(zapInAction.address, await getSelectors(zapInAction), {
-    gasPrice: Config.gasPrice,
-    gasLimit: Config.gasLimit,
-  });
+  await PositionManagerFactory.pushActionData(
+    UpdateUncollectedFees.address,
+    await getSelectors(UpdateUncollectedFees),
+    {
+      gasPrice: Config.gasPrice,
+      gasLimit: Config.gasLimit,
+    }
+  );
   await new Promise((resolve) => setTimeout(resolve, Config.sleep));
 };
 
