@@ -1,5 +1,5 @@
 import { ethers } from 'hardhat';
-import { Config } from '../deploy/000_Config';
+import { Config } from '../deploy-v2/000_Config';
 import { getSelectors } from '../test/shared/fixtures';
 
 async function main() {

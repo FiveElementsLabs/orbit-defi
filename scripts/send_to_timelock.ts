@@ -1,5 +1,5 @@
 import { ethers } from 'hardhat';
-import { Config } from '../deploy/000_Config';
+import { Config } from '../deploy-v2/000_Config';
 
 async function main() {
   const provider = new ethers.providers.JsonRpcProvider(process.env.ALCHEMY_POLYGON);
