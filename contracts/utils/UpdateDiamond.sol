@@ -4,21 +4,31 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import '../../interfaces/IDiamondCut.sol';
+import '../../interfaces/IRegistry.sol';
 
 contract UpdateDiamond {
-    address public governance;
+    IRegistry public registry;
 
     modifier onlyGovernance() {
-        require(msg.sender == governance, 'UpdateDiamond::onlyGovernance: Only governance can add actions');
+        require(msg.sender == registry.governance(), 'UpdateDiamond::onlyGovernance: Only governance can add actions');
         _;
     }
 
-    constructor(address _governance) {
-        governance = _governance;
+    constructor(address _registry) {
+        registry = IRegistry(_registry);
+        require(
+            registry.governance() != address(0),
+            'UpdateDiamond::constructor: Registry must have a governance address'
+        );
     }
 
-    function changeGovernance(address newGovernance) external onlyGovernance {
-        governance = newGovernance;
+    function changeRegistry(address newRegistry) external onlyGovernance {
+        registry = IRegistry(newRegistry);
+        require(
+            registry.governance() != address(0),
+            'UpdateDiamond::changeRegistry: Registry must have a governance address'
+        );
+>>>>>>> 5cb2ca8170c2b49ab6d0fd46aca2deeb44e3af92
     }
 
     function updateDiamond(address positionManager, IDiamondCut.FacetCut[] memory actions) external onlyGovernance {

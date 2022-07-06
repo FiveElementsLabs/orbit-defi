@@ -58,13 +58,15 @@ contract AutoCompoundModule is BaseModule {
                 ._getTokens(tokenId, INonfungiblePositionManager(addressHolder.nonfungiblePositionManagerAddress()));
 
             (amount0Desired, amount1Desired) = ISwapToPositionRatio(positionManager).swapToPositionRatioV2(
-                token0,
-                token1,
-                fee,
-                amount0Desired,
-                amount1Desired,
-                tickLower,
-                tickUpper
+                ISwapToPositionRatio.SwapToPositionInput({
+                    token0Address: token0,
+                    token1Address: token1,
+                    fee: fee,
+                    amount0In: amount0Desired,
+                    amount1In: amount1Desired,
+                    tickLower: tickLower,
+                    tickUpper: tickUpper
+                })
             );
 
             IIncreaseLiquidity(positionManager).increaseLiquidity(tokenId, amount0Desired, amount1Desired);
