@@ -123,7 +123,7 @@ const PostDeployScript: DeployFunction = async function (hre: HardhatRuntimeEnvi
 
   // Set factory owner (has rights to push actions)
   const PositionManagerFactory = await ethers.getContract('PositionManagerFactory');
-  await PositionManagerFactory.changeGovernance(Config.governance, {
+  await PositionManagerFactory.changeGovernance(process.env.GOVERNANCE_ADDRESS, {
     gasPrice: Config.gasPrice,
     gasLimit: Config.gasLimit,
   });
