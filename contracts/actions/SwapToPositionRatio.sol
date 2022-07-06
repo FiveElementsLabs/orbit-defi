@@ -45,8 +45,8 @@ contract SwapToPositionRatio is ISwapToPositionRatio {
             IUniswapV3Pool pool = IUniswapV3Pool(
                 UniswapNFTHelper._getPool(
                     Storage.uniswapAddressHolder.uniswapV3FactoryAddress(),
-                    inputs.token0,
-                    inputs.token1,
+                    inputs.token0Address,
+                    inputs.token1Address,
                     inputs.fee
                 )
             );
@@ -58,15 +58,15 @@ contract SwapToPositionRatio is ISwapToPositionRatio {
                 tickPool,
                 inputs.tickLower,
                 inputs.tickUpper,
-                inputs.amount0,
-                inputs.amount1
+                inputs.amount0In,
+                inputs.amount1In
             );
         }
 
         if (amountToSwap != 0) {
             uint256 amountSwapped = _swap(
-                isToken0In ? inputs.token0 : inputs.token1,
-                isToken0In ? inputs.token1 : inputs.token0,
+                isToken0In ? inputs.token0Address : inputs.token1Address,
+                isToken0In ? inputs.token1Address : inputs.token0Address,
                 inputs.fee,
                 amountToSwap
             );
@@ -74,13 +74,19 @@ contract SwapToPositionRatio is ISwapToPositionRatio {
             ///@notice return the new amount of the token swapped and the token returned
             ///@dev token0AddressIn true amount 0 - amountToSwap  ------ amount 1 + amountSwapped
             ///@dev token0AddressIn false amount 0 + amountSwapped  ------ amount 1 - amountToSwap
-            amount0Out = isToken0In ? inputs.amount0.sub(amountToSwap) : inputs.amount0.add(amountSwapped);
-            amount1Out = isToken0In ? inputs.amount1.add(amountSwapped) : inputs.amount1.sub(amountToSwap);
+            amount0Out = isToken0In ? inputs.amount0In.sub(amountToSwap) : inputs.amount0In.add(amountSwapped);
+            amount1Out = isToken0In ? inputs.amount1In.add(amountSwapped) : inputs.amount1In.sub(amountToSwap);
 
-            emit SwappedToPositionRatio(address(this), inputs.token0, inputs.token1, amount0Out, amount1Out);
+            emit SwappedToPositionRatio(
+                address(this),
+                inputs.token0Address,
+                inputs.token1Address,
+                amount0Out,
+                amount1Out
+            );
         } else {
-            amount0Out = inputs.amount0;
-            amount1Out = inputs.amount1;
+            amount0Out = inputs.amount0In;
+            amount1Out = inputs.amount1In;
         }
     }
 
