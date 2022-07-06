@@ -8,9 +8,6 @@ const PostDeployScript: DeployFunction = async function (hre: HardhatRuntimeEnvi
   // 2. set timelock as registry governance
   // 3. eventually change governance from deployer (on Factory etc.)
 
-  const { getNamedAccounts } = hre;
-  const { multiSig } = await getNamedAccounts();
-
   const Registry = await ethers.getContract('Registry');
 
   //get Modules Contracts
@@ -100,7 +97,22 @@ const PostDeployScript: DeployFunction = async function (hre: HardhatRuntimeEnvi
   await new Promise((resolve) => setTimeout(resolve, Config.sleep));
   console.log(':: Added WithdrawRecipes to Registry');
 
-  // Set Timelock as Registry owner
+  const UpdateDiamond = await ethers.getContract('UpdateDiamond');
+
+  await Registry.addNewContract(
+    hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('UpdateDiamond')),
+    UpdateDiamond.address,
+    ethers.utils.hexZeroPad(ethers.utils.hexlify(0), 32),
+    true,
+    {
+      gasPrice: Config.gasPrice,
+      gasLimit: Config.gasLimit,
+    }
+  );
+  await new Promise((resolve) => setTimeout(resolve, Config.sleep));
+  console.log(':: Added UpdateDiamond to Registry');
+
+  // Set  Registry owner
   const Timelock = await ethers.getContract('Timelock');
   await Registry.changeGovernance(Timelock.address, {
     gasPrice: Config.gasPrice,
@@ -111,7 +123,7 @@ const PostDeployScript: DeployFunction = async function (hre: HardhatRuntimeEnvi
 
   // Set factory owner (has rights to push actions)
   const PositionManagerFactory = await ethers.getContract('PositionManagerFactory');
-  await PositionManagerFactory.changeGovernance(multiSig, {
+  await PositionManagerFactory.changeGovernance(Config.governance, {
     gasPrice: Config.gasPrice,
     gasLimit: Config.gasLimit,
   });
