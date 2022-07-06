@@ -28,7 +28,6 @@ contract UpdateDiamond {
             registry.governance() != address(0),
             'UpdateDiamond::changeRegistry: Registry must have a governance address'
         );
->>>>>>> 5cb2ca8170c2b49ab6d0fd46aca2deeb44e3af92
     }
 
     function updateDiamond(address positionManager, IDiamondCut.FacetCut[] memory actions) external onlyGovernance {
