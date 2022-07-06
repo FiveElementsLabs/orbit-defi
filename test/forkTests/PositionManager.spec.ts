@@ -1,16 +1,14 @@
 import '@nomiclabs/hardhat-ethers';
 import { expect } from 'chai';
-import { ContractFactory, Contract } from 'ethers';
+import { Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import hre from 'hardhat';
 import LendingPooljson from '@aave/protocol-v2/artifacts/contracts/protocol/lendingpool/LendingPool.sol/LendingPool.json';
 import {
-  NonFungiblePositionManagerDescriptorBytecode,
   tokensFixture,
   poolFixture,
   mintSTDAmount,
   getSelectors,
-  findbalanceSlot,
   RegistryFixture,
   getPositionManager,
   deployUniswapContracts,
@@ -18,14 +16,7 @@ import {
   mintForkedTokens,
   deployContract,
 } from '../shared/fixtures';
-import {
-  MockToken,
-  IUniswapV3Pool,
-  INonfungiblePositionManager,
-  TestRouter,
-  DepositRecipes,
-  PositionManagerFactory,
-} from '../../typechain';
+import { MockToken, IUniswapV3Pool, INonfungiblePositionManager, DepositRecipes } from '../../typechain';
 
 describe('PositionManager.sol', function () {
   //GLOBAL VARIABLE - USE THIS

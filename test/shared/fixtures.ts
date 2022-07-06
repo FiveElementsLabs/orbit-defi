@@ -8,7 +8,7 @@ import NonFungiblePositionManagerjson from '@uniswap/v3-periphery/artifacts/cont
 import NonFungiblePositionManagerDescriptorjson from '@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json';
 import SwapRouterjson from '@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json';
 import PositionManagerjson from '../../artifacts/contracts/PositionManager.sol/PositionManager.json';
-import { getContractAddress } from '@ethersproject/address';
+import LendingPooljson from '@aave/protocol-v2/artifacts/contracts/protocol/lendingpool/LendingPool.sol/LendingPool.json';
 import UniswapV3Pool from '@uniswap/v3-core/artifacts/contracts/UniswapV3Pool.sol/UniswapV3Pool.json';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 export const NonFungiblePositionManagerDescriptorBytecode =
@@ -243,4 +243,111 @@ export async function doAllApprovals(approvers: SignerWithAddress[], spendersAdd
       }
     }
   }
+}
+
+export async function getMainnetContracts() {
+  let contracts: any;
+  contracts.UniswapV3Factory = await ethers.getContractAt(
+    UniswapV3Factoryjson.abi,
+    '0x1f98431c8ad98523631ae4a59f267346ea31f984'
+  );
+  contracts.NonFungiblePositionManager = await ethers.getContractAt(
+    NonFungiblePositionManagerjson.abi,
+    '0xC36442b4a4522E871399CD717aBDD847Ab11FE88'
+  );
+  contracts.SwapRouter = await ethers.getContractAt(SwapRouterjson.abi, '0xE592427A0AEce92De3Edee1F18E0157C05861564');
+  contracts.LendingPool = await ethers.getContractAt(LendingPooljson.abi, '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9');
+  return contracts;
+}
+
+export const orbitActions = [
+  'AaveDeposit',
+  'AaveWithdraw',
+  'ClosePosition',
+  'CollectFees',
+  'DecreaseLiquidity',
+  'IncreaseLiquidity',
+  'Mint',
+  'Swap',
+  'SwapToPositionRatio',
+  'UpdateUncollectedFees',
+  'ZapIn',
+  'ZapOut',
+];
+
+export async function deployOrbit(governance: SignerWithAddress, keeper: SignerWithAddress, contracts: any) {
+  let orbit: any;
+  orbit.Registry = (await RegistryFixture(governance.address)).registryFixture;
+  orbit.UniswapAddressHolder = await deployContract('UniswapAddressHolder', [
+    contracts.NonFungiblePositionManager.address,
+    contracts.UniswapV3Factory.address,
+    contracts.SwapRouter.address,
+    contracts.Registry.address,
+  ]);
+  orbit.AaveAddressHolder = await deployContract('AaveAddressHolder', [
+    contracts.LendingPool.address,
+    contracts.Registry.address,
+  ]);
+  orbit.DiamondCutFacet = await deployContract('DiamondCutFacet');
+  orbit.AutoCompoundModule = await deployContract('AutoCompoundModule', [
+    orbit.UniswapAddressHolder.address,
+    orbit.Registry.address,
+  ]);
+  orbit.IdleLiquidityModule = await deployContract('IdleLiquidityModule', [
+    orbit.UniswapAddressHolder.address,
+    orbit.Registry.address,
+  ]);
+  orbit.AaveModule = await deployContract('AaveModule', [
+    orbit.AaveAddressHolder.address,
+    orbit.UniswapAddressHolder.address,
+    orbit.Registry.address,
+  ]);
+  orbit.PositionManagerFactory = await deployPositionManagerFactoryAndActions(
+    governance.address,
+    orbit.Registry.address,
+    orbit.DiamondCutFacet.address,
+    orbit.UniswapAddressHolder.address,
+    orbit.AaveAddressHolder.address,
+    orbitActions
+  );
+  orbit.DepositRecipes = await deployContract('DepositRecipes', [
+    orbit.UniswapAddressHolder.address,
+    orbit.PositionManagerFactory.address,
+  ]);
+  orbit.WithdrawRecipes = await deployContract('WithdrawRecipes', [
+    orbit.PositionManagerFactory.address,
+    orbit.UniswapAddressHolder.address,
+  ]);
+
+  //setup Registry
+  await orbit.Registry.connect(governance).setPositionManagerFactory(orbit.PositionManagerFactory.address);
+  await orbit.Registry.addNewContract(
+    hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Factory')),
+    orbit.PositionManagerFactory.address,
+    ethers.utils.hexZeroPad(ethers.utils.hexlify(1), 32),
+    true
+  );
+  await orbit.AaveModule.addNewContract(
+    hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('AutoCompoundModule')),
+    orbit.AutoCompoundModule.address,
+    ethers.utils.hexZeroPad(ethers.utils.hexlify(1), 32), //1% fee threshold
+    true
+  );
+  await orbit.AaveModule.addNewContract(
+    hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('IdleLiquidityModule')),
+    orbit.IdleLiquidityModule.address,
+    ethers.utils.hexZeroPad(ethers.utils.hexlify(2), 32), //2% rebalance
+    false //not a default module
+  );
+  await orbit.AaveModule.addNewContract(
+    hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('AaveModule')),
+    orbit.AaveModule.address,
+    ethers.utils.hexZeroPad(ethers.utils.hexlify(2), 32), //2% move to aave
+    true // default module
+  );
+
+  //whitelist keeper
+  await orbit.Registry.addKeeperToWhitelist(keeper.address);
+
+  return orbit;
 }

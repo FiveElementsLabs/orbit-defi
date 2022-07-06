@@ -1,7 +1,6 @@
 import '@nomiclabs/hardhat-ethers';
 import { expect } from 'chai';
 import { Contract } from 'ethers';
-import { AbiCoder } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import hre from 'hardhat';
 import UniswapV3Factoryjson from '@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json';
@@ -48,12 +47,10 @@ describe('AaveModule.sol', function () {
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
   let PositionManager: PositionManager; // Position manager contract
   let DepositRecipes: Contract;
-  let AaveDepositFallback: Contract;
   let LendingPool: Contract;
   let AaveModule: Contract;
   let usdcMock: MockToken;
   let wbtcMock: MockToken;
-  let abiCoder: AbiCoder;
   let swapRouter: Contract;
   let aUsdc: Contract;
   let aWbtc: Contract;
@@ -228,7 +225,6 @@ describe('AaveModule.sol', function () {
 
     await NonFungiblePositionManager.ownerOf(tokenId);
     await DepositRecipes.connect(user).depositUniNft([tokenId]);
-    abiCoder = ethers.utils.defaultAbiCoder;
 
     const aUsdcAddress = (await LendingPool.getReserveData(usdcMock.address)).aTokenAddress;
     aUsdc = await ethers.getContractAt(ATokenjson.abi, aUsdcAddress);
