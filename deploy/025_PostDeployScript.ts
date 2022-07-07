@@ -112,22 +112,29 @@ const PostDeployScript: DeployFunction = async function (hre: HardhatRuntimeEnvi
   await new Promise((resolve) => setTimeout(resolve, Config.sleep));
   console.log(':: Added UpdateDiamond to Registry');
 
-  // Set  Registry owner
-  const Timelock = await ethers.getContract('Timelock');
-  await Registry.changeGovernance(Timelock.address, {
-    gasPrice: Config.gasPrice,
-    gasLimit: Config.gasLimit,
-  });
+  // Add keepers to whitelist
+  // ****************** NOTE: this is the DEVELOPMENT UNSAFE keeper ******************
+  const keeperAddress = '0xb86659C1010f60CC3fDE9EF90C9d3D71C537A526';
+  await Registry.addKeeperToWhitelist(keeperAddress, { gasPrice: Config.gasPrice, gasLimit: Config.gasLimit });
   await new Promise((resolve) => setTimeout(resolve, Config.sleep));
-  console.log(':: Changed Registry governance to Timelock');
+  console.log(':: Added keeper to whitelist');
+
+  // Set  Registry owner
+  // const Timelock = await ethers.getContract('Timelock');
+  // await Registry.changeGovernance(Timelock.address, {
+  //   gasPrice: Config.gasPrice,
+  //   gasLimit: Config.gasLimit,
+  // });
+  // await new Promise((resolve) => setTimeout(resolve, Config.sleep));
+  // console.log(':: Changed Registry governance to Timelock');
 
   // Set factory owner (has rights to push actions)
-  const PositionManagerFactory = await ethers.getContract('PositionManagerFactory');
-  await PositionManagerFactory.changeGovernance(process.env.GOVERNANCE_ADDRESS, {
-    gasPrice: Config.gasPrice,
-    gasLimit: Config.gasLimit,
-  });
-  console.log(':: Changed PositionManagerFactory governance to multiSig');
+  // const PositionManagerFactory = await ethers.getContract('PositionManagerFactory');
+  // await PositionManagerFactory.changeGovernance(process.env.GOVERNANCE_ADDRESS, {
+  //   gasPrice: Config.gasPrice,
+  //   gasLimit: Config.gasLimit,
+  // });
+  // console.log(':: Changed PositionManagerFactory governance to multiSig');
 
   const END_TIME = Date.now();
   console.log(`:: Deployment took ${(END_TIME - START_TIME) / 1000}s`);
