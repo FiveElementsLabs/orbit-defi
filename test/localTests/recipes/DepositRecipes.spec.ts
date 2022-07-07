@@ -573,5 +573,34 @@ describe('DepositRecipes.sol', function () {
         )
       ).to.be.reverted;
     });
+
+    it('should send leftover tokens back to the user if necessary', async function () {
+      const amount0 = '0x' + (1e18).toString(16);
+      const amount1 = '0x' + (1e15).toString(16);
+      const fee = 500;
+      const tickLower = 0 - 60 * 1000;
+      const tickUpper = 0 + 60 * 1000;
+
+      const mintTx = await DepositRecipes.connect(user).mintAndDeposit(
+        tokenEth.address,
+        tokenUsdc.address,
+        fee,
+        tickLower,
+        tickUpper,
+        amount0,
+        amount1
+      );
+
+      const events: any = (await mintTx.wait()).events;
+      const mintEvent = await events[events.length - 1];
+      let tokenId = abiCoder.decode(['uint256'], mintEvent.data).toString();
+
+      expect(await NonFungiblePositionManager.ownerOf(tokenId)).to.equal(PositionManager.address);
+      const positions = await PositionManager.getAllUniPositions();
+      expect(positions[positions.length - 1]).to.equal(tokenId);
+
+      expect(await tokenEth.balanceOf(PositionManager.address)).to.equal(0);
+      expect(await tokenUsdc.balanceOf(PositionManager.address)).to.equal(0);
+    });
   });
 });

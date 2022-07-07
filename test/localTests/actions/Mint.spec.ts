@@ -109,8 +109,6 @@ describe('Mint.sol', function () {
     );
 
     //give mint action some tokens
-    await tokenEth.connect(user).transfer(PositionManager.address, ethers.utils.parseEther('1000000000000'));
-    await tokenUsdc.connect(user).transfer(PositionManager.address, ethers.utils.parseEther('1000000000000'));
 
     // give pool some liquidity
     await NonFungiblePositionManager.connect(liquidityProvider).mint(
@@ -131,6 +129,11 @@ describe('Mint.sol', function () {
     );
 
     MintFallback = (await ethers.getContractAt('IMint', PositionManager.address)) as Mint;
+  });
+
+  beforeEach(async () => {
+    await tokenEth.connect(user).transfer(PositionManager.address, ethers.utils.parseEther('10'));
+    await tokenUsdc.connect(user).transfer(PositionManager.address, ethers.utils.parseEther('10'));
   });
 
   describe('MintAction.sol - mint', function () {
@@ -156,7 +159,7 @@ describe('Mint.sol', function () {
 
     it('should successfully mint a UNIV3 position out of range', async function () {
       const balancePre = await NonFungiblePositionManager.balanceOf(PositionManager.address);
-      const amount0In = 5e5;
+      const amount0In = 0;
       const amount1In = 5e5;
       const tickLower = -7200;
       const tickUpper = -3600;
