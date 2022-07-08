@@ -140,7 +140,7 @@ describe('SwapToPositionRatio.sol', function () {
 
   describe('doAction', function () {
     it('should correctly swap to exact position ratio amount0In', async function () {
-      const tickLower = -300;
+      const tickLower = -600;
       const tickUpper = 600;
       const amount0In = 1e5;
       const amount1In = 2e5;
@@ -284,7 +284,7 @@ describe('SwapToPositionRatio.sol', function () {
           token1: tokenUsdc.address,
           fee: 500,
           tickLower: 0 - 60 * 24,
-          tickUpper: 0 + 60 * 193,
+          tickUpper: 0 + 60 * 1000,
           amount0Desired: '0x' + (1e26).toString(16),
           amount1Desired: '0x' + (1e26).toString(16),
           amount0Min: 0,

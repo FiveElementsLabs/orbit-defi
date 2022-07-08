@@ -132,7 +132,7 @@ contract IdleLiquidityModule is BaseModule {
             nonfungiblePositionManagerAddress
         ).positions(tokenId);
 
-        int24 tickDelta = tickUpper.sub(tickLower);
+        int24 tickDelta = (tickUpper.sub(tickLower)).div(2);
 
         IUniswapV3Pool pool = IUniswapV3Pool(
             UniswapNFTHelper._getPoolFromTokenId(

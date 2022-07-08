@@ -10,6 +10,7 @@ import '../helpers/UniswapNFTHelper.sol';
 import '../helpers/ERC20Helper.sol';
 import '../utils/Storage.sol';
 import '../../interfaces/actions/ISwapToPositionRatio.sol';
+import 'hardhat/console.sol';
 
 ///@notice action to swap to an exact position ratio
 contract SwapToPositionRatio is ISwapToPositionRatio {
@@ -39,6 +40,10 @@ contract SwapToPositionRatio is ISwapToPositionRatio {
         returns (uint256 amount0Out, uint256 amount1Out)
     {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
+
+        console.log('token0amount: ', inputs.amount0In);
+        console.log('token1amount: ', inputs.amount1In);
+
         uint256 amountToSwap;
         bool isToken0In;
         {
@@ -51,6 +56,11 @@ contract SwapToPositionRatio is ISwapToPositionRatio {
                 )
             );
             (, int24 tickPool, , , , , ) = pool.slot0();
+            console.log(
+                'tickPool: ',
+                (tickPool >= 0 ? '' : '-'),
+                tickPool > 0 ? uint256(tickPool) : uint256(-tickPool)
+            );
 
             SwapHelper.checkDeviation(pool, Storage.registry.maxTwapDeviation(), Storage.registry.twapDuration());
 
@@ -61,6 +71,8 @@ contract SwapToPositionRatio is ISwapToPositionRatio {
                 inputs.amount0In,
                 inputs.amount1In
             );
+            console.log('amountToSwap: ', amountToSwap);
+            console.log('isToken0In: ', isToken0In);
         }
 
         if (amountToSwap != 0) {
@@ -70,12 +82,16 @@ contract SwapToPositionRatio is ISwapToPositionRatio {
                 inputs.fee,
                 amountToSwap
             );
+            console.log('amountSwapped: ', amountSwapped);
 
             ///@notice return the new amount of the token swapped and the token returned
             ///@dev token0AddressIn true amount 0 - amountToSwap  ------ amount 1 + amountSwapped
             ///@dev token0AddressIn false amount 0 + amountSwapped  ------ amount 1 - amountToSwap
             amount0Out = isToken0In ? inputs.amount0In.sub(amountToSwap) : inputs.amount0In.add(amountSwapped);
             amount1Out = isToken0In ? inputs.amount1In.add(amountSwapped) : inputs.amount1In.sub(amountToSwap);
+
+            console.log('amount0Out: ', amount0Out);
+            console.log('amount1Out: ', amount1Out);
 
             emit SwappedToPositionRatio(
                 address(this),

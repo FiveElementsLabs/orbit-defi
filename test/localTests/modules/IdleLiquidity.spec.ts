@@ -151,10 +151,10 @@ describe('IdleLiquidityModule.sol', function () {
         token0: tokenEth.address,
         token1: tokenUsdc.address,
         fee: 3000,
-        tickLower: 0 - 60 * 2,
-        tickUpper: 0 + 60 * 2,
-        amount0Desired: '0x' + (1e9).toString(16),
-        amount1Desired: '0x' + (1e9).toString(16),
+        tickLower: 0 - 60 * 10,
+        tickUpper: 0 + 60 * 10,
+        amount0Desired: '0x' + (5e17).toString(16),
+        amount1Desired: '0x' + (5e17).toString(16),
         amount0Min: 0,
         amount1Min: 0,
         recipient: PositionManager.address,
@@ -172,9 +172,9 @@ describe('IdleLiquidityModule.sol', function () {
 
   describe('IdleLiquidityModule - rebalance', function () {
     it('should rebalance a uni position that is out of range', async function () {
-      while ((await Pool0.slot0()).tick <= 125) {
+      while ((await Pool0.slot0()).tick <= 12500) {
         // Do a trade to change tick
-        await Router.connect(liquidityProvider).swap(Pool0.address, false, '0x' + (1e22).toString(16));
+        await Router.connect(liquidityProvider).swap(Pool0.address, false, '0x' + (1e24).toString(16));
       }
 
       const tick = (await Pool0.slot0()).tick;
@@ -182,12 +182,15 @@ describe('IdleLiquidityModule.sol', function () {
       expect(await NonFungiblePositionManager.ownerOf(tokenId)).to.equal(PositionManager.address);
       expect(Math.abs((await NonFungiblePositionManager.positions(tokenId)).tickLower)).to.be.lt(Math.abs(tick));
       expect(Math.abs((await NonFungiblePositionManager.positions(tokenId)).tickUpper)).to.be.lt(Math.abs(tick));
-
+      console.log(await NonFungiblePositionManager.positions(tokenId));
       await PositionManager.connect(user).setModuleData(
         tokenId,
         IdleLiquidityModule.address,
         abiCoder.encode(['uint24'], [2])
       );
+      console.log(await tokenEth.balanceOf(PositionManager.address));
+      console.log(await tokenUsdc.balanceOf(PositionManager.address));
+
       // rebalance
       await IdleLiquidityModule.rebalance(PositionManager.address, tokenId);
 
@@ -195,6 +198,19 @@ describe('IdleLiquidityModule.sol', function () {
       expect(await NonFungiblePositionManager.ownerOf(tokenId.add(1))).to.equal(PositionManager.address);
       expect(Math.abs((await NonFungiblePositionManager.positions(tokenId.add(1))).tickLower)).to.be.lt(Math.abs(tick));
       expect(Math.abs((await NonFungiblePositionManager.positions(tokenId.add(1))).tickUpper)).to.be.gt(Math.abs(tick));
+
+      console.log(await NonFungiblePositionManager.positions(tokenId.add(1)));
+      console.log(await tokenEth.balanceOf(PositionManager.address));
+      console.log(await tokenUsdc.balanceOf(PositionManager.address));
+
+      const nftHelper = await deployContract('MockUniswapNFTHelper', []);
+      const amounts = await nftHelper.getAmountsfromTokenId(
+        tokenId.add(1),
+        NonFungiblePositionManager.address,
+        Factory.address
+      );
+      console.log(amounts);
+      console.log('ratio: ', amounts[1] / amounts[0]);
     });
 
     it('should faild cause inesistent tokenId', async function () {
