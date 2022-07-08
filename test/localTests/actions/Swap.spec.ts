@@ -56,7 +56,7 @@ describe('Swap.sol', function () {
     [Factory, NonFungiblePositionManager, SwapRouter] = await deployUniswapContracts(tokenEth);
 
     //deploy first pool
-    Pool0 = (await poolFixture(tokenEth, tokenUsdc, 3000, Factory)).pool;
+    Pool0 = (await poolFixture(tokenEth, tokenUsdc, 3000, Factory, 0)).pool;
 
     //mint 1e30 token, you can call with arbitrary amount
     await mintSTDAmount(tokenEth);

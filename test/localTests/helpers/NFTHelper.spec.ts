@@ -69,7 +69,7 @@ describe('TestUniswapNFTHelper', () => {
     await Factory.deployed();
 
     //deploy pool
-    Pool0 = (await poolFixture(tokenEth, tokenUsdc, 3000, Factory)).pool;
+    Pool0 = (await poolFixture(tokenEth, tokenUsdc, 3000, Factory, 0)).pool;
 
     //deploy NonFungiblePositionManagerDescriptor and NonFungiblePositionManager
     const NonFungiblePositionManagerDescriptorFactory = new ContractFactory(

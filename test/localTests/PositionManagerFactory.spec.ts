@@ -1,23 +1,17 @@
 import { expect } from 'chai';
 import '@nomiclabs/hardhat-ethers';
-import { Contract, ContractFactory } from 'ethers';
+import { Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import {
-  NonFungiblePositionManagerDescriptorBytecode,
   tokensFixture,
-  poolFixture,
   routerFixture,
   RegistryFixture,
   getSelectors,
   deployUniswapContracts,
   deployContract,
 } from '../shared/fixtures';
-import { MockToken, INonfungiblePositionManager, ISwapRouter, UniswapAddressHolder, Registry } from '../../typechain';
-
-import UniswapV3Factoryjson from '@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json';
+import { MockToken, INonfungiblePositionManager, ISwapRouter, UniswapAddressHolder } from '../../typechain';
 import PositionManagerContract from '../../artifacts/contracts/PositionManager.sol/PositionManager.json';
-import NonFungiblePositionManagerjson from '@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json';
-import NonFungiblePositionManagerDescriptorjson from '@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json';
 import hre from 'hardhat';
 
 describe('PositionManagerFactory.sol', function () {

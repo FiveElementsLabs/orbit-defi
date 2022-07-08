@@ -56,7 +56,8 @@ export async function poolFixture(
   token0: MockToken,
   token1: MockToken,
   fee: number,
-  factory: Contract
+  factory: Contract,
+  startingTick: number
 ): Promise<PoolFixture> {
   const signers = await ethers.getSigners();
 
@@ -65,8 +66,7 @@ export async function poolFixture(
 
   const pool = new ethers.Contract(receipt.events[0].args.pool, UniswapV3Pool['abi'], signers[0]) as IUniswapV3Pool;
 
-  let startTick = 0;
-  const price = Math.pow(1.0001, startTick);
+  const price = Math.pow(1.0001, startingTick);
   await pool.initialize('0x' + (Math.sqrt(price) * Math.pow(2, 96)).toString(16));
   await pool.increaseObservationCardinalityNext(100);
 

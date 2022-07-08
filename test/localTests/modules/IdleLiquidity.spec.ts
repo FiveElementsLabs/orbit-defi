@@ -42,7 +42,7 @@ describe('IdleLiquidityModule.sol', function () {
   let PositionManager: PositionManager; // Position manager contract
   let ClosePositionAction: Contract; // ClosePositionAction contract
   let MintAction: Contract; // MintAction contract
-  let SwapToPositionRatioAction: Contract; // SwapToPositionRatioAction contract
+  let registry: Contract;
   let IdleLiquidityModule: Contract; // IdleLiquidityModule contract
   let SwapRouter: Contract; // SwapRouter contract
   let abiCoder: AbiCoder; // abiCoder used to encode and decode data
@@ -62,14 +62,14 @@ describe('IdleLiquidityModule.sol', function () {
     Router = (await routerFixture()).ruoterDeployFixture;
 
     //deploy first pool
-    Pool0 = (await poolFixture(tokenEth, tokenUsdc, 3000, Factory)).pool;
+    Pool0 = (await poolFixture(tokenEth, tokenUsdc, 3000, Factory, 0)).pool;
 
     //mint 1e30 token, you can call with arbitrary amount
     await mintSTDAmount(tokenEth);
     await mintSTDAmount(tokenUsdc);
 
     //deploy our contracts
-    const registry = (await RegistryFixture(user.address)).registryFixture;
+    registry = (await RegistryFixture(user.address)).registryFixture;
     const uniswapAddressHolder = await deployContract('UniswapAddressHolder', [
       NonFungiblePositionManager.address,
       Factory.address,
@@ -132,8 +132,8 @@ describe('IdleLiquidityModule.sol', function () {
         token0: tokenEth.address,
         token1: tokenUsdc.address,
         fee: 3000,
-        tickLower: 0 - 60 * 1000,
-        tickUpper: 0 + 60 * 1000,
+        tickLower: 0 - 60 * 10000,
+        tickUpper: 0 + 60 * 10000,
         amount0Desired: '0x' + (1e26).toString(16),
         amount1Desired: '0x' + (1e26).toString(16),
         amount0Min: 0,
@@ -184,9 +184,9 @@ describe('IdleLiquidityModule.sol', function () {
     });
 
     it('should rebalance a uni position that is out of range', async function () {
-      while ((await Pool0.slot0()).tick <= 12500) {
+      while ((await Pool0.slot0()).tick <= 206000) {
         // Do a trade to change tick
-        await Router.connect(liquidityProvider).swap(Pool0.address, false, '0x' + (1e24).toString(16));
+        await Router.connect(liquidityProvider).swap(Pool0.address, false, '0x' + (1e25).toString(16));
       }
 
       const tick = (await Pool0.slot0()).tick;
@@ -200,10 +200,11 @@ describe('IdleLiquidityModule.sol', function () {
         IdleLiquidityModule.address,
         abiCoder.encode(['uint24'], [2])
       );
-      console.log(await tokenEth.balanceOf(PositionManager.address));
-      console.log(await tokenUsdc.balanceOf(PositionManager.address));
+      const userBalanceEth = await tokenEth.balanceOf(user.address);
+      const userBalanceUsdc = await tokenUsdc.balanceOf(user.address);
 
       // rebalance
+      await registry.setMaxTwapDeviation(1000000);
       await IdleLiquidityModule.rebalance(PositionManager.address, tokenId);
 
       await expect(NonFungiblePositionManager.ownerOf(tokenId)).to.be.reverted;
@@ -212,8 +213,8 @@ describe('IdleLiquidityModule.sol', function () {
       expect(Math.abs((await NonFungiblePositionManager.positions(tokenId.add(1))).tickUpper)).to.be.gt(Math.abs(tick));
 
       console.log(await NonFungiblePositionManager.positions(tokenId.add(1)));
-      console.log(await tokenEth.balanceOf(PositionManager.address));
-      console.log(await tokenUsdc.balanceOf(PositionManager.address));
+      console.log((await tokenEth.balanceOf(user.address)).sub(userBalanceEth));
+      console.log((await tokenUsdc.balanceOf(user.address)).sub(userBalanceUsdc));
 
       const nftHelper = await deployContract('MockUniswapNFTHelper', []);
       const amounts = await nftHelper.getAmountsfromTokenId(

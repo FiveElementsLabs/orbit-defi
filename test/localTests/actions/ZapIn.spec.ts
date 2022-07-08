@@ -63,13 +63,13 @@ describe('ZapIn.sol', function () {
     [Factory, NonFungiblePositionManager, SwapRouter] = await deployUniswapContracts(tokenEth);
 
     //deploy some pools
-    PoolEthUsdc3000 = (await poolFixture(tokenEth, tokenUsdc, 3000, Factory)).pool;
-    PoolEthDai3000 = (await poolFixture(tokenEth, tokenDai, 3000, Factory)).pool;
-    PoolUsdcDai3000 = (await poolFixture(tokenDai, tokenUsdc, 3000, Factory)).pool;
-    PoolEthUsdc500 = (await poolFixture(tokenEth, tokenUsdc, 500, Factory)).pool;
-    PoolEthDai500 = (await poolFixture(tokenEth, tokenDai, 500, Factory)).pool;
-    PoolUsdcDai500 = (await poolFixture(tokenDai, tokenUsdc, 500, Factory)).pool;
-    PoolUsdtUsdc500 = (await poolFixture(tokenUsdt, tokenUsdc, 500, Factory)).pool;
+    PoolEthUsdc3000 = (await poolFixture(tokenEth, tokenUsdc, 3000, Factory, 0)).pool;
+    PoolEthDai3000 = (await poolFixture(tokenEth, tokenDai, 3000, Factory, 0)).pool;
+    PoolUsdcDai3000 = (await poolFixture(tokenDai, tokenUsdc, 3000, Factory, 0)).pool;
+    PoolEthUsdc500 = (await poolFixture(tokenEth, tokenUsdc, 500, Factory, 0)).pool;
+    PoolEthDai500 = (await poolFixture(tokenEth, tokenDai, 500, Factory, 0)).pool;
+    PoolUsdcDai500 = (await poolFixture(tokenDai, tokenUsdc, 500, Factory, 0)).pool;
+    PoolUsdtUsdc500 = (await poolFixture(tokenUsdt, tokenUsdc, 500, Factory, 0)).pool;
 
     //mint 1e30 token, you can call with arbitrary amount
     await mintSTDAmount(tokenEth);
