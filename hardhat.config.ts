@@ -95,7 +95,7 @@ export default {
     },
     polygon: {
       url: process.env.ALCHEMY_POLYGON || '',
-      accounts: [process.env.POLYGON_PRIVATE_KEY || ''],
+      accounts: [process.env.TEST_PRIVATE_KEY || ''],
       verify: {
         etherscan: {
           apiKey: process.env.ETHERSCAN_API_KEY || '',
