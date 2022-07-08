@@ -171,6 +171,18 @@ describe('IdleLiquidityModule.sol', function () {
   });
 
   describe('IdleLiquidityModule - rebalance', function () {
+    it('should not rebalance a uni position if its still in range', async function () {
+      await PositionManager.connect(user).setModuleData(
+        tokenId,
+        IdleLiquidityModule.address,
+        abiCoder.encode(['uint24'], [2])
+      );
+      // rebalance
+      await expect(IdleLiquidityModule.rebalance(PositionManager.address, tokenId)).to.be.revertedWith(
+        'IdleLiquidityModule::rebalance: not needed.'
+      );
+    });
+
     it('should rebalance a uni position that is out of range', async function () {
       while ((await Pool0.slot0()).tick <= 12500) {
         // Do a trade to change tick

@@ -192,9 +192,11 @@ describe('AutoCompoundModule.sol', function () {
     const position = await NonFungiblePositionManager.positions(2);
     await PositionManager.connect(user).setModuleData(2, autoCompound.address, abiCoder.encode(['uint256'], [30]));
     //collect and reinvest fees
-    await autoCompound.connect(user).autoCompoundFees(PositionManager.address, 2);
+    await expect(autoCompound.connect(user).autoCompoundFees(PositionManager.address, 2)).to.be.revertedWith(
+      'AutoCompoundModule::autoCompoundFees: not needed.'
+    );
     const positionPost = await NonFungiblePositionManager.positions(2);
-    expect(positionPost.liquidity).to.lt(position.liquidity);
+    expect(positionPost.liquidity).to.be.equals(position.liquidity);
   });
 
   it('should be able to autocompound fees', async function () {
@@ -213,6 +215,7 @@ describe('AutoCompoundModule.sol', function () {
     }
 
     const position = await NonFungiblePositionManager.positions(2);
+
     //collect and reinvest fees
     await PositionManager.connect(user).setModuleData(2, autoCompound.address, abiCoder.encode(['uint256'], [1]));
     await autoCompound.connect(user).autoCompoundFees(PositionManager.address, 2);
