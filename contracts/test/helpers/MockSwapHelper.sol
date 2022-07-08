@@ -15,7 +15,7 @@ contract MockSwapHelper {
         int24 tickPool,
         int24 tickLower,
         int24 tickUpper
-    ) public view returns (uint256) {
+    ) public pure returns (uint256) {
         return SwapHelper.getRatioFromRange(tickPool, tickLower, tickUpper);
     }
 
@@ -33,7 +33,7 @@ contract MockSwapHelper {
         int24 tickUpper,
         uint256 amount0In,
         uint256 amount1In
-    ) public view returns (uint256, bool) {
+    ) public pure returns (uint256, bool) {
         return SwapHelper.calcAmountToSwap(tickPool, tickLower, tickUpper, amount0In, amount1In);
     }
 }

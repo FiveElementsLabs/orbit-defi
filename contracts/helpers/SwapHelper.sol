@@ -23,45 +23,21 @@ library SwapHelper {
     ///@param tickPool tick of the pool
     ///@param tickLower lower tick of position
     ///@param tickUpper upper tick of position
-    ///@return ratioE18 amount1/amount0 * 1e18
+    ///@return ratioX96 amount1/amount0 * 2**96
     function getRatioFromRange(
         int24 tickPool,
         int24 tickLower,
         int24 tickUpper
-    ) internal view returns (uint256) {
+    ) internal pure returns (uint256 ratioX96) {
         require(
             tickLower < tickPool && tickUpper > tickPool,
             'SwapHelper::getRatioFromRange: Position should be in range to call this function'
-        );
-        console.log(
-            'getRatio::tickPool: ',
-            (tickPool >= 0 ? '' : '-'),
-            tickPool >= 0 ? uint256(tickPool) : uint256(-tickPool)
-        );
-        console.log(
-            'getRatio::tickLower: ',
-            (tickLower >= 0 ? '' : '-'),
-            tickLower >= 0 ? uint256(tickLower) : uint256(-tickLower)
-        );
-        console.log(
-            'getRatio::tickUpper: ',
-            (tickUpper >= 0 ? '' : '-'),
-            tickUpper >= 0 ? uint256(tickUpper) : uint256(-tickUpper)
         );
         uint160 sqrtRatioX96 = TickMath.getSqrtRatioAtTick(tickPool);
         uint160 sqrtRatioAX96 = TickMath.getSqrtRatioAtTick(tickLower);
         uint160 sqrtRatioBX96 = TickMath.getSqrtRatioAtTick(tickUpper);
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmount0(sqrtRatioX96, sqrtRatioBX96, FixedPoint96.Q96);
-        console.log('liquidity: ', liquidity);
-        (uint256 newAmount0, uint256 ratioX96) = LiquidityAmounts.getAmountsForLiquidity(
-            sqrtRatioX96,
-            sqrtRatioAX96,
-            sqrtRatioBX96,
-            liquidity
-        );
-        console.log('newAmount0: ', newAmount0);
-        console.log('ratioX96: ', ratioX96);
-        return ratioX96;
+        (, ratioX96) = LiquidityAmounts.getAmountsForLiquidity(sqrtRatioX96, sqrtRatioAX96, sqrtRatioBX96, liquidity);
     }
 
     ///@notice calculate amount to be swapped in order to deposit according to the ratio selected position needs
@@ -78,7 +54,7 @@ library SwapHelper {
         int24 tickUpper,
         uint256 amount0In,
         uint256 amount1In
-    ) internal view returns (uint256 amountToSwap, bool token0In) {
+    ) internal pure returns (uint256 amountToSwap, bool token0In) {
         require(amount0In != 0 || amount1In != 0, 'SwapHelper::calcAmountToSwap: at least one amountIn should be != 0');
 
         //if tickPoolool >= tickUpper, then my range is under the current tick, so my position will all be in token1
@@ -92,34 +68,18 @@ library SwapHelper {
             token0In = false;
         } else {
             uint256 ratioX96 = getRatioFromRange(tickPool, tickLower, tickUpper);
-            console.log('SwapHelper::calcAmountToSwap: ratioX96', ratioX96);
-
             uint160 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(tickPool);
-            console.log('SwapHelper::calcAmountToSwap: sqrtPriceX96', sqrtPriceX96);
-
             uint256 valueX96 = (amount0In.mul((uint256(sqrtPriceX96)**2) >> FixedPoint96.RESOLUTION)).add(
                 amount1In << FixedPoint96.RESOLUTION
             );
-            console.log('SwapHelper::calcAmountToSwap: valueX96', valueX96);
-
-            // uint256 amount1PostX96 = (ratioE18.mul(valueX96)).div(ratioE18.add(1e18));
-            // console.log('SwapHelper::calcAmountToSwap: amount1PostX96', amount1PostX96);
 
             uint256 amount0Post = valueX96.div(((uint256(sqrtPriceX96)**2) >> FixedPoint96.RESOLUTION).add(ratioX96));
-            console.log('SwapHelper::calcAmountToSwap: amount0PostX96', amount0Post);
-
             token0In = amount0Post < amount0In;
-            console.log('SwapHelper::calcAmountToSwap: token0In', token0In);
 
             if (token0In) {
-                // amountToSwap = ((amount1PostX96.sub(amount1In << FixedPoint96.RESOLUTION)).div(sqrtPriceX96) <<
-                //     FixedPoint96.RESOLUTION).div(sqrtPriceX96);
                 amountToSwap = amount0In.sub(amount0Post);
-                console.log('SwapHelper::calcAmountToSwap: amountToSwap', amountToSwap);
             } else {
-                // amountToSwap = amount1In.sub(amount1PostX96 >> FixedPoint96.RESOLUTION);
                 amountToSwap = (amount0Post).mul(ratioX96) >> FixedPoint96.RESOLUTION;
-                console.log('SwapHelper::calcAmountToSwap: amountToSwap', amountToSwap);
             }
         }
     }
