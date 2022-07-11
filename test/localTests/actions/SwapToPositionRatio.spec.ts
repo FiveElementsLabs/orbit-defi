@@ -145,7 +145,7 @@ describe('SwapToPositionRatio.sol', function () {
       const amount0In = 1e5;
       const amount1In = 2e5;
 
-      await SwapToPositionRatioFallback.connect(user).swapToPositionRatioV2({
+      await SwapToPositionRatioFallback.connect(user).swapToPositionRatio({
         token0Address: tokenEth.address,
         token1Address: tokenUsdc.address,
         fee: 3000,
@@ -162,7 +162,7 @@ describe('SwapToPositionRatio.sol', function () {
       const amount0In = 2e5;
       const amount1In = 1e5;
 
-      await SwapToPositionRatioFallback.connect(user).swapToPositionRatioV2({
+      await SwapToPositionRatioFallback.connect(user).swapToPositionRatio({
         token0Address: tokenEth.address,
         token1Address: tokenUsdc.address,
         fee: 3000,
@@ -179,7 +179,7 @@ describe('SwapToPositionRatio.sol', function () {
       const amount0In = 1e5;
       const amount1In = 2e5;
 
-      const tx = await SwapToPositionRatioFallback.connect(user).swapToPositionRatioV2({
+      const tx = await SwapToPositionRatioFallback.connect(user).swapToPositionRatio({
         token0Address: tokenEth.address,
         token1Address: tokenUsdc.address,
         fee: 3000,
@@ -195,8 +195,12 @@ describe('SwapToPositionRatio.sol', function () {
         ['address', 'address', 'uint256', 'uint256'],
         outputEvent.data
       );
-      expect(amount0Out.toNumber()).to.equal(199202);
-      expect(amount1Out.toNumber()).to.equal(100498);
+
+      //this calculation is specific for pool tick ~0
+      const ratio0 = Math.abs(tickUpper) / Math.abs(tickUpper - tickLower);
+      const ratio1 = Math.abs(tickLower) / Math.abs(tickUpper - tickLower);
+      expect(amount0Out.toNumber()).to.be.closeTo((amount0In + amount1In) * ratio0, (amount0In + amount1In) / 500);
+      expect(amount1Out.toNumber()).to.be.closeTo((amount0In + amount1In) * ratio1, (amount0In + amount1In) / 500);
     });
 
     it('should fail to swap if twap deviation is too high', async function () {
@@ -214,7 +218,7 @@ describe('SwapToPositionRatio.sol', function () {
       let amount0In = '0x' + (1e24).toString(16);
       let amount1In = '0x' + (1e24).toString(16);
 
-      await SwapToPositionRatioFallback.connect(user).swapToPositionRatioV2({
+      await SwapToPositionRatioFallback.connect(user).swapToPositionRatio({
         token0Address: tokenEth.address,
         token1Address: tokenUsdc.address,
         fee: 3000,
@@ -231,7 +235,7 @@ describe('SwapToPositionRatio.sol', function () {
       amount0In = '0x' + (1e20).toString(16);
       amount1In = '0x' + (1e18).toString(16);
       await expect(
-        SwapToPositionRatioFallback.connect(user).swapToPositionRatioV2({
+        SwapToPositionRatioFallback.connect(user).swapToPositionRatio({
           token0Address: tokenEth.address,
           token1Address: tokenUsdc.address,
           fee: 3000,
@@ -250,7 +254,7 @@ describe('SwapToPositionRatio.sol', function () {
       const amount1In = 5e5;
 
       await expect(
-        SwapToPositionRatioFallback.connect(user).swapToPositionRatioV2({
+        SwapToPositionRatioFallback.connect(user).swapToPositionRatio({
           token0Address: tokenEth.address,
           token1Address: tokenDai.address,
           fee: 2345,
@@ -302,7 +306,7 @@ describe('SwapToPositionRatio.sol', function () {
       const amount0In = 1e5;
       const amount1In = 2e5;
 
-      await SwapToPositionRatioFallback.connect(user).swapToPositionRatioV2({
+      await SwapToPositionRatioFallback.connect(user).swapToPositionRatio({
         token0Address: tokenEth.address,
         token1Address: tokenUsdc.address,
         fee: 500,
@@ -354,7 +358,7 @@ describe('SwapToPositionRatio.sol', function () {
       const amount0In = 1e5;
       const amount1In = 2e5;
 
-      await SwapToPositionRatioFallback.connect(user).swapToPositionRatioV2({
+      await SwapToPositionRatioFallback.connect(user).swapToPositionRatio({
         token0Address: tokenEth.address,
         token1Address: tokenUsdc.address,
         fee: 10000,

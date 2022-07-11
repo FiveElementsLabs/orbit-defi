@@ -173,7 +173,7 @@ contract AaveModule is BaseModule {
 
         if (toAaveToken == token0) {
             if (amount1Collected != 0) {
-                amount0Collected += ISwap(positionManager).swapV2(
+                amount0Collected += ISwap(positionManager).swap(
                     token1,
                     toAaveToken,
                     _findBestFee(token1, toAaveToken),
@@ -181,7 +181,7 @@ contract AaveModule is BaseModule {
                 );
             }
         } else if (amount0Collected != 0) {
-            amount1Collected += ISwap(positionManager).swapV2(
+            amount1Collected += ISwap(positionManager).swap(
                 token0,
                 toAaveToken,
                 _findBestFee(token0, toAaveToken),
@@ -219,9 +219,9 @@ contract AaveModule is BaseModule {
         uint256 tokenId,
         TokenData memory tokenData
     ) internal {
-        uint256 amountWithdrawn = IAaveWithdraw(positionManager).withdrawFromAaveV2(tokenFromAave, id, 10_000, false);
+        uint256 amountWithdrawn = IAaveWithdraw(positionManager).withdrawFromAave(tokenFromAave, id, 10_000, false);
 
-        (uint256 amount0Out, uint256 amount1Out) = ISwapToPositionRatio(positionManager).swapToPositionRatioV2(
+        (uint256 amount0Out, uint256 amount1Out) = ISwapToPositionRatio(positionManager).swapToPositionRatio(
             ISwapToPositionRatio.SwapToPositionInput({
                 token0Address: tokenData.token0,
                 token1Address: tokenData.token1,

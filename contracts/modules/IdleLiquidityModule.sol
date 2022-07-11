@@ -96,7 +96,7 @@ contract IdleLiquidityModule is BaseModule {
         );
 
         ///@dev call swapToPositionAction to perform the swap
-        (uint256 amount0Swapped, uint256 amount1Swapped) = ISwapToPositionRatio(positionManager).swapToPositionRatioV2(
+        (uint256 amount0Swapped, uint256 amount1Swapped) = ISwapToPositionRatio(positionManager).swapToPositionRatio(
             ISwapToPositionRatio.SwapToPositionInput({
                 token0Address: token0,
                 token1Address: token1,

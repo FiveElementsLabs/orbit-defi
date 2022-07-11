@@ -84,7 +84,7 @@ contract AutoCompoundModule is BaseModule {
             NonfungiblePositionManager
         );
 
-        (amount0Desired, amount1Desired) = ISwapToPositionRatio(positionManager).swapToPositionRatioV2(
+        (amount0Desired, amount1Desired) = ISwapToPositionRatio(positionManager).swapToPositionRatio(
             ISwapToPositionRatio.SwapToPositionInput({
                 token0Address: token0,
                 token1Address: token1,

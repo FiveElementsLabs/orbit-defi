@@ -141,7 +141,7 @@ describe('Swap.sol', function () {
       const amount0Before = await tokenEth.balanceOf(PositionManager.address);
       const amount1Before = await tokenUsdc.balanceOf(PositionManager.address);
 
-      await SwapFallback.connect(user).swapV2(tokenEth.address, tokenUsdc.address, 3000, amount0In);
+      await SwapFallback.connect(user).swap(tokenEth.address, tokenUsdc.address, 3000, amount0In);
       expect(await tokenEth.balanceOf(PositionManager.address)).to.equal(amount0Before.sub(amount0In));
       expect(await tokenUsdc.balanceOf(PositionManager.address)).to.gt(amount1Before);
     });
@@ -157,22 +157,21 @@ describe('Swap.sol', function () {
       const tickBefore = (await Pool0.slot0()).tick;
 
       // This swap should succeed
-      await SwapFallback.connect(user).swapV2(tokenEth.address, tokenUsdc.address, 3000, amount0In);
+      await SwapFallback.connect(user).swap(tokenEth.address, tokenUsdc.address, 3000, amount0In);
 
       const tickAfter = (await Pool0.slot0()).tick;
       expect(tickAfter).to.not.be.eq(tickBefore);
 
       // This swap should fail because of maxTwapDeviation
       await expect(
-        SwapFallback.connect(user).swapV2(tokenEth.address, tokenUsdc.address, 3000, amount0In)
+        SwapFallback.connect(user).swap(tokenEth.address, tokenUsdc.address, 3000, amount0In)
       ).to.be.revertedWith('SwapHelper::checkDeviation: Price deviation is too high');
     });
 
     it('should revert if pool does not exist', async function () {
       const amount0In = 7e5;
 
-      await expect(SwapFallback.connect(user).swapV2(tokenEth.address, tokenDai.address, 2348, amount0In)).to.be
-        .reverted;
+      await expect(SwapFallback.connect(user).swap(tokenEth.address, tokenDai.address, 2348, amount0In)).to.be.reverted;
     });
   });
 });

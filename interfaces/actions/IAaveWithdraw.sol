@@ -10,7 +10,7 @@ interface IAaveWithdraw {
     ///@param partToWithdraw percentage of token to withdraw in base points
     ///@param returnTokensToUser true if withdrawn tokens are sent to positionManager owner
     ///@return amountWithdrawn amount of token withdrawn from aave
-    function withdrawFromAaveV2(
+    function withdrawFromAave(
         address token,
         uint256 id,
         uint256 partToWithdraw,

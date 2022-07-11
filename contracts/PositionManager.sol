@@ -8,13 +8,6 @@ import '@openzeppelin/contracts/proxy/Initializable.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import './helpers/ERC20Helper.sol';
 import './utils/Storage.sol';
-import '../interfaces/IPositionManager.sol';
-import '../interfaces/DataTypes.sol';
-import '../interfaces/IUniswapAddressHolder.sol';
-import '../interfaces/IAaveAddressHolder.sol';
-import '../interfaces/IDiamondCut.sol';
-import '../interfaces/IRegistry.sol';
-import '../interfaces/ILendingPool.sol';
 
 /**
  * @title   Position Manager
@@ -49,7 +42,6 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
     ///@notice modifier to check if the msg.sender is the owner
     modifier onlyOwner() {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
-
         require(msg.sender == Storage.owner, 'PositionManager::onlyOwner: Only owner can call this function');
         _;
     }
@@ -57,7 +49,7 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
     ///@notice modifier to check if the msg.sender is whitelisted
     modifier onlyWhitelisted() {
         require(
-            _calledFromRecipe(msg.sender) || _calledFromActiveModule(msg.sender) || msg.sender == address(this),
+            _calledFromActiveModule(msg.sender) || msg.sender == address(this),
             'PositionManager::fallback: Only whitelisted addresses can call this function'
         );
         _;
@@ -66,9 +58,8 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
     ///@notice modifier to check if the msg.sender is the PositionManagerFactory
     modifier onlyFactory() {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
-
         require(
-            IRegistry(Storage.registry).positionManagerFactoryAddress() == msg.sender,
+            Storage.registry.positionManagerFactoryAddress() == msg.sender,
             'PositionManager::init: Only PositionManagerFactory can init this contract'
         );
         _;
@@ -308,20 +299,6 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
             (address moduleAddress, bool isActive, , ) = Storage.registry.getModuleInfo(keys[i]);
             if (moduleAddress == _address && isActive == true) {
                 isCalledFromActiveModule = true;
-                break;
-            }
-        }
-    }
-
-    function _calledFromRecipe(address _address) internal view returns (bool isCalledFromRecipe) {
-        StorageStruct storage Storage = PositionManagerStorage.getStorage();
-        bytes32[] memory recipeKeys = PositionManagerStorage.getRecipesKeys();
-
-        uint256 recipeKeysLength = recipeKeys.length;
-        for (uint256 i; i < recipeKeysLength; ++i) {
-            (address moduleAddress, , , ) = Storage.registry.getModuleInfo(recipeKeys[i]);
-            if (moduleAddress == _address) {
-                isCalledFromRecipe = true;
                 break;
             }
         }

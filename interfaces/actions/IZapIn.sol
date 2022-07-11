@@ -4,7 +4,7 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 interface IZapIn {
-    function zapInV2(
+    function zapIn(
         address token0,
         address token1,
         bool isToken0In,

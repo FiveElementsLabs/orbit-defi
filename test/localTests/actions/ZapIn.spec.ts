@@ -231,7 +231,7 @@ describe('ZapIn.sol', function () {
       const beforeLength = await PositionManager.getAllUniPositions();
       const poolTick = Math.round((await PoolUsdcDai500.slot0())[1] / 10) * 10;
 
-      await ZapInFallback.connect(user).zapInV2(
+      await ZapInFallback.connect(user).zapIn(
         tokenUsdc.address,
         tokenDai.address,
         true,
@@ -246,7 +246,7 @@ describe('ZapIn.sol', function () {
 
     it('should mint a position with tokens with different decimals', async function () {
       const beforeLength = await PositionManager.getAllUniPositions();
-      await ZapInFallback.connect(user).zapInV2(
+      await ZapInFallback.connect(user).zapIn(
         tokenEth.address,
         tokenUsdc.address,
         false,
@@ -263,14 +263,14 @@ describe('ZapIn.sol', function () {
       const beforeLength = await PositionManager.getAllUniPositions();
       await PositionManager.withdrawERC20(tokenEth.address);
       await PositionManager.withdrawERC20(tokenUsdc.address);
-      await ZapInFallback.connect(user).zapInV2(tokenEth.address, tokenUsdc.address, false, 10000, 400, 500, 500);
+      await ZapInFallback.connect(user).zapIn(tokenEth.address, tokenUsdc.address, false, 10000, 400, 500, 500);
       const afterLength = await PositionManager.getAllUniPositions();
       expect(Number(afterLength.length)).to.be.gt(Number(beforeLength.length));
     });
 
     it('should fail if amountIn is 0', async function () {
       await expect(
-        ZapInFallback.connect(user).zapInV2(tokenUsdc.address, tokenDai.address, false, 0, -600, 600, 500)
+        ZapInFallback.connect(user).zapIn(tokenUsdc.address, tokenDai.address, false, 0, -600, 600, 500)
       ).to.be.revertedWith('ZapIn::zapIn: tokenIn cannot be 0');
     });
 
@@ -284,7 +284,7 @@ describe('ZapIn.sol', function () {
       const tickBefore = (await PoolEthUsdc500.slot0()).tick;
 
       // This zap should succeed
-      await ZapInFallback.connect(user).zapInV2(
+      await ZapInFallback.connect(user).zapIn(
         tokenEth.address,
         tokenUsdc.address,
         false,
@@ -299,7 +299,7 @@ describe('ZapIn.sol', function () {
 
       // This zap should fail because of maxTwapDeviation
       await expect(
-        ZapInFallback.connect(user).zapInV2(
+        ZapInFallback.connect(user).zapIn(
           tokenEth.address,
           tokenUsdc.address,
           false,
@@ -334,7 +334,7 @@ describe('ZapIn.sol', function () {
       const amount = 1e6;
       await PositionManager.withdrawERC20(tokenEth.address);
       await PositionManager.withdrawERC20(tokenUsdc.address);
-      await ZapInFallback.connect(user).zapInV2(
+      await ZapInFallback.connect(user).zapIn(
         tokenEth.address,
         tokenUsdc.address,
         false,

@@ -138,7 +138,7 @@ describe('AaveWithdraw.sol', function () {
       const balanceBefore = await usdcMock.balanceOf(PositionManager.address);
       const pmDataBefore = await LendingPool.getUserAccountData(PositionManager.address);
 
-      await AaveWithdrawFallback.withdrawFromAaveV2(usdcMock.address, id, 10000, false);
+      await AaveWithdrawFallback.withdrawFromAave(usdcMock.address, id, 10000, false);
       const balanceAfter = await usdcMock.balanceOf(PositionManager.address);
       const pmDataAfter = await LendingPool.getUserAccountData(PositionManager.address);
 
@@ -159,7 +159,7 @@ describe('AaveWithdraw.sol', function () {
       const balanceBefore = await usdcMock.balanceOf(PositionManager.address);
       const pmDataBefore = await LendingPool.getUserAccountData(PositionManager.address);
 
-      await AaveWithdrawFallback.withdrawFromAaveV2(usdcMock.address, id, 5000, false);
+      await AaveWithdrawFallback.withdrawFromAave(usdcMock.address, id, 5000, false);
       const balanceAfter = await usdcMock.balanceOf(PositionManager.address);
       const pmDataAfter = await LendingPool.getUserAccountData(PositionManager.address);
 
@@ -179,7 +179,7 @@ describe('AaveWithdraw.sol', function () {
       const userBalanceBefore = await usdcMock.balanceOf(user.address);
       const pmDataBefore = await LendingPool.getUserAccountData(PositionManager.address);
 
-      await AaveWithdrawFallback.withdrawFromAaveV2(usdcMock.address, id, 10000, true);
+      await AaveWithdrawFallback.withdrawFromAave(usdcMock.address, id, 10000, true);
       const balanceAfter = await usdcMock.balanceOf(PositionManager.address);
       const userBalanceAfter = await usdcMock.balanceOf(user.address);
       const pmDataAfter = await LendingPool.getUserAccountData(PositionManager.address);

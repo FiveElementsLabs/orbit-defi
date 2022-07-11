@@ -204,7 +204,12 @@ export async function deployPositionManagerFactoryAndActions(
     let Action;
     for (let i = 0; i < actions.length; i++) {
       Action = await deployContract(actions[i]);
-      await PositionManagerFactory.pushActionData(Action.address, await getSelectors(Action));
+
+      await PositionManagerFactory.updateActionData({
+        facetAddress: Action.address,
+        action: 0,
+        functionSelectors: await getSelectors(Action),
+      });
     }
   }
 
