@@ -11,7 +11,6 @@ import '@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol';
 import './SafeInt24Math.sol';
 import './SafeInt56Math.sol';
 import './MathHelper.sol';
-import 'hardhat/console.sol';
 
 ///@title library to help with swap amounts calculations
 library SwapHelper {
