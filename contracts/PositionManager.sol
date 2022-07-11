@@ -50,7 +50,7 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
     modifier onlyWhitelisted() {
         require(
             _calledFromActiveModule(msg.sender) || msg.sender == address(this),
-            'PositionManager::fallback: Only whitelisted addresses can call this function'
+            'PositionManager::onlyWhitelisted: Only whitelisted addresses can call this function'
         );
         _;
     }
@@ -289,19 +289,19 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
 
     ///@notice function to check if an address corresponds to an active module (or this contract)
     ///@param _address input address
-    ///@return isCalledFromActiveModule boolean
-    function _calledFromActiveModule(address _address) internal view returns (bool isCalledFromActiveModule) {
+    ///@return boolean true if the address is an active module
+    function _calledFromActiveModule(address _address) internal view returns (bool) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         bytes32[] memory keys = Storage.registry.getModuleKeys();
 
         uint256 keysLength = keys.length;
         for (uint256 i; i < keysLength; ++i) {
             (address moduleAddress, bool isActive, , ) = Storage.registry.getModuleInfo(keys[i]);
-            if (moduleAddress == _address && isActive == true) {
-                isCalledFromActiveModule = true;
-                break;
+            if (isActive && moduleAddress == _address) {
+                return true;
             }
         }
+        return false;
     }
 
     fallback() external payable onlyWhitelisted {
