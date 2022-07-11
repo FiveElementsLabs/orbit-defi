@@ -94,23 +94,9 @@ const PostDeployScript: DeployFunction = async function (hre: HardhatRuntimeEnvi
       gasLimit: Config.gasLimit,
     }
   );
+
   await new Promise((resolve) => setTimeout(resolve, Config.sleep));
   console.log(':: Added WithdrawRecipes to Registry');
-
-  const UpdateDiamond = await ethers.getContract('UpdateDiamond');
-
-  await Registry.addNewContract(
-    hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('UpdateDiamond')),
-    UpdateDiamond.address,
-    ethers.utils.hexZeroPad(ethers.utils.hexlify(0), 32),
-    true,
-    {
-      gasPrice: Config.gasPrice,
-      gasLimit: Config.gasLimit,
-    }
-  );
-  await new Promise((resolve) => setTimeout(resolve, Config.sleep));
-  console.log(':: Added UpdateDiamond to Registry');
 
   // Add keepers to whitelist
   // ****************** NOTE: this is the DEVELOPMENT UNSAFE keeper ******************

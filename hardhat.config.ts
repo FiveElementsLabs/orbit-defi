@@ -71,9 +71,8 @@ export default {
         blockNumber: 15000000,
         chainId: 31337,
       },
-      mining: {
-        auto: true,
-      },
+      mining: { auto: true },
+      live: false,
     },
     localhost: {
       port: 8545,
@@ -82,6 +81,7 @@ export default {
       blockGasLimit: 0x1fffffffffffff,
       allowUnlimitedContractSize: true,
       timeout: 1800000,
+      live: false,
     },
     mumbai: {
       url: process.env.ALCHEMY_MUMBAI || '',
@@ -92,6 +92,7 @@ export default {
           apiUrl: 'https://mumbai.polygonscan.com/',
         },
       },
+      live: true,
     },
     polygon: {
       url: process.env.ALCHEMY_POLYGON || '',
@@ -102,6 +103,7 @@ export default {
           apiUrl: 'https://api.polygonscan.com/',
         },
       },
+      live: true,
     },
   },
   mocha: {

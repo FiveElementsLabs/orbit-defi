@@ -1,3 +1,5 @@
+import { HardhatRuntimeEnvironment } from 'hardhat/types';
+
 export const START_TIME = Date.now();
 
 export const Config = {
@@ -6,7 +8,11 @@ export const Config = {
   gasLimit: 5 * 1e6,
 };
 
-const func = () => {
+const func = (hre: HardhatRuntimeEnvironment) => {
+  const { network } = hre;
+
+  if (!network?.live) Config.sleep = 0;
+
   console.log(`:: Initialized sleep timeout: ${Config.sleep}ms`);
 };
 
