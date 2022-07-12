@@ -326,7 +326,7 @@ describe('AaveModule.sol', function () {
     it('should not return to position if still out of range', async function () {
       await expect(
         AaveModule.connect(user).moveToUniswap(PositionManager.address, usdcMock.address, aaveId)
-      ).to.be.revertedWith('AaveModule::isMoveToUniswapNeeded: not needed.');
+      ).to.be.revertedWith('AaveModule::moveToUniswap: not needed.');
 
       expect((await aUsdc.balanceOf(PositionManager.address)).toNumber()).to.gt(0);
     });
