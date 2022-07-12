@@ -95,8 +95,9 @@ contract AaveModule is BaseModule {
         );
 
         ///@dev move token to aave only if the position's range is outside of the tick of the pool
-        if (distanceFromRange != 0 && MathHelper.fromUint256ToUint24(uint256(data)) <= distanceFromRange)
+        if (distanceFromRange != 0 && MathHelper.fromUint256ToUint24(uint256(data)) <= distanceFromRange) {
             _moveToAave(positionManager, tokenId);
+        } else revert('AaveModule::moveToAave: move to aave is not needed');
     }
 
     ///@notice move liquidity deposited on aave back to its uniswap position

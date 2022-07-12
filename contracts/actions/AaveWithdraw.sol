@@ -90,24 +90,24 @@ contract AaveWithdraw is IAaveWithdraw {
         if (partToWithdraw == 10_000) {
             Storage.aaveUserReserves[token].positionShares[id] = 0;
             Storage.aaveUserReserves[token].tokenIds[id] = 0;
-        } else {
-            Storage.aaveUserReserves[token].positionShares[id] -= sharesWithdrawn;
-        }
 
-        uint256 aavePositionsLength = Storage.aavePositionsArray.length;
-        if (aavePositionsLength == 1) {
-            delete Storage.aavePositionsArray;
-            return;
-        }
+            uint256 aavePositionsLength = Storage.aavePositionsArray.length;
+            if (aavePositionsLength == 1) {
+                delete Storage.aavePositionsArray;
+                return;
+            }
 
-        for (uint256 i; i < aavePositionsLength; ++i) {
-            if (Storage.aavePositionsArray[i].id == id && Storage.aavePositionsArray[i].tokenToAave == token) {
-                {
-                    Storage.aavePositionsArray[i] = Storage.aavePositionsArray[aavePositionsLength - 1];
-                    Storage.aavePositionsArray.pop();
-                    return;
+            for (uint256 i; i < aavePositionsLength; ++i) {
+                if (Storage.aavePositionsArray[i].id == id && Storage.aavePositionsArray[i].tokenToAave == token) {
+                    {
+                        Storage.aavePositionsArray[i] = Storage.aavePositionsArray[aavePositionsLength - 1];
+                        Storage.aavePositionsArray.pop();
+                        return;
+                    }
                 }
             }
+        } else {
+            Storage.aaveUserReserves[token].positionShares[id] -= sharesWithdrawn;
         }
     }
 }

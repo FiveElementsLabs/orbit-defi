@@ -99,9 +99,8 @@ contract Registry is IRegistry {
     ///@param _newContractAddress address of the new module
     function changeContract(bytes32 _id, address _newContractAddress) external onlyGovernance {
         require(modules[_id].contractAddress != address(0), 'Registry::changeContract: Entry does not exist.');
-        //Begin timelock
-        emit ContractChanged(modules[_id].contractAddress, _newContractAddress, _id);
         modules[_id].contractAddress = _newContractAddress;
+        emit ContractChanged(modules[_id].contractAddress, _newContractAddress, _id);
     }
 
     ///@notice Toggle global state of a module
