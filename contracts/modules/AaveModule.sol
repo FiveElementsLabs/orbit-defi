@@ -191,10 +191,10 @@ contract AaveModule is BaseModule {
 
         (uint256 id, ) = IAaveDeposit(positionManager).depositToAave(
             toAaveToken,
-            toAaveToken == token0 ? amount0Collected : amount1Collected
+            toAaveToken == token0 ? amount0Collected : amount1Collected,
+            tokenId
         );
 
-        IPositionManager(positionManager).pushTokenIdToAave(toAaveToken, id, tokenId);
         IPositionManager(positionManager).removePositionId(tokenId);
 
         emit MovedToAave(
@@ -234,7 +234,6 @@ contract AaveModule is BaseModule {
         );
 
         IIncreaseLiquidity(positionManager).increaseLiquidity(tokenId, amount0Out, amount1Out);
-        IPositionManager(positionManager).removeTokenIdFromAave(tokenFromAave, id);
         IPositionManager(positionManager).pushPositionId(tokenId);
 
         emit MovedToUniswap(positionManager, tokenId, tokenFromAave, amountWithdrawn, id);

@@ -203,25 +203,6 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
         return (activatedModules[_tokenId][_moduleAddress].isActive, activatedModules[_tokenId][_moduleAddress].data);
     }
 
-    ///@notice stores old position data when liquidity is moved to aave
-    ///@param token address of the token
-    ///@param id ID of the position
-    ///@param tokenId of the position
-    function pushTokenIdToAave(
-        address token,
-        uint256 id,
-        uint256 tokenId
-    ) external override onlyWhitelisted {
-        StorageStruct storage Storage = PositionManagerStorage.getStorage();
-        require(
-            Storage.aaveUserReserves[token].positionShares[id] > 0,
-            'PositionManager::pushOldPositionData: positionShares does not exist'
-        );
-
-        Storage.aavePositionsArray.push(AavePositions({id: id, tokenToAave: token}));
-        Storage.aaveUserReserves[token].tokenIds[id] = tokenId;
-    }
-
     ///@notice returns the token id of a position on Aave
     ///@param token address of the token
     ///@param id ID of aave position
@@ -235,29 +216,6 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
         );
 
         return aaveUserReserves.tokenIds[id];
-    }
-
-    ///@notice removes position data from aave positions array
-    ///@param token address of the token
-    ///@param id ID of the position
-    function removeTokenIdFromAave(address token, uint256 id) external override onlyWhitelisted {
-        StorageStruct storage Storage = PositionManagerStorage.getStorage();
-
-        uint256 aavePositionsLength = Storage.aavePositionsArray.length;
-        if (aavePositionsLength == 1) {
-            delete Storage.aavePositionsArray;
-            return;
-        }
-
-        for (uint256 i; i < aavePositionsLength; ++i) {
-            if (Storage.aavePositionsArray[i].id == id && Storage.aavePositionsArray[i].tokenToAave == token) {
-                {
-                    Storage.aavePositionsArray[i] = Storage.aavePositionsArray[aavePositionsLength - 1];
-                    Storage.aavePositionsArray.pop();
-                    return;
-                }
-            }
-        }
     }
 
     ///@notice returns array of positions moved to aave

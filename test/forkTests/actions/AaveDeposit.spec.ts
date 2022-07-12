@@ -117,7 +117,7 @@ describe('AaveDeposit.sol', function () {
       await usdcMock.connect(user).approve(AaveDepositFallback.address, 10000);
       await usdcMock.connect(user).transfer(AaveDepositFallback.address, 10000);
 
-      const tx = await AaveDepositFallback.connect(user).depositToAave(usdcMock.address, 10000);
+      const tx = await AaveDepositFallback.connect(user).depositToAave(usdcMock.address, 10000, 120000);
 
       const aUsdcAddress = (await LendingPool.getReserveData(usdcMock.address)).aTokenAddress;
       const aUsdc = await ethers.getContractAt(ATokenjson.abi, aUsdcAddress);

@@ -53,7 +53,7 @@ contract AaveWithdraw is IAaveWithdraw {
             returnTokensToUser ? Storage.owner : address(this)
         );
 
-        _removeShares(token, id, partToWithdraw);
+        _removeTokenIdFromAave(token, id, partToWithdraw);
         emit WithdrawnFromAave(address(this), token, amountWithdrawn, returnTokensToUser, partToWithdraw == 10_000);
     }
 
@@ -74,11 +74,11 @@ contract AaveWithdraw is IAaveWithdraw {
             Storage.aaveUserReserves[token].sharesEmitted;
     }
 
-    ///@notice remove shares associated to withdrawn tokens
+    ///@notice remove shares associated to withdrawn tokens and remove tokenID from aave reserves
     ///@param token address of token withdrawn
     ///@param id of the withdrawn position
     ///@param partToWithdraw percentage of token to withdraw in base points
-    function _removeShares(
+    function _removeTokenIdFromAave(
         address token,
         uint256 id,
         uint256 partToWithdraw
@@ -92,6 +92,22 @@ contract AaveWithdraw is IAaveWithdraw {
             Storage.aaveUserReserves[token].tokenIds[id] = 0;
         } else {
             Storage.aaveUserReserves[token].positionShares[id] -= sharesWithdrawn;
+        }
+
+        uint256 aavePositionsLength = Storage.aavePositionsArray.length;
+        if (aavePositionsLength == 1) {
+            delete Storage.aavePositionsArray;
+            return;
+        }
+
+        for (uint256 i; i < aavePositionsLength; ++i) {
+            if (Storage.aavePositionsArray[i].id == id && Storage.aavePositionsArray[i].tokenToAave == token) {
+                {
+                    Storage.aavePositionsArray[i] = Storage.aavePositionsArray[aavePositionsLength - 1];
+                    Storage.aavePositionsArray.pop();
+                    return;
+                }
+            }
         }
     }
 }

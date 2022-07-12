@@ -26,9 +26,14 @@ contract AaveDeposit is IAaveDeposit {
     ///@notice deposit to aave some token amount
     ///@param token token address
     ///@param amount amount to deposit
+    ///@param tokenId tokenId of the position deposited to aave
     ///@return id of the deposited position
     ///@return shares emitted
-    function depositToAave(address token, uint256 amount) external override returns (uint256 id, uint256 shares) {
+    function depositToAave(
+        address token,
+        uint256 amount,
+        uint256 tokenId
+    ) external override returns (uint256 id, uint256 shares) {
         ILendingPool lendingPool = ILendingPool(
             PositionManagerStorage.getStorage().aaveAddressHolder.lendingPoolAddress()
         );
@@ -46,15 +51,28 @@ contract AaveDeposit is IAaveDeposit {
 
         shares = aToken.scaledBalanceOf(address(this)) - balanceBefore;
 
-        id = _updateAavePosition(token, shares);
+        id = _updateAavePosition(token, shares, tokenId);
         emit DepositedOnAave(address(this), token, id, shares);
     }
 
-    function _updateAavePosition(address token, uint256 shares) internal returns (uint256) {
+    function _updateAavePosition(
+        address token,
+        uint256 shares,
+        uint256 tokenId
+    ) internal returns (uint256) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
-        Storage.aaveUserReserves[token].positionShares[Storage.aaveIdCounter] = shares;
+
+        uint256 id = Storage.aaveIdCounter;
+        require(
+            Storage.aaveUserReserves[token].positionShares[id] == 0,
+            'AaveDeposit::_pushTokenIdToAave: positionShares does not exist'
+        );
+        Storage.aavePositionsArray.push(AavePositions({id: id, tokenToAave: token}));
+
+        Storage.aaveUserReserves[token].positionShares[id] = shares;
         Storage.aaveUserReserves[token].sharesEmitted += shares;
+        Storage.aaveUserReserves[token].tokenIds[id] = tokenId;
         Storage.aaveIdCounter++;
-        return Storage.aaveIdCounter - 1;
+        return id;
     }
 }

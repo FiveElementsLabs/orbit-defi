@@ -127,13 +127,15 @@ describe('AaveWithdraw.sol', function () {
 
   describe('AaveWithdraw - withdrawFromAave', function () {
     it('should withdraw position from aave LendingPool', async function () {
-      const tx = await AaveDepositFallback.depositToAave(usdcMock.address, '5000');
+      const tokenId = 120000;
+      const tokenId2 = 120001;
+      const tx = await AaveDepositFallback.depositToAave(usdcMock.address, '5000', tokenId);
 
       const events = (await tx.wait()).events;
       const depositEvent = events[events.length - 1];
       const id = abiCoder.decode(['address', 'uint256', 'uint256'], depositEvent.data)[1];
 
-      await AaveDepositFallback.depositToAave(usdcMock.address, '5000');
+      await AaveDepositFallback.depositToAave(usdcMock.address, '5000', tokenId2);
 
       const balanceBefore = await usdcMock.balanceOf(PositionManager.address);
       const pmDataBefore = await LendingPool.getUserAccountData(PositionManager.address);
@@ -148,13 +150,15 @@ describe('AaveWithdraw.sol', function () {
     });
 
     it('should be able to partially withdraw position from aave LendingPool', async function () {
-      const tx = await AaveDepositFallback.depositToAave(usdcMock.address, '5000');
+      const tokenId = 120002;
+      const tokenId2 = 120003;
+      const tx = await AaveDepositFallback.depositToAave(usdcMock.address, '5000', tokenId);
 
       const events = (await tx.wait()).events;
       const depositEvent = events[events.length - 1];
       const id = abiCoder.decode(['address', 'uint256', 'uint256'], depositEvent.data)[1];
 
-      await AaveDepositFallback.depositToAave(usdcMock.address, '5000');
+      await AaveDepositFallback.depositToAave(usdcMock.address, '5000', tokenId2);
 
       const balanceBefore = await usdcMock.balanceOf(PositionManager.address);
       const pmDataBefore = await LendingPool.getUserAccountData(PositionManager.address);
@@ -169,7 +173,8 @@ describe('AaveWithdraw.sol', function () {
     });
 
     it('should be able withdraw position and send it to the user', async function () {
-      const tx = await AaveDepositFallback.depositToAave(usdcMock.address, '5000');
+      const tokenId = 120004;
+      const tx = await AaveDepositFallback.depositToAave(usdcMock.address, '5000', tokenId);
 
       const events = (await tx.wait()).events;
       const depositEvent = events[events.length - 1];

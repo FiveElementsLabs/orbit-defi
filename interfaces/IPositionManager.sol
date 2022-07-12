@@ -45,15 +45,7 @@ interface IPositionManager {
 
     function removePositionId(uint256 index) external;
 
-    function removeTokenIdFromAave(address token, uint256 id) external;
-
     function getAavePositionsArray() external view returns (AavePositions[] memory);
-
-    function pushTokenIdToAave(
-        address token,
-        uint256 id,
-        uint256 tokenId
-    ) external;
 
     function getTokenIdFromAavePosition(address token, uint256 id) external view returns (uint256 tokenId);
 
