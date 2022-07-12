@@ -11,7 +11,7 @@ contract BaseModule {
 
     modifier onlyWhitelistedKeeper() {
         require(
-            registry.isWhitelistedKeeper(msg.sender),
+            registry.whitelistedKeepers(msg.sender),
             'Module::onlyWhitelistedKeeper: Only whitelisted keepers can call this function'
         );
         _;

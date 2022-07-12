@@ -111,14 +111,14 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
 
     ///@notice middleware to manage the deposit of the position
     ///@param tokenId ID of the position
-    function middlewareDeposit(uint256 tokenId) public override onlyOwnedPosition(tokenId) {
+    function middlewareDeposit(uint256 tokenId) external override onlyOwnedPosition(tokenId) {
         _setDefaultDataOfPosition(tokenId);
         pushPositionId(tokenId);
     }
 
     ///@notice remove awareness of tokenId UniswapV3 NFT
     ///@param tokenId ID of the NFT to remove
-    function removePositionId(uint256 tokenId) public override onlyWhitelisted {
+    function removePositionId(uint256 tokenId) external override onlyWhitelisted {
         uint256 uniswapNFTsLength = uniswapNFTs.length;
         for (uint256 i; i < uniswapNFTsLength; ++i) {
             if (uniswapNFTs[i] == tokenId) {
@@ -211,7 +211,7 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
         address token,
         uint256 id,
         uint256 tokenId
-    ) public override onlyWhitelisted {
+    ) external override onlyWhitelisted {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         require(
             Storage.aaveUserReserves[token].positionShares[id] > 0,
@@ -226,13 +226,7 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
     ///@param token address of the token
     ///@param id ID of aave position
     ///@return tokenId of the position
-    function getTokenIdFromAavePosition(address token, uint256 id)
-        public
-        view
-        override
-        onlyWhitelisted
-        returns (uint256)
-    {
+    function getTokenIdFromAavePosition(address token, uint256 id) external view override returns (uint256) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         AaveReserve storage aaveUserReserves = Storage.aaveUserReserves[token];
         require(
@@ -246,26 +240,29 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
     ///@notice removes position data from aave positions array
     ///@param token address of the token
     ///@param id ID of the position
-    function removeTokenIdFromAave(address token, uint256 id) public override onlyWhitelisted {
+    function removeTokenIdFromAave(address token, uint256 id) external override onlyWhitelisted {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
         uint256 aavePositionsLength = Storage.aavePositionsArray.length;
+        if (aavePositionsLength == 1) {
+            delete Storage.aavePositionsArray;
+            return;
+        }
+
         for (uint256 i; i < aavePositionsLength; ++i) {
             if (Storage.aavePositionsArray[i].id == id && Storage.aavePositionsArray[i].tokenToAave == token) {
-                if (Storage.aavePositionsArray.length > 1) {
+                {
                     Storage.aavePositionsArray[i] = Storage.aavePositionsArray[aavePositionsLength - 1];
                     Storage.aavePositionsArray.pop();
-                } else {
-                    delete Storage.aavePositionsArray;
+                    return;
                 }
-                break;
             }
         }
     }
 
     ///@notice returns array of positions moved to aave
     ///@return Storage.AavePositions return the array of positions moved on aave
-    function getAavePositionsArray() public view override returns (AavePositions[] memory) {
+    function getAavePositionsArray() external view override returns (AavePositions[] memory) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         return Storage.aavePositionsArray;
     }

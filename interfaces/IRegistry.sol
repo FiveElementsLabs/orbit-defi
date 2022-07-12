@@ -41,7 +41,7 @@ interface IRegistry {
     ///@notice checks if the address is whitelisted as a keeper
     ///@param _keeper address to check
     ///@return bool true if the address is withelisted, false otherwise
-    function isWhitelistedKeeper(address _keeper) external view returns (bool);
+    function whitelistedKeepers(address _keeper) external view returns (bool);
 
     function getModuleInfo(bytes32 _id)
         external

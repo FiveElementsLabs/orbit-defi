@@ -58,7 +58,7 @@ contract Swap is ISwap {
         address token1Address,
         uint24 fee,
         uint256 amount0In
-    ) public override checkDeviation(token0Address, token1Address, fee) returns (uint256 amount1Out) {
+    ) external override checkDeviation(token0Address, token1Address, fee) returns (uint256 amount1Out) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         ISwapRouter swapRouter = ISwapRouter(Storage.uniswapAddressHolder.swapRouterAddress());
 

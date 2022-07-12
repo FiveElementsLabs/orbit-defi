@@ -94,7 +94,7 @@ contract PositionManagerFactory is IPositionManagerFactory {
 
     ///@notice deploy new positionManager and assign to userAddress
     ///@return address[] return array of PositionManager address updated with the last deployed PositionManager
-    function create() public override returns (address[] memory) {
+    function create() external override returns (address[] memory) {
         require(
             userToPositionManager[msg.sender] == address(0),
             'PositionManagerFactory::create: User already has a PositionManager'

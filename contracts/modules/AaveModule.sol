@@ -145,7 +145,7 @@ contract AaveModule is BaseModule {
                 tokenId,
                 TokenData(token0, token1, fee, tickLower, tickUpper)
             );
-        } else revert('AaveModule::isMoveToUniswapNeeded: not needed.');
+        } else revert('AaveModule::moveToUniswap: not needed.');
     }
 
     ///@notice deposit a uni v3 position's liquidity to an Aave lending pool
