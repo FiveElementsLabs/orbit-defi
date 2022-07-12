@@ -25,14 +25,14 @@ contract IdleLiquidityModule is BaseModule {
     ///@param positionManager address of the called position manager
     ///@param closedPosition tokenId of the closed position
     ///@param mintedPosition tokenId of the minted position
-    ///@param amount0 amount of token0 minted
-    ///@param amount1 amount of token1 minted
+    ///@param amount0Closed amount of token0 closed
+    ///@param amount1Closed amount of token1 closed
     event positionRebalanced(
         address indexed positionManager,
         uint256 closedPosition,
         uint256 mintedPosition,
-        uint256 amount0,
-        uint256 amount1
+        uint256 amount0Closed,
+        uint256 amount1Closed
     );
 
     ///@notice assing the uniswap address holder to the contract
@@ -113,7 +113,7 @@ contract IdleLiquidityModule is BaseModule {
             IMint.MintInput(token0, token1, fee, tickLower, tickUpper, amount0Swapped, amount1Swapped)
         );
 
-        emit positionRebalanced(positionManager, tokenId, mintedPosition, amount0Swapped, amount1Swapped);
+        emit positionRebalanced(positionManager, tokenId, mintedPosition, amount0Closed, amount1Closed);
     }
 
     ///@notice calc tickLower and tickUpper with the same delta as the position but with tick of the pool in center
