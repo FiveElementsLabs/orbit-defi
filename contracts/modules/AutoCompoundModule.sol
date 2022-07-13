@@ -41,67 +41,63 @@ contract AutoCompoundModule is BaseModule {
     ///@param positionManager address of the position manager
     ///@param tokenId id of the token to autocompound
     function autoCompoundFees(address positionManager, uint256 tokenId)
-        public
+        external
         onlyWhitelistedKeeper
         activeModule(positionManager, tokenId)
     {
         (uint256 uncollectedFees0, uint256 uncollectedFees1) = IUpdateUncollectedFees(positionManager)
             .updateUncollectedFees(tokenId);
-        ///@dev check if compound need to be done
-        if (isCompoundNeeded(positionManager, tokenId, uncollectedFees0, uncollectedFees1)) {
-            (uint256 amount0Desired, uint256 amount1Desired) = ICollectFees(positionManager).collectFees(
-                tokenId,
-                false
-            );
 
-            (address token0, address token1, uint24 fee, int24 tickLower, int24 tickUpper) = UniswapNFTHelper
-                ._getTokens(tokenId, INonfungiblePositionManager(addressHolder.nonfungiblePositionManagerAddress()));
-
-            (amount0Desired, amount1Desired) = ISwapToPositionRatio(positionManager).swapToPositionRatioV2(
-                token0,
-                token1,
-                fee,
-                amount0Desired,
-                amount1Desired,
-                tickLower,
-                tickUpper
-            );
-
-            IIncreaseLiquidity(positionManager).increaseLiquidity(tokenId, amount0Desired, amount1Desired);
-            emit AutoCompounded(positionManager, tokenId, amount0Desired, amount1Desired);
-        }
-    }
-
-    ///@notice checks the position status
-    ///@param positionManager address of the position manager
-    ///@param tokenId token id of the position
-    ///@return true if the position needs to be collected
-    function isCompoundNeeded(
-        address positionManager,
-        uint256 tokenId,
-        uint256 uncollectedFees0,
-        uint256 uncollectedFees1
-    ) public view returns (bool) {
-        address nonfungiblePositionManagerAddress = addressHolder.nonfungiblePositionManagerAddress();
+        INonfungiblePositionManager NonfungiblePositionManager = INonfungiblePositionManager(
+            addressHolder.nonfungiblePositionManagerAddress()
+        );
+        address uniswapV3FactoryAddress = addressHolder.uniswapV3FactoryAddress();
 
         (uint256 amount0, uint256 amount1) = UniswapNFTHelper._getAmountsfromTokenId(
             tokenId,
-            INonfungiblePositionManager(nonfungiblePositionManagerAddress),
-            addressHolder.uniswapV3FactoryAddress()
+            NonfungiblePositionManager,
+            uniswapV3FactoryAddress
         );
 
         (, bytes32 data) = IPositionManager(positionManager).getModuleInfo(tokenId, address(this));
         require(data != bytes32(0), 'AutoCompoundModule::_checkIfCompoundIsNeeded: module data cannot be empty');
 
         (uint160 sqrtPriceX96, , , , , , ) = IUniswapV3Pool(
-            UniswapNFTHelper._getPoolFromTokenId(
-                tokenId,
-                INonfungiblePositionManager(nonfungiblePositionManagerAddress),
-                addressHolder.uniswapV3FactoryAddress()
-            )
+            UniswapNFTHelper._getPoolFromTokenId(tokenId, NonfungiblePositionManager, uniswapV3FactoryAddress)
         ).slot0();
 
-        return _isThresholdReached(amount0, amount1, uncollectedFees0, uncollectedFees1, sqrtPriceX96, uint256(data));
+        ///@dev check if compound need to be done
+        if (_isThresholdReached(amount0, amount1, uncollectedFees0, uncollectedFees1, sqrtPriceX96, uint256(data))) {
+            _performAutoCompound(NonfungiblePositionManager, positionManager, tokenId);
+        } else revert('AutoCompoundModule::autoCompoundFees: not needed.');
+    }
+
+    function _performAutoCompound(
+        INonfungiblePositionManager NonfungiblePositionManager,
+        address positionManager,
+        uint256 tokenId
+    ) internal {
+        (uint256 amount0Desired, uint256 amount1Desired) = ICollectFees(positionManager).collectFees(tokenId, false);
+
+        (address token0, address token1, uint24 fee, int24 tickLower, int24 tickUpper) = UniswapNFTHelper._getTokens(
+            tokenId,
+            NonfungiblePositionManager
+        );
+
+        (amount0Desired, amount1Desired) = ISwapToPositionRatio(positionManager).swapToPositionRatio(
+            ISwapToPositionRatio.SwapToPositionInput({
+                token0Address: token0,
+                token1Address: token1,
+                fee: fee,
+                amount0In: amount0Desired,
+                amount1In: amount1Desired,
+                tickLower: tickLower,
+                tickUpper: tickUpper
+            })
+        );
+
+        IIncreaseLiquidity(positionManager).increaseLiquidity(tokenId, amount0Desired, amount1Desired);
+        emit AutoCompounded(positionManager, tokenId, amount0Desired, amount1Desired);
     }
 
     ///@notice returns true if the value of uncollected fees * 100 is greater than amount in the position * threshold:

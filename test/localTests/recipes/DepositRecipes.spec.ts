@@ -63,12 +63,12 @@ describe('DepositRecipes.sol', function () {
     [Factory, NonFungiblePositionManager, SwapRouter] = await deployUniswapContracts(tokenEth);
 
     //deploy some pools
-    PoolEthUsdc3000 = (await poolFixture(tokenEth, tokenUsdc, 3000, Factory)).pool;
-    PoolEthDai3000 = (await poolFixture(tokenEth, tokenDai, 3000, Factory)).pool;
-    PoolUsdcDai3000 = (await poolFixture(tokenDai, tokenUsdc, 3000, Factory)).pool;
-    PoolEthUsdc500 = (await poolFixture(tokenEth, tokenUsdc, 500, Factory)).pool;
-    PoolEthDai500 = (await poolFixture(tokenEth, tokenDai, 500, Factory)).pool;
-    PoolUsdcDai500 = (await poolFixture(tokenDai, tokenUsdc, 500, Factory)).pool;
+    PoolEthUsdc3000 = (await poolFixture(tokenEth, tokenUsdc, 3000, Factory, 0)).pool;
+    PoolEthDai3000 = (await poolFixture(tokenEth, tokenDai, 3000, Factory, 0)).pool;
+    PoolUsdcDai3000 = (await poolFixture(tokenDai, tokenUsdc, 3000, Factory, 0)).pool;
+    PoolEthUsdc500 = (await poolFixture(tokenEth, tokenUsdc, 500, Factory, 0)).pool;
+    PoolEthDai500 = (await poolFixture(tokenEth, tokenDai, 500, Factory, 0)).pool;
+    PoolUsdcDai500 = (await poolFixture(tokenDai, tokenUsdc, 500, Factory, 0)).pool;
 
     //mint 1e30 token, you can call with arbitrary amount
     await mintSTDAmount(tokenEth);
@@ -572,6 +572,35 @@ describe('DepositRecipes.sol', function () {
           fee
         )
       ).to.be.reverted;
+    });
+
+    it('should send leftover tokens back to the user if necessary', async function () {
+      const amount0 = '0x' + (1e18).toString(16);
+      const amount1 = '0x' + (1e15).toString(16);
+      const fee = 500;
+      const tickLower = 0 - 60 * 1000;
+      const tickUpper = 0 + 60 * 1000;
+
+      const mintTx = await DepositRecipes.connect(user).mintAndDeposit(
+        tokenEth.address,
+        tokenUsdc.address,
+        fee,
+        tickLower,
+        tickUpper,
+        amount0,
+        amount1
+      );
+
+      const events: any = (await mintTx.wait()).events;
+      const mintEvent = await events[events.length - 1];
+      let tokenId = abiCoder.decode(['uint256'], mintEvent.data).toString();
+
+      expect(await NonFungiblePositionManager.ownerOf(tokenId)).to.equal(PositionManager.address);
+      const positions = await PositionManager.getAllUniPositions();
+      expect(positions[positions.length - 1]).to.equal(tokenId);
+
+      expect(await tokenEth.balanceOf(PositionManager.address)).to.equal(0);
+      expect(await tokenUsdc.balanceOf(PositionManager.address)).to.equal(0);
     });
   });
 });

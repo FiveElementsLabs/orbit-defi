@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 
-pragma solidity >=0.6.0 <0.8.0;
+pragma solidity 0.7.6;
 
 /**
  * @title SafeInt56Math
@@ -8,32 +8,6 @@ pragma solidity >=0.6.0 <0.8.0;
  */
 library SafeInt56Math {
     int56 private constant _INT_56_MIN = type(int56).min;
-
-    /**
-     * @dev Returns the multiplication of two signed integers, reverting on
-     * overflow.
-     *
-     * Counterpart to Solidity's `*` operator.
-     *
-     * Requirements:
-     *
-     * - Multiplication cannot overflow.
-     */
-    function mul(int56 a, int56 b) internal pure returns (int56) {
-        // Gas optimization: this is cheaper than requiring 'a' not being zero, but the
-        // benefit is lost if 'b' is also tested.
-        // See: https://github.com/OpenZeppelin/openzeppelin-contracts/pull/522
-        if (a == 0) {
-            return 0;
-        }
-
-        require(!(a == -1 && b == _INT_56_MIN), 'SafeInt56Math::mul: multiplication overflow');
-
-        int56 c = a * b;
-        require(c / a == b, 'SafeInt56Math::mul: multiplication overflow');
-
-        return c;
-    }
 
     /**
      * @dev Returns the integer division of two signed integers. Reverts on
@@ -69,23 +43,6 @@ library SafeInt56Math {
     function sub(int56 a, int56 b) internal pure returns (int56) {
         int56 c = a - b;
         require((b >= 0 && c <= a) || (b < 0 && c > a), 'SafeInt56Math::sub: subtraction overflow');
-
-        return c;
-    }
-
-    /**
-     * @dev Returns the addition of two signed integers, reverting on
-     * overflow.
-     *
-     * Counterpart to Solidity's `+` operator.
-     *
-     * Requirements:
-     *
-     * - Addition cannot overflow.
-     */
-    function add(int56 a, int56 b) internal pure returns (int56) {
-        int56 c = a + b;
-        require((b >= 0 && c >= a) || (b < 0 && c < a), 'SafeInt56Math::add: addition overflow');
 
         return c;
     }

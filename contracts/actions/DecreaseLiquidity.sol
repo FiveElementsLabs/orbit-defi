@@ -30,7 +30,7 @@ contract DecreaseLiquidity is IDecreaseLiquidity {
         uint256 amount0Desired,
         uint256 amount1Desired
     )
-        public
+        external
         override
         returns (
             uint128 liquidityToDecrease,

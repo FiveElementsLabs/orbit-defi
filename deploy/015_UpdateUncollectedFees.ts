@@ -21,9 +21,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const PositionManagerFactory = await ethers.getContract('PositionManagerFactory');
 
   // add actions to diamond cut
-  await PositionManagerFactory.pushActionData(
-    UpdateUncollectedFees.address,
-    await getSelectors(UpdateUncollectedFees),
+  await PositionManagerFactory.updateActionData(
+    {
+      facetAddress: UpdateUncollectedFees.address,
+      action: 0,
+      functionSelectors: await getSelectors(UpdateUncollectedFees),
+    },
     {
       gasPrice: Config.gasPrice,
       gasLimit: Config.gasLimit,

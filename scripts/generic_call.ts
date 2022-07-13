@@ -5,13 +5,13 @@ async function main() {
   const provider = new ethers.providers.JsonRpcProvider(process.env.ALCHEMY_POLYGON);
   const signer = new ethers.Wallet(process.env.POLYGON_PRIVATE_KEY || '', provider);
 
-  const Registry = await ethers.getContractAt('Registry', '0x38B2c4da0F5d1a3512e4CBfb24DbA1652674b7ea', signer);
+  const PM = await ethers.getContractAt('PositionManager', '0x0960Cf66bEd733c3272077188fA7EDD0A3494187', signer);
   const contractIdKeccak = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('PositionManagerFactory'));
 
   // Change these as needed to perform specific calls
-  const ContractToQuery = Registry;
-  const functionName = 'modules';
-  const args = [contractIdKeccak];
+  const ContractToQuery = PM;
+  const functionName = 'getModuleInfo';
+  const args: any = [178120, '0xAC4031ba573a30CC9530C1dC5F19a89a390A6955'];
 
   const tx = await ContractToQuery[functionName](...args, {
     gasPrice: Config.gasPrice,

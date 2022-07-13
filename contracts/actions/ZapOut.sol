@@ -25,7 +25,7 @@ contract ZapOut is IZapOut {
     ///@param tokenId id of the NFT to burn
     ///@param tokenOut address of output token
     ///@return uint256 amount of tokenOut withdrawn
-    function zapOutV2(uint256 tokenId, address tokenOut) public override returns (uint256) {
+    function zapOut(uint256 tokenId, address tokenOut) external override returns (uint256) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
         INonfungiblePositionManager nonfungiblePositionManager = INonfungiblePositionManager(

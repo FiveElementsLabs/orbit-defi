@@ -23,7 +23,7 @@ contract ZapIn is IZapIn {
     ///@param amountIn amount of tokenIn zapped in
     event ZappedIn(address indexed positionManager, uint256 tokenId, address tokenIn, uint256 amountIn);
 
-    ///@notice mints a uni NFT with a single input token, the token in input can be different from the two position tokens
+    ///@notice mints a uni NFT with a single input token, the token in input must be one of the two token in the pool
     ///@param token0 address token0 of the pool
     ///@param token1 address token1 of the pool
     ///@param isToken0In true if token0 is the input token, false if token1 is the input token
@@ -32,7 +32,7 @@ contract ZapIn is IZapIn {
     ///@param tickUpper upper bound of desired position
     ///@param fee fee tier of the pool
     ///@return tokenId of minted NFT
-    function zapInV2(
+    function zapIn(
         address token0,
         address token1,
         bool isToken0In,
@@ -40,7 +40,7 @@ contract ZapIn is IZapIn {
         int24 tickLower,
         int24 tickUpper,
         uint24 fee
-    ) public override returns (uint256 tokenId) {
+    ) external override returns (uint256 tokenId) {
         require(token0 != token1, 'ZapIn::zapIn: token0 and token1 cannot be the same');
         require(amountIn != 0, 'ZapIn::zapIn: tokenIn cannot be 0');
 
@@ -78,7 +78,7 @@ contract ZapIn is IZapIn {
                     tokenOut: isToken0In ? token1 : token0,
                     fee: fee,
                     recipient: address(this),
-                    deadline: block.timestamp + 120,
+                    deadline: block.timestamp,
                     amountIn: amountToSwap,
                     amountOutMinimum: 1,
                     sqrtPriceLimitX96: 0

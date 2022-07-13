@@ -29,7 +29,7 @@ describe('SwapHelper.sol', function () {
       const tickLower = -300;
       const tickUpper = 300;
       const ratioE18 = await MockSwapHelper.getRatioFromRange(tickPool, tickLower, tickUpper);
-      expect(ratioE18.div(1e9).toNumber() / 1e9).to.be.closeTo(1, 1e-8);
+      expect(ratioE18.toString()).to.be.equal('79228162514264337593543950302');
     });
 
     it('should calculate ratio in the right direction', async function () {
@@ -37,8 +37,7 @@ describe('SwapHelper.sol', function () {
       const tickLower = -20;
       const tickUpper = 600;
       const ratioE18 = await MockSwapHelper.getRatioFromRange(tickPool, tickLower, tickUpper);
-      expect(ratioE18.div(1e9).toNumber() / 1e9).to.gt(0);
-      expect(ratioE18.div(1e9).toNumber() / 1e9).to.lt(1);
+      expect(ratioE18.toString()).to.equal('2679409037991255016012194662');
     });
 
     it('should revert if position if out of range', async function () {
@@ -99,7 +98,7 @@ describe('SwapHelper.sol', function () {
         amount0In,
         amount1In
       );
-      expect(amountToSwap.toNumber()).to.be.closeTo((amount1In - amount0In) / 2, (amount1In - amount0In) / 1e4);
+      expect(amountToSwap.toNumber()).to.be.closeTo((amount1In + amount0In) / 2, (amount1In - amount0In) / 1e4);
       expect(token0In).to.equal(false);
     });
 
