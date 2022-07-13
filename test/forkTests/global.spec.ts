@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import { AbiCoder } from 'ethers/lib/utils';
-import { ethers } from 'hardhat';
+import hre, { ethers } from 'hardhat';
 import { MockToken, PositionManager } from '../../typechain';
 import {
   deployContract,
@@ -58,7 +58,7 @@ describe('Global Tests', function () {
     usdcMock = (await ethers.getContractAt('MockToken', '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48')) as MockToken;
     wbtcMock = (await ethers.getContractAt('MockToken', '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599')) as MockToken;
     daiMock = (await ethers.getContractAt('MockToken', '0x6B175474E89094C44Da98b954EedeAC495271d0F')) as MockToken;
-    await mintForkedTokens([usdcMock, wbtcMock, daiMock], [user1, user2, user3, governance, keeper, trader], 1e10);
+    await mintForkedTokens([usdcMock, wbtcMock, daiMock], [user1, user2, user3, governance, keeper, trader], 1e13);
 
     //approve NFPM
     await doAllApprovals(
@@ -137,8 +137,8 @@ describe('Global Tests', function () {
     const feeTier = 100;
     const tick = (await contracts.PoolDaiUsdc100.slot0()).tick;
     const tickSpacing = feeTier / 50;
-    const tickLower = Math.round(tick / tickSpacing) * tickSpacing - 10 * tickSpacing;
-    const tickUpper = Math.round(tick / tickSpacing) * tickSpacing + 15 * tickSpacing;
+    const tickLower = Math.round(tick / tickSpacing) * tickSpacing - 1 * tickSpacing;
+    const tickUpper = Math.round(tick / tickSpacing) * tickSpacing + 1 * tickSpacing;
     const mintTx = await contracts.NonFungiblePositionManager.connect(user2).mint({
       token0: daiMock.address,
       token1: usdcMock.address,
@@ -171,9 +171,7 @@ describe('Global Tests', function () {
     expect(info.isActive).to.equal(false);
     expect(info.data).to.equal('0x00000000000000000000000000000000000000000000000000000000000000c8');
 
-    const newAutoCompoundData = '0x0000000000000000000000000000000000000000000000000000000000000002';
     const newAaveData = '0x0000000000000000000000000000000000000000000000000000000000000003';
-    await positionManager2.connect(user2).setModuleData(tokenId, orbit.AutoCompoundModule.address, newAutoCompoundData);
     await positionManager2.connect(user2).setModuleData(tokenId, orbit.AaveModule.address, newAaveData);
 
     info = await positionManager2.getModuleInfo(tokenId, orbit.AaveModule.address);
@@ -181,7 +179,7 @@ describe('Global Tests', function () {
     expect(info.data).to.equal(newAaveData);
     info = await positionManager2.getModuleInfo(tokenId, orbit.AutoCompoundModule.address);
     expect(info.isActive).to.equal(true);
-    expect(info.data).to.equal(newAutoCompoundData);
+    expect(info.data).to.equal('0x0000000000000000000000000000000000000000000000000000000000000001');
     info = await positionManager2.getModuleInfo(tokenId, orbit.IdleLiquidityModule.address);
     expect(info.isActive).to.equal(false);
     expect(info.data).to.equal('0x00000000000000000000000000000000000000000000000000000000000000c8');
@@ -221,6 +219,8 @@ describe('Global Tests', function () {
     expect(info.isActive).to.equal(false);
     expect(info.data).to.equal('0x00000000000000000000000000000000000000000000000000000000000000c8');
 
+    const newAutoCompoundData = '0x0000000000000000000000000000000000000000000000000000000000000003';
+    await positionManager3.connect(user3).setModuleData(tokenId, orbit.AutoCompoundModule.address, newAutoCompoundData);
     await positionManager3.connect(user3).toggleModule(tokenId, orbit.AutoCompoundModule.address, false);
     await positionManager3.connect(user3).toggleModule(tokenId, orbit.AaveModule.address, false);
     await positionManager3.connect(user3).toggleModule(tokenId, orbit.IdleLiquidityModule.address, true);
@@ -230,7 +230,7 @@ describe('Global Tests', function () {
     expect(info.data).to.equal('0x00000000000000000000000000000000000000000000000000000000000000c8');
     info = await positionManager3.getModuleInfo(tokenId, orbit.AutoCompoundModule.address);
     expect(info.isActive).to.equal(false);
-    expect(info.data).to.equal('0x0000000000000000000000000000000000000000000000000000000000000001');
+    expect(info.data).to.equal(newAutoCompoundData);
     info = await positionManager3.getModuleInfo(tokenId, orbit.IdleLiquidityModule.address);
     expect(info.isActive).to.equal(true);
     expect(info.data).to.equal('0x00000000000000000000000000000000000000000000000000000000000000c8');
@@ -267,39 +267,34 @@ describe('Global Tests', function () {
       PoolWbtcUsdc3000Tick = (await contracts.PoolWbtcUsdc3000.slot0()).tick;
     }
     const DaiUsdcPositionId = (await positionManager2.getAllUniPositions())[0];
-    console.log(DaiUsdcPositionId);
     const amounts = await mockNFTHelper.getAmountsfromTokenId(
       DaiUsdcPositionId,
       contracts.NonFungiblePositionManager.address,
       contracts.UniswapV3Factory.address
     );
-    //TODO: staticCall not working
-    let tokensOwed = await (positionManager2 as any).callStatic.collectFees(DaiUsdcPositionId, false);
+
+    // workaround to make a call to update fees even if nft is hold by a contract
+    const updateFees = await ethers.getContractAt('UpdateUncollectedFees', positionManager2.address);
+    await orbit.Registry.addNewContract(
+      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('PleaseLetMeUpdateFees')),
+      keeper.address,
+      ethers.utils.hexZeroPad(ethers.utils.hexlify(1), 32),
+      true
+    );
+    let tokensOwed = await updateFees.connect(keeper).callStatic.updateUncollectedFees(DaiUsdcPositionId);
     let i = 0;
-    while (
-      tokensOwed.amount0.mul(100) < amounts.amount0.mul(2) &&
-      tokensOwed.amount1.mul(100) < amounts.amount1.mul(2)
-    ) {
+    while (tokensOwed[0].mul(100).lt(amounts[0]) || tokensOwed[1].mul(100).lt(amounts[1])) {
       await contracts.SwapRouter.connect(trader).exactInputSingle({
         tokenIn: i % 2 == 0 ? daiMock.address : usdcMock.address,
         tokenOut: i % 2 == 0 ? usdcMock.address : daiMock.address,
         fee: 100,
         recipient: trader.address,
         deadline: Date.now() + 100,
-        amountIn: i % 2 == 0 ? '0x' + (1e22).toString(16) : '0x' + (1e10).toString(16),
+        amountIn: i % 2 == 0 ? '0x' + (3e26).toString(16) : '0x' + (3e14).toString(16),
         amountOutMinimum: 0,
         sqrtPriceLimitX96: 0,
       });
-      console.log(i);
-      tokensOwed = await contracts.NonFungiblePositionManager.callStatic.collect(
-        {
-          tokenId: DaiUsdcPositionId,
-          recipient: positionManager2.address,
-          amount0Max: '0x' + (3e30).toString(16),
-          amount1Max: '0x' + (3e30).toString(16),
-        },
-        { from: positionManager2.address }
-      );
+      tokensOwed = await updateFees.connect(keeper).callStatic.updateUncollectedFees(DaiUsdcPositionId);
       i++;
     }
 
@@ -323,7 +318,7 @@ describe('Global Tests', function () {
     const user2UsdcBalance = await usdcMock.balanceOf(user2.address);
     const user2DaiBalance = await daiMock.balanceOf(user2.address);
     const user2Positions = await positionManager2.getAllUniPositions();
-    await orbit.WithdrawRecipes.connect(user2).withdrawUniNft(user2Positions[0]);
+    await orbit.WithdrawRecipes.connect(user2).withdrawUniNft(user2Positions[0], 10000);
     expect(await positionManager2.getAllUniPositions()).to.be.empty;
     expect(await usdcMock.balanceOf(user2.address)).to.be.gt(user2UsdcBalance);
     expect(await daiMock.balanceOf(user2.address)).to.be.gt(user2DaiBalance);
@@ -351,7 +346,7 @@ async function runKeeper(orbit: any, keeper: SignerWithAddress) {
       data = await positionManager.getModuleInfo(positions[j], orbit.AutoCompoundModule.address);
       if (data.isActive) {
         try {
-          await orbit.AaveModule.connect(keeper).autoCompoundFees(positionManager.address, positions[j]);
+          await orbit.AutoCompoundModule.connect(keeper).autoCompoundFees(positionManager.address, positions[j]);
           compounded.push(positions[j]);
         } catch {}
       }
@@ -367,7 +362,7 @@ async function runKeeper(orbit: any, keeper: SignerWithAddress) {
         try {
           await orbit.AaveModule.connect(keeper).moveToAave(positionManager.address, positions[j]);
           movedToAave.push(positions[j]);
-        } catch (e) {}
+        } catch {}
       }
     }
   }
