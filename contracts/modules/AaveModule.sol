@@ -86,7 +86,7 @@ contract AaveModule is BaseModule {
     {
         (, bytes32 data) = IPositionManager(positionManager).getModuleInfo(tokenId, address(this));
 
-        require(data != bytes32(0), 'AaveModule::isDepositNeeded: module data cannot be empty');
+        require(data != bytes32(0), 'AaveModule::moveToAave: module data cannot be empty');
 
         uint24 distanceFromRange = UniswapNFTHelper._checkDistanceFromRange(
             tokenId,

@@ -73,6 +73,11 @@ contract WithdrawRecipes {
         IZapOut(positionManagerFactory.userToPositionManager(msg.sender)).zapOut(tokenId, tokenOut);
     }
 
+    ///@notice withdraw a position currently on Aave
+    ///@param id identifier of the aave position to withdraw
+    ///@param token aaveToken to withdraw
+    ///@param partToWithdraw percentage of position withdraw in base points
+    ///@return amountWithdrawn amount of token withdrawn
     function withdrawFromAave(
         uint256 id,
         address token,
@@ -85,12 +90,13 @@ contract WithdrawRecipes {
                 id
             )
         )
+        returns (uint256 amountWithdrawn)
     {
         require(
             partToWithdraw != 0 && partToWithdraw <= 10_000,
-            'WithdrawRecipes::withdrawFromAave: part to withdraw must be between 0 and 10000'
+            'WithdrawRecipes::withdrawFromAave: part to withdraw must be between 1 and 10000'
         );
         address positionManager = positionManagerFactory.userToPositionManager(msg.sender);
-        IAaveWithdraw(positionManager).withdrawFromAave(token, id, partToWithdraw, true);
+        amountWithdrawn = IAaveWithdraw(positionManager).withdrawFromAave(token, id, partToWithdraw, true);
     }
 }
