@@ -260,11 +260,6 @@ export async function getMainnetContracts() {
     NonFungiblePositionManagerjson.abi,
     '0xC36442b4a4522E871399CD717aBDD847Ab11FE88'
   );
-  contracts.NonFungiblePositionManagerWithoutSigner = new Contract(
-    '0xC36442b4a4522E871399CD717aBDD847Ab11FE88',
-    NonFungiblePositionManagerjson.abi,
-    ethers.getDefaultProvider()
-  );
   contracts.SwapRouter = await ethers.getContractAt(SwapRouterjson.abi, '0xE592427A0AEce92De3Edee1F18E0157C05861564');
   contracts.LendingPool = await ethers.getContractAt(LendingPooljson.abi, '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9');
   contracts.PoolWbtcUsdc3000 = (await ethers.getContractAt(

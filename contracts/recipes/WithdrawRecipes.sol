@@ -92,5 +92,9 @@ contract WithdrawRecipes {
         );
         address positionManager = positionManagerFactory.userToPositionManager(msg.sender);
         IAaveWithdraw(positionManager).withdrawFromAave(token, id, partToWithdraw, true);
+        IClosePosition(positionManager).closePosition(
+            IPositionManager(positionManager).getTokenIdFromAavePosition(token, id),
+            true
+        );
     }
 }
