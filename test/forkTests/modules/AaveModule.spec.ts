@@ -165,7 +165,7 @@ describe('AaveModule.sol', function () {
 
     PositionManager = (await getPositionManager(PositionManagerFactory, user)) as PositionManager;
 
-    //Get mock tokens. These need to be real Mainnet addresses
+    //Get mock tokens. These need to be real ethereum Mainnet addresses
     usdcMock = (await ethers.getContractAt('MockToken', '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48')) as MockToken;
     wbtcMock = (await ethers.getContractAt('MockToken', '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599')) as MockToken;
     await mintForkedTokens([usdcMock, wbtcMock], [user, liquidityProvider, trader], 100000000);
