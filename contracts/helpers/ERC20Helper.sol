@@ -19,11 +19,11 @@ library ERC20Helper {
         address spender,
         uint256 amount
     ) internal {
-        if (IERC20(token).allowance(address(this), spender) >= amount) {
+        uint256 allowance = IERC20(token).allowance(address(this), spender);
+        if (allowance >= amount) {
             return;
         }
-        IERC20(token).safeApprove(spender, 0);
-        IERC20(token).safeApprove(spender, amount);
+        IERC20(token).safeIncreaseAllowance(spender, amount - allowance);
     }
 
     ///@notice return the allowance of the token that the spender is able to spend

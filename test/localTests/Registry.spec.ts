@@ -155,11 +155,11 @@ describe('Registry.sol', function () {
   describe('Registry.sol - keeperWhitelist', function () {
     it('Should be able to add a keeper to whitelist', async function () {
       await Registry.addKeeperToWhitelist(user.address);
-      expect(await Registry.isWhitelistedKeeper(user.address)).to.be.true;
+      expect(await Registry.whitelistedKeepers(user.address)).to.be.true;
     });
-    it('Should be able to remove keeper from whitelist', async function() {
+    it('Should be able to remove keeper from whitelist', async function () {
       await Registry.removeKeeperFromWhitelist(user.address);
-      expect(await Registry.isWhitelistedKeeper(user.address)).to.be.false;
-    })
+      expect(await Registry.whitelistedKeepers(user.address)).to.be.false;
+    });
   });
 });

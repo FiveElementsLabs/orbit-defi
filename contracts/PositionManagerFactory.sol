@@ -5,14 +5,13 @@ pragma abicoder v2;
 
 import './PositionManager.sol';
 import '../interfaces/IPositionManagerFactory.sol';
-import '../interfaces/IDiamondCut.sol';
 
 contract PositionManagerFactory is IPositionManagerFactory {
+    address public registry;
     address public governance;
     address public immutable diamondCutFacet;
-    address public immutable uniswapAddressHolder;
     address public immutable aaveAddressHolder;
-    address public registry;
+    address public immutable uniswapAddressHolder;
     address[] public positionManagers;
     IDiamondCut.FacetCut[] public actions;
     mapping(address => address) public override userToPositionManager;
@@ -33,7 +32,7 @@ contract PositionManagerFactory is IPositionManagerFactory {
         address _diamondCutFacet,
         address _uniswapAddressHolder,
         address _aaveAddressHolder
-    ) public {
+    ) {
         governance = _governance;
         registry = _registry;
         diamondCutFacet = _diamondCutFacet;
@@ -61,23 +60,41 @@ contract PositionManagerFactory is IPositionManagerFactory {
         registry = _registry;
     }
 
-    ///@notice adds a new action to the factory
-    ///@param actionAddress address of the action
-    ///@param selectors action selectors
-    function pushActionData(address actionAddress, bytes4[] calldata selectors) external onlyGovernance {
-        require(actionAddress != address(0), 'PositionManagerFactory::pushActionData: Action address cannot be 0');
-        actions.push(
-            IDiamondCut.FacetCut({
-                facetAddress: actionAddress,
-                action: IDiamondCut.FacetCutAction.Add,
-                functionSelectors: selectors
-            })
-        );
+    ///@notice update actions already existing on positionManager
+    ///@dev Add (0) Replace(1) Remove(2)
+    ///@param positionManager address of the position manager on which one should modified an action
+    ///@param actionsToUpdate contains the facet addresses and function selectors of the actions
+    function updateDiamond(address positionManager, IDiamondCut.FacetCut[] memory actionsToUpdate)
+        external
+        onlyGovernance
+    {
+        IDiamondCut(positionManager).diamondCut(actionsToUpdate, 0x0000000000000000000000000000000000000000, '');
+    }
+
+    ///@notice adds or removes an action to/from the factory
+    ///@param facetAction facet of the action to add or remove from position manager factory
+    function updateActionData(IDiamondCut.FacetCut calldata facetAction) external onlyGovernance {
+        if (facetAction.action == IDiamondCut.FacetCutAction.Add) {
+            actions.push(facetAction);
+            return;
+        }
+
+        if (facetAction.action == IDiamondCut.FacetCutAction.Remove) {
+            uint256 actionsLength = actions.length;
+
+            for (uint256 i; i < actionsLength; ++i) {
+                if (actions[i].facetAddress == facetAction.facetAddress) {
+                    actions[i] = actions[actionsLength - 1];
+                    actions.pop();
+                    return;
+                }
+            }
+        }
     }
 
     ///@notice deploy new positionManager and assign to userAddress
     ///@return address[] return array of PositionManager address updated with the last deployed PositionManager
-    function create() public override returns (address[] memory) {
+    function create() external override returns (address[] memory) {
         require(
             userToPositionManager[msg.sender] == address(0),
             'PositionManagerFactory::create: User already has a PositionManager'
@@ -86,8 +103,7 @@ contract PositionManagerFactory is IPositionManagerFactory {
         positionManagers.push(address(manager));
         userToPositionManager[msg.sender] = address(manager);
         manager.init(msg.sender, uniswapAddressHolder, aaveAddressHolder);
-        bytes memory _calldata;
-        IDiamondCut(address(manager)).diamondCut(actions, 0x0000000000000000000000000000000000000000, _calldata);
+        IDiamondCut(address(manager)).diamondCut(actions, 0x0000000000000000000000000000000000000000, '');
 
         emit PositionManagerCreated(address(manager), msg.sender);
 

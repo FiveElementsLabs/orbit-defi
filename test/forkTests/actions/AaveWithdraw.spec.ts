@@ -64,7 +64,7 @@ describe('AaveWithdraw.sol', function () {
     await Factory.deployed();
 
     //deploy first pool
-    Pool0 = (await poolFixture(tokenEth, tokenUsdc, 3000, Factory)).pool;
+    Pool0 = (await poolFixture(tokenEth, tokenUsdc, 3000, Factory, 0)).pool;
 
     //mint 1e30 token, you can call with arbitrary amount
     await mintSTDAmount(tokenEth);
@@ -127,18 +127,20 @@ describe('AaveWithdraw.sol', function () {
 
   describe('AaveWithdraw - withdrawFromAave', function () {
     it('should withdraw position from aave LendingPool', async function () {
-      const tx = await AaveDepositFallback.depositToAave(usdcMock.address, '5000');
+      const tokenId = 120000;
+      const tokenId2 = 120001;
+      const tx = await AaveDepositFallback.depositToAave(usdcMock.address, '5000', tokenId);
 
       const events = (await tx.wait()).events;
       const depositEvent = events[events.length - 1];
       const id = abiCoder.decode(['address', 'uint256', 'uint256'], depositEvent.data)[1];
 
-      await AaveDepositFallback.depositToAave(usdcMock.address, '5000');
+      await AaveDepositFallback.depositToAave(usdcMock.address, '5000', tokenId2);
 
       const balanceBefore = await usdcMock.balanceOf(PositionManager.address);
       const pmDataBefore = await LendingPool.getUserAccountData(PositionManager.address);
 
-      await AaveWithdrawFallback.withdrawFromAaveV2(usdcMock.address, id, 10000, false);
+      await AaveWithdrawFallback.withdrawFromAave(usdcMock.address, id, 10000, false);
       const balanceAfter = await usdcMock.balanceOf(PositionManager.address);
       const pmDataAfter = await LendingPool.getUserAccountData(PositionManager.address);
 
@@ -148,18 +150,20 @@ describe('AaveWithdraw.sol', function () {
     });
 
     it('should be able to partially withdraw position from aave LendingPool', async function () {
-      const tx = await AaveDepositFallback.depositToAave(usdcMock.address, '5000');
+      const tokenId = 120002;
+      const tokenId2 = 120003;
+      const tx = await AaveDepositFallback.depositToAave(usdcMock.address, '5000', tokenId);
 
       const events = (await tx.wait()).events;
       const depositEvent = events[events.length - 1];
       const id = abiCoder.decode(['address', 'uint256', 'uint256'], depositEvent.data)[1];
 
-      await AaveDepositFallback.depositToAave(usdcMock.address, '5000');
+      await AaveDepositFallback.depositToAave(usdcMock.address, '5000', tokenId2);
 
       const balanceBefore = await usdcMock.balanceOf(PositionManager.address);
       const pmDataBefore = await LendingPool.getUserAccountData(PositionManager.address);
 
-      await AaveWithdrawFallback.withdrawFromAaveV2(usdcMock.address, id, 5000, false);
+      await AaveWithdrawFallback.withdrawFromAave(usdcMock.address, id, 5000, false);
       const balanceAfter = await usdcMock.balanceOf(PositionManager.address);
       const pmDataAfter = await LendingPool.getUserAccountData(PositionManager.address);
 
@@ -169,7 +173,8 @@ describe('AaveWithdraw.sol', function () {
     });
 
     it('should be able withdraw position and send it to the user', async function () {
-      const tx = await AaveDepositFallback.depositToAave(usdcMock.address, '5000');
+      const tokenId = 120004;
+      const tx = await AaveDepositFallback.depositToAave(usdcMock.address, '5000', tokenId);
 
       const events = (await tx.wait()).events;
       const depositEvent = events[events.length - 1];
@@ -179,7 +184,7 @@ describe('AaveWithdraw.sol', function () {
       const userBalanceBefore = await usdcMock.balanceOf(user.address);
       const pmDataBefore = await LendingPool.getUserAccountData(PositionManager.address);
 
-      await AaveWithdrawFallback.withdrawFromAaveV2(usdcMock.address, id, 10000, true);
+      await AaveWithdrawFallback.withdrawFromAave(usdcMock.address, id, 10000, true);
       const balanceAfter = await usdcMock.balanceOf(PositionManager.address);
       const userBalanceAfter = await usdcMock.balanceOf(user.address);
       const pmDataAfter = await LendingPool.getUserAccountData(PositionManager.address);

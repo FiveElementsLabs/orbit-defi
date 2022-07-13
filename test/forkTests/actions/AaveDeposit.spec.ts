@@ -54,7 +54,7 @@ describe('AaveDeposit.sol', function () {
     await Factory.deployed();
 
     //deploy first pool
-    Pool0 = (await poolFixture(tokenEth, tokenUsdc, 3000, Factory)).pool;
+    Pool0 = (await poolFixture(tokenEth, tokenUsdc, 3000, Factory, 0)).pool;
     //LendingPool contract
     LendingPool = await ethers.getContractAt(LendingPooljson.abi, '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9');
 
@@ -117,7 +117,7 @@ describe('AaveDeposit.sol', function () {
       await usdcMock.connect(user).approve(AaveDepositFallback.address, 10000);
       await usdcMock.connect(user).transfer(AaveDepositFallback.address, 10000);
 
-      const tx = await AaveDepositFallback.connect(user).depositToAave(usdcMock.address, 10000);
+      const tx = await AaveDepositFallback.connect(user).depositToAave(usdcMock.address, 10000, 120000);
 
       const aUsdcAddress = (await LendingPool.getReserveData(usdcMock.address)).aTokenAddress;
       const aUsdc = await ethers.getContractAt(ATokenjson.abi, aUsdcAddress);

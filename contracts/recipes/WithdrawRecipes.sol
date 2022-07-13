@@ -70,7 +70,7 @@ contract WithdrawRecipes {
     ///@param tokenId ID of the NFT to zap out
     ///@param tokenOut address of the token to withdraw
     function zapOutUniNft(uint256 tokenId, address tokenOut) external onlyOwner(tokenId) {
-        IZapOut(positionManagerFactory.userToPositionManager(msg.sender)).zapOutV2(tokenId, tokenOut);
+        IZapOut(positionManagerFactory.userToPositionManager(msg.sender)).zapOut(tokenId, tokenOut);
     }
 
     function withdrawFromAave(
@@ -91,6 +91,6 @@ contract WithdrawRecipes {
             'WithdrawRecipes::withdrawFromAave: part to withdraw must be between 0 and 10000'
         );
         address positionManager = positionManagerFactory.userToPositionManager(msg.sender);
-        IAaveWithdraw(positionManager).withdrawFromAaveV2(token, id, partToWithdraw, true);
+        IAaveWithdraw(positionManager).withdrawFromAave(token, id, partToWithdraw, true);
     }
 }

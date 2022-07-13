@@ -22,7 +22,7 @@ contract CollectFees is ICollectFees {
     ///@return amount0 of token0 collected
     ///@return amount1 of token1 collected
     function collectFees(uint256 tokenId, bool returnTokensToUser)
-        public
+        external
         override
         returns (uint256 amount0, uint256 amount1)
     {

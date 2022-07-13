@@ -98,7 +98,7 @@ contract DepositRecipes {
     ) external returns (uint256 tokenId) {
         address positionManagerAddress = positionManagerFactory.userToPositionManager(msg.sender);
 
-        (tokenId) = IZapIn(positionManagerAddress).zapInV2(
+        (tokenId) = IZapIn(positionManagerAddress).zapIn(
             token0,
             token1,
             isToken0In,

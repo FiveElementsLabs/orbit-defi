@@ -240,8 +240,7 @@ describe('AaveModule.sol', function () {
 
   describe('AaveModule - depositToAave', function () {
     it('should not deposit to aave if position is in range', async function () {
-      await AaveModule.connect(user).moveToAave(PositionManager.address, tokenId);
-      expect(await NonFungiblePositionManager.ownerOf(tokenId)).to.equal(PositionManager.address);
+      await expect(AaveModule.connect(user).moveToAave(PositionManager.address, tokenId)).to.be.reverted;
     });
 
     it('should deposit token0 to aave if position is out of range (lower side)', async function () {
@@ -326,7 +325,7 @@ describe('AaveModule.sol', function () {
     it('should not return to position if still out of range', async function () {
       await expect(
         AaveModule.connect(user).moveToUniswap(PositionManager.address, usdcMock.address, aaveId)
-      ).to.be.revertedWith('AaveModule::isMoveToUniswapNeeded: not needed.');
+      ).to.be.revertedWith('AaveModule::moveToUniswap: not needed.');
 
       expect((await aUsdc.balanceOf(PositionManager.address)).toNumber()).to.gt(0);
     });
