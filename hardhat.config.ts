@@ -2,6 +2,7 @@ import 'hardhat-gas-reporter';
 import '@nomiclabs/hardhat-waffle';
 import '@typechain/hardhat';
 import '@nomiclabs/hardhat-ethers';
+import '@nomiclabs/hardhat-etherscan';
 import 'hardhat-deploy';
 import 'solidity-coverage';
 import 'dotenv/config';
@@ -96,14 +97,15 @@ export default {
     },
     polygon: {
       url: process.env.ALCHEMY_POLYGON || '',
-      accounts: [process.env.TEST_PRIVATE_KEY || ''],
-      verify: {
-        etherscan: {
-          apiKey: process.env.ETHERSCAN_API_KEY || '',
-          apiUrl: 'https://api.polygonscan.com/',
-        },
-      },
-      live: true,
+      accounts: [process.env.POLYGON_PRIVATE_KEY || ''],
+    },
+  },
+  etherscan: {
+    apiKey: {
+      polygon: process.env.ETHERSCAN_API_KEY || '',
+    },
+    apiUrl: {
+      polygon: 'https://api.polygonscan.com/',
     },
   },
   mocha: {
