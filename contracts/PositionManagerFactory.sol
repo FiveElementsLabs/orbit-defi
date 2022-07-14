@@ -74,14 +74,8 @@ contract PositionManagerFactory is IPositionManagerFactory {
     ///@notice adds or removes an action to/from the factory
     ///@param facetAction facet of the action to add or remove from position manager factory
     function updateActionData(IDiamondCut.FacetCut calldata facetAction) external onlyGovernance {
-        if (facetAction.action == IDiamondCut.FacetCutAction.Add) {
-            actions.push(facetAction);
-            return;
-        }
-
         if (facetAction.action == IDiamondCut.FacetCutAction.Remove) {
             uint256 actionsLength = actions.length;
-
             for (uint256 i; i < actionsLength; ++i) {
                 if (actions[i].facetAddress == facetAction.facetAddress) {
                     actions[i] = actions[actionsLength - 1];
@@ -89,7 +83,40 @@ contract PositionManagerFactory is IPositionManagerFactory {
                     return;
                 }
             }
+            require(false, 'PositionManagerFactory::updateActionData: Action not found');
         }
+
+        if (facetAction.action == IDiamondCut.FacetCutAction.Replace) {
+            uint256 actionsLength = actions.length;
+            for (uint256 i; i < actionsLength; ++i) {
+                if (actions[i].facetAddress == facetAction.facetAddress) {
+                    actions[i] = facetAction;
+                    return;
+                }
+            }
+            require(false, 'PositionManagerFactory::updateActionData: Action not found');
+        }
+
+        if (facetAction.action == IDiamondCut.FacetCutAction.Add) {
+            uint256 actionsLength = actions.length;
+            for (uint256 i; i < actionsLength; ++i) {
+                uint256 newSelectorsLength = facetAction.functionSelectors.length;
+                uint256 oldSelectorsLength = actions[i].functionSelectors.length;
+                if (newSelectorsLength == oldSelectorsLength) {
+                    bool different = false;
+                    for (uint256 j; j < newSelectorsLength; ++j) {
+                        if (actions[i].functionSelectors[j] != facetAction.functionSelectors[j]) {
+                            different = true;
+                        }
+                    }
+                    require(different, 'PositionManagerFactory::updateActionData: Action already exists');
+                }
+            }
+            actions.push(facetAction);
+            return;
+        }
+
+        require(false, 'PositionManagerFactory::updateActionData: Invalid action');
     }
 
     ///@notice deploy new positionManager and assign to userAddress
