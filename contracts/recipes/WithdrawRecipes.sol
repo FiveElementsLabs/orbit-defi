@@ -91,6 +91,8 @@ contract WithdrawRecipes {
             'WithdrawRecipes::withdrawFromAave: part to withdraw must be between 0 and 10000'
         );
         address positionManager = positionManagerFactory.userToPositionManager(msg.sender);
+        uint256 tokenId = IPositionManager(positionManager).getTokenIdFromAavePosition(token, id);
         IAaveWithdraw(positionManager).withdrawFromAave(token, id, partToWithdraw, true);
+        IClosePosition(positionManager).closePosition(tokenId, true);
     }
 }
