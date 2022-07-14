@@ -99,14 +99,15 @@ contract PositionManagerFactory is IPositionManagerFactory {
 
         if (facetAction.action == IDiamondCut.FacetCutAction.Add) {
             uint256 actionsLength = actions.length;
+            uint256 newSelectorsLength = facetAction.functionSelectors.length;
             for (uint256 i; i < actionsLength; ++i) {
-                uint256 newSelectorsLength = facetAction.functionSelectors.length;
                 uint256 oldSelectorsLength = actions[i].functionSelectors.length;
                 if (newSelectorsLength == oldSelectorsLength) {
-                    bool different = false;
+                    bool different;
                     for (uint256 j; j < newSelectorsLength; ++j) {
                         if (actions[i].functionSelectors[j] != facetAction.functionSelectors[j]) {
                             different = true;
+                            break;
                         }
                     }
                     require(different, 'PositionManagerFactory::updateActionData: Action already exists');
