@@ -12,6 +12,7 @@ import {
 } from '../shared/fixtures';
 import PositionManagerjson from '../../artifacts/contracts/PositionManager.sol/PositionManager.json';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import { BigNumber } from 'ethers';
 
 describe('Global Tests', function () {
   let governance: any = ethers.getSigners().then(async (signers) => {
@@ -38,6 +39,8 @@ describe('Global Tests', function () {
   let usdcMock: MockToken, wbtcMock: MockToken, daiMock: MockToken;
   let abiCoder: AbiCoder;
   let mockNFTHelper: any;
+  const bytes200 = '0x00000000000000000000000000000000000000000000000000000000000000c8';
+  const bytes1 = '0x0000000000000000000000000000000000000000000000000000000000000001';
 
   before(async function () {
     governance = await governance;
@@ -110,13 +113,13 @@ describe('Global Tests', function () {
 
     let info = await positionManager1.getModuleInfo(tokenId, orbit.AaveModule.address);
     expect(info.isActive).to.equal(true);
-    expect(info.data).to.equal('0x00000000000000000000000000000000000000000000000000000000000000c8');
+    expect(info.data).to.equal(bytes200);
     info = await positionManager1.getModuleInfo(tokenId, orbit.AutoCompoundModule.address);
     expect(info.isActive).to.equal(true);
-    expect(info.data).to.equal('0x0000000000000000000000000000000000000000000000000000000000000001');
+    expect(info.data).to.equal(bytes1);
     info = await positionManager1.getModuleInfo(tokenId, orbit.IdleLiquidityModule.address);
     expect(info.isActive).to.equal(false);
-    expect(info.data).to.equal('0x00000000000000000000000000000000000000000000000000000000000000c8');
+    expect(info.data).to.equal(bytes200);
 
     const newAaveData = '0x0000000000000000000000000000000000000000000000000000000000000038';
     await positionManager1.connect(user1).setModuleData(tokenId, orbit.AaveModule.address, newAaveData);
@@ -127,10 +130,10 @@ describe('Global Tests', function () {
     expect(info.data).to.equal(newAaveData);
     info = await positionManager1.getModuleInfo(tokenId, orbit.AutoCompoundModule.address);
     expect(info.isActive).to.equal(false);
-    expect(info.data).to.equal('0x0000000000000000000000000000000000000000000000000000000000000001');
+    expect(info.data).to.equal(bytes1);
     info = await positionManager1.getModuleInfo(tokenId, orbit.IdleLiquidityModule.address);
     expect(info.isActive).to.equal(false);
-    expect(info.data).to.equal('0x00000000000000000000000000000000000000000000000000000000000000c8');
+    expect(info.data).to.equal(bytes200);
   });
 
   it('should allow user2 to deposit an already minted position and set custom parameters', async function () {
@@ -163,13 +166,13 @@ describe('Global Tests', function () {
 
     let info = await positionManager2.getModuleInfo(tokenId, orbit.AaveModule.address);
     expect(info.isActive).to.equal(true);
-    expect(info.data).to.equal('0x00000000000000000000000000000000000000000000000000000000000000c8');
+    expect(info.data).to.equal(bytes200);
     info = await positionManager2.getModuleInfo(tokenId, orbit.AutoCompoundModule.address);
     expect(info.isActive).to.equal(true);
-    expect(info.data).to.equal('0x0000000000000000000000000000000000000000000000000000000000000001');
+    expect(info.data).to.equal(bytes1);
     info = await positionManager2.getModuleInfo(tokenId, orbit.IdleLiquidityModule.address);
     expect(info.isActive).to.equal(false);
-    expect(info.data).to.equal('0x00000000000000000000000000000000000000000000000000000000000000c8');
+    expect(info.data).to.equal(bytes200);
 
     const newAaveData = '0x0000000000000000000000000000000000000000000000000000000000000003';
     await positionManager2.connect(user2).setModuleData(tokenId, orbit.AaveModule.address, newAaveData);
@@ -179,10 +182,10 @@ describe('Global Tests', function () {
     expect(info.data).to.equal(newAaveData);
     info = await positionManager2.getModuleInfo(tokenId, orbit.AutoCompoundModule.address);
     expect(info.isActive).to.equal(true);
-    expect(info.data).to.equal('0x0000000000000000000000000000000000000000000000000000000000000001');
+    expect(info.data).to.equal(bytes1);
     info = await positionManager2.getModuleInfo(tokenId, orbit.IdleLiquidityModule.address);
     expect(info.isActive).to.equal(false);
-    expect(info.data).to.equal('0x00000000000000000000000000000000000000000000000000000000000000c8');
+    expect(info.data).to.equal(bytes200);
   });
 
   it('should allow user3 to mint and deposit a new position and set custom parameters', async function () {
@@ -211,13 +214,13 @@ describe('Global Tests', function () {
 
     let info = await positionManager3.getModuleInfo(tokenId, orbit.AaveModule.address);
     expect(info.isActive).to.equal(true);
-    expect(info.data).to.equal('0x00000000000000000000000000000000000000000000000000000000000000c8');
+    expect(info.data).to.equal(bytes200);
     info = await positionManager3.getModuleInfo(tokenId, orbit.AutoCompoundModule.address);
     expect(info.isActive).to.equal(true);
-    expect(info.data).to.equal('0x0000000000000000000000000000000000000000000000000000000000000001');
+    expect(info.data).to.equal(bytes1);
     info = await positionManager3.getModuleInfo(tokenId, orbit.IdleLiquidityModule.address);
     expect(info.isActive).to.equal(false);
-    expect(info.data).to.equal('0x00000000000000000000000000000000000000000000000000000000000000c8');
+    expect(info.data).to.equal(bytes200);
 
     const newAutoCompoundData = '0x0000000000000000000000000000000000000000000000000000000000000003';
     await positionManager3.connect(user3).setModuleData(tokenId, orbit.AutoCompoundModule.address, newAutoCompoundData);
@@ -227,16 +230,16 @@ describe('Global Tests', function () {
 
     info = await positionManager3.getModuleInfo(tokenId, orbit.AaveModule.address);
     expect(info.isActive).to.equal(false);
-    expect(info.data).to.equal('0x00000000000000000000000000000000000000000000000000000000000000c8');
+    expect(info.data).to.equal(bytes200);
     info = await positionManager3.getModuleInfo(tokenId, orbit.AutoCompoundModule.address);
     expect(info.isActive).to.equal(false);
     expect(info.data).to.equal(newAutoCompoundData);
     info = await positionManager3.getModuleInfo(tokenId, orbit.IdleLiquidityModule.address);
     expect(info.isActive).to.equal(true);
-    expect(info.data).to.equal('0x00000000000000000000000000000000000000000000000000000000000000c8');
+    expect(info.data).to.equal(bytes200);
   });
 
-  it('should execute needed actions when keepers are run', async function () {
+  it('should execute a rebalance when a position is out of range', async function () {
     const expectedCompounds: any = [];
     const expectedRebalances = await positionManager3.getAllUniPositions();
     const expectedAave: any = [];
@@ -246,26 +249,7 @@ describe('Global Tests', function () {
     expect(positions.movedToAave).to.eql(expectedAave);
   });
 
-  it('should execute correct actions after a state change', async function () {
-    let PoolWbtcUsdc3000Tick = (await contracts.PoolWbtcUsdc3000.slot0()).tick;
-    const WbtcUsdcPositionId = (await positionManager1.getAllUniPositions())[0];
-    const WbtcUsdcPosition = await contracts.NonFungiblePositionManager.positions(WbtcUsdcPositionId);
-    while (
-      WbtcUsdcPosition.tickLower * (1 - Math.sign(WbtcUsdcPosition.tickLower) * 0.02) <= PoolWbtcUsdc3000Tick &&
-      PoolWbtcUsdc3000Tick <= WbtcUsdcPosition.tickUpper * (1 + Math.sign(WbtcUsdcPosition.tickUpper) * 0.02)
-    ) {
-      await contracts.SwapRouter.connect(trader).exactInputSingle({
-        tokenIn: wbtcMock.address,
-        tokenOut: usdcMock.address,
-        fee: 3000,
-        recipient: trader.address,
-        deadline: Date.now() + 100,
-        amountIn: '0x' + (1e10).toString(16),
-        amountOutMinimum: 0,
-        sqrtPriceLimitX96: 0,
-      });
-      PoolWbtcUsdc3000Tick = (await contracts.PoolWbtcUsdc3000.slot0()).tick;
-    }
+  it('should execute a compound when fee threshold is met', async function () {
     const DaiUsdcPositionId = (await positionManager2.getAllUniPositions())[0];
     const amounts = await mockNFTHelper.getAmountsfromTokenId(
       DaiUsdcPositionId,
@@ -276,7 +260,7 @@ describe('Global Tests', function () {
     // workaround to make a call to update fees even if nft is hold by a contract
     const updateFees = await ethers.getContractAt('UpdateUncollectedFees', positionManager2.address);
     await orbit.Registry.addNewContract(
-      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('PleaseLetMeUpdateFees')),
+      hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Keeper')),
       keeper.address,
       ethers.utils.hexZeroPad(ethers.utils.hexlify(1), 32),
       true
@@ -300,6 +284,36 @@ describe('Global Tests', function () {
 
     const expectedCompounds: any = [DaiUsdcPositionId];
     const expectedRebalances: any = [];
+    const expectedAave: any = [];
+    const positions = await runKeeper(orbit, keeper);
+    expect(positions.compounded).to.eql(expectedCompounds);
+    expect(positions.rebalanced).to.eql(expectedRebalances);
+    expect(positions.movedToAave).to.eql(expectedAave);
+  });
+
+  it('should move liquidity to aave when a position is out of rnage', async function () {
+    let PoolWbtcUsdc3000Tick = (await contracts.PoolWbtcUsdc3000.slot0()).tick;
+    const WbtcUsdcPositionId = (await positionManager1.getAllUniPositions())[0];
+    const WbtcUsdcPosition = await contracts.NonFungiblePositionManager.positions(WbtcUsdcPositionId);
+    while (
+      WbtcUsdcPosition.tickLower * (1 - Math.sign(WbtcUsdcPosition.tickLower) * 0.02) <= PoolWbtcUsdc3000Tick &&
+      PoolWbtcUsdc3000Tick <= WbtcUsdcPosition.tickUpper * (1 + Math.sign(WbtcUsdcPosition.tickUpper) * 0.02)
+    ) {
+      await contracts.SwapRouter.connect(trader).exactInputSingle({
+        tokenIn: wbtcMock.address,
+        tokenOut: usdcMock.address,
+        fee: 3000,
+        recipient: trader.address,
+        deadline: Date.now() + 100,
+        amountIn: '0x' + (1e10).toString(16),
+        amountOutMinimum: 0,
+        sqrtPriceLimitX96: 0,
+      });
+      PoolWbtcUsdc3000Tick = (await contracts.PoolWbtcUsdc3000.slot0()).tick;
+    }
+
+    const expectedCompounds: any = [];
+    const expectedRebalances: any = [];
     const expectedAave: any = [WbtcUsdcPositionId];
     await orbit.Registry.connect(governance).setMaxTwapDeviation(1000000);
     const positions = await runKeeper(orbit, keeper);
@@ -309,20 +323,37 @@ describe('Global Tests', function () {
     expect(positions.movedToAave).to.eql(expectedAave);
   });
 
-  it('should allow all users to withdraw their position', async function () {
+  it('should allow all user1 to withdraw his position from aave', async function () {
     const user1WbtcBalance = await wbtcMock.balanceOf(user1.address);
     await orbit.WithdrawRecipes.connect(user1).withdrawFromAave(0, wbtcMock.address, 10000);
     expect(await positionManager1.getAllUniPositions()).to.be.empty;
     expect(await wbtcMock.balanceOf(user1.address)).to.gt(user1WbtcBalance);
+  });
 
+  it('should allow all user2 to withdraw his position, 50% at a time', async function () {
     const user2UsdcBalance = await usdcMock.balanceOf(user2.address);
     const user2DaiBalance = await daiMock.balanceOf(user2.address);
     const user2Positions = await positionManager2.getAllUniPositions();
+    const positionBefore = await contracts.NonFungiblePositionManager.positions(user2Positions[0]);
+
+    await orbit.WithdrawRecipes.connect(user2).withdrawUniNft(user2Positions[0], 5000);
+    const user2UsdcMiddleBalance = await usdcMock.balanceOf(user2.address);
+    const user2DaiMiddleBalance = await daiMock.balanceOf(user2.address);
+    expect((await contracts.NonFungiblePositionManager.positions(user2Positions[0])).liquidity).to.be.closeTo(
+      positionBefore.liquidity.div(BigNumber.from(2)),
+      positionBefore.liquidity.div(BigNumber.from(1000))
+    );
+    expect(user2UsdcMiddleBalance).to.gt(user2UsdcBalance);
+    expect(user2DaiMiddleBalance).to.gt(user2DaiBalance);
+    expect(await positionManager2.getAllUniPositions()).to.eql(user2Positions);
+
     await orbit.WithdrawRecipes.connect(user2).withdrawUniNft(user2Positions[0], 10000);
     expect(await positionManager2.getAllUniPositions()).to.be.empty;
-    expect(await usdcMock.balanceOf(user2.address)).to.be.gt(user2UsdcBalance);
-    expect(await daiMock.balanceOf(user2.address)).to.be.gt(user2DaiBalance);
+    expect(await usdcMock.balanceOf(user2.address)).to.be.gt(user2UsdcMiddleBalance);
+    expect(await daiMock.balanceOf(user2.address)).to.be.gt(user2DaiMiddleBalance);
+  });
 
+  it('should allow all user3 to zap out his position', async function () {
     const user3WbtcBalance = await wbtcMock.balanceOf(user3.address);
     const user3DaiBalance = await daiMock.balanceOf(user3.address);
     const user3Positions = await positionManager3.getAllUniPositions();
