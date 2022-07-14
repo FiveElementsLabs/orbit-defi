@@ -43,6 +43,7 @@ describe('WithdrawRecipes.sol', function () {
   let Factory: Contract; // the factory that will deploy all pools
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
   let SwapRouter: Contract;
+  let LendingPool: Contract;
   let WithdrawRecipes: WithdrawRecipes;
   let DepositRecipes: DepositRecipes;
   let PositionManager: PositionManager;
@@ -76,8 +77,8 @@ describe('WithdrawRecipes.sol', function () {
       '0x99ac8cA7087fA4A2A1FB6357269965A2014ABc35'
     )) as IUniswapV3Pool;
 
-    const SwapRouter = await ethers.getContractAt(SwapRouterjson.abi, '0xE592427A0AEce92De3Edee1F18E0157C05861564');
-    const LendingPool = await ethers.getContractAt(LendingPooljson.abi, '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9');
+    SwapRouter = await ethers.getContractAt(SwapRouterjson.abi, '0xE592427A0AEce92De3Edee1F18E0157C05861564');
+    LendingPool = await ethers.getContractAt(LendingPooljson.abi, '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9');
 
     //deploy our contracts
     registry = (await RegistryFixture(user.address)).registryFixture;
@@ -103,15 +104,15 @@ describe('WithdrawRecipes.sol', function () {
       UniswapAddressHolder.address,
       aaveAddressHolder.address,
       [
-        'ClosePosition',
-        'DecreaseLiquidity',
-        'CollectFees',
-        'ZapOut',
         'AaveDeposit',
         'AaveWithdraw',
+        'ClosePosition',
+        'CollectFees',
+        'DecreaseLiquidity',
+        'IncreaseLiquidity',
         'Swap',
         'SwapToPositionRatio',
-        'IncreaseLiquidity',
+        'ZapOut',
       ]
     );
 
@@ -219,15 +220,19 @@ describe('WithdrawRecipes.sol', function () {
   });
 
   beforeEach(async function () {
+    let slot0 = await Pool0.slot0();
+    const tickLower = (Math.round(slot0.tick / 60) - 200) * 60;
+    const tickUpper = (Math.round(slot0.tick / 60) - 150) * 60;
+
     const mintTx = await NonFungiblePositionManager.connect(user).mint(
       {
         token0: wbtcMock.address,
         token1: usdcMock.address,
-        fee: 500,
-        tickLower: 0 - 60 * 1000,
-        tickUpper: 0 + 60 * 1000,
-        amount0Desired: '0x' + (1e10).toString(16),
-        amount1Desired: '0x' + (1e10).toString(16),
+        fee: 3000,
+        tickLower: tickLower,
+        tickUpper: tickUpper,
+        amount0Desired: '0x' + (1e14).toString(16),
+        amount1Desired: '0x' + (1e6).toString(16),
         amount0Min: 0,
         amount1Min: 0,
         recipient: user.address,
@@ -288,10 +293,12 @@ describe('WithdrawRecipes.sol', function () {
       expect(await wbtcMock.balanceOf(user.address)).to.be.gt(balanceBefore);
       await expect(NonFungiblePositionManager.ownerOf(tokenId)).to.be.reverted;
     });
+
     it('should revert if im not the owner of nft', async function () {
       expect(await NonFungiblePositionManager.ownerOf(tokenId)).to.be.equal(PositionManager.address);
       await expect(WithdrawRecipes.connect(liquidityProvider).withdrawUniNft(tokenId, 10000)).to.be.reverted;
     });
+
     it('should be able to withdraw a position idle on aave', async function () {
       expect(await NonFungiblePositionManager.ownerOf(tokenId)).to.be.equal(PositionManager.address);
       const [amount0Before, amount1Before] = await MockUniswapNFTHelper.getAmountsfromTokenId(
@@ -308,6 +315,44 @@ describe('WithdrawRecipes.sol', function () {
 
       await WithdrawRecipes.connect(user).withdrawFromAave(aaveId, tokenToAave.address, 10000);
       expect(await tokenToAave.balanceOf(user.address)).to.be.gt(balanceBefore);
+    });
+
+    it('should be able to zap out a position idle on aave (to the token which is not on aave)', async function () {
+      expect(await NonFungiblePositionManager.ownerOf(tokenId)).to.be.equal(PositionManager.address);
+      const [amount0Before, amount1Before] = await MockUniswapNFTHelper.getAmountsfromTokenId(
+        tokenId,
+        NonFungiblePositionManager.address,
+        await UniswapAddressHolder.uniswapV3FactoryAddress()
+      );
+      const tokenToAave = amount0Before < amount1Before ? usdcMock : wbtcMock;
+      const tokenOut = amount0Before < amount1Before ? wbtcMock : usdcMock;
+
+      const tx = await AaveModule.connect(user).moveToAave(PositionManager.address, tokenId);
+      const events = (await tx.wait()).events;
+      const aaveId = events[events.length - 1].args.aaveId;
+
+      const balanceBefore = await tokenOut.balanceOf(user.address);
+      await WithdrawRecipes.connect(user).zapOutFromAave(aaveId, tokenToAave.address, tokenOut.address);
+      expect(await tokenOut.balanceOf(user.address)).to.be.gt(balanceBefore);
+    });
+
+    it('should be able to zap out a position idle on aave (to the token which is on aave)', async function () {
+      expect(await NonFungiblePositionManager.ownerOf(tokenId)).to.be.equal(PositionManager.address);
+      const [amount0Before, amount1Before] = await MockUniswapNFTHelper.getAmountsfromTokenId(
+        tokenId,
+        NonFungiblePositionManager.address,
+        await UniswapAddressHolder.uniswapV3FactoryAddress()
+      );
+      const tokenToAave = amount0Before < amount1Before ? usdcMock : wbtcMock;
+      const tokenOut = tokenToAave;
+
+      const tx = await AaveModule.connect(user).moveToAave(PositionManager.address, tokenId);
+      const events = (await tx.wait()).events;
+      const aaveId = events[events.length - 1].args.aaveId;
+
+      const balanceBefore = await tokenOut.balanceOf(user.address);
+      await WithdrawRecipes.connect(user).zapOutFromAave(aaveId, tokenToAave.address, tokenOut.address);
+      expect(await tokenOut.balanceOf(user.address)).to.be.gt(balanceBefore);
     });
   });
 });

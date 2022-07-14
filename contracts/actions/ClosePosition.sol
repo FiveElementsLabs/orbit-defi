@@ -36,21 +36,20 @@ contract ClosePosition is IClosePosition {
             Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()
         );
         (, , , , , , , uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(tokenId);
-
-        INonfungiblePositionManager.DecreaseLiquidityParams memory decreaseliquidityparams = INonfungiblePositionManager
-            .DecreaseLiquidityParams({
-                tokenId: tokenId,
-                liquidity: liquidity,
-                amount0Min: 0,
-                amount1Min: 0,
-                deadline: block.timestamp
-            });
-        nonfungiblePositionManager.decreaseLiquidity(decreaseliquidityparams);
-
+        if (liquidity != 0) {
+            INonfungiblePositionManager.DecreaseLiquidityParams
+                memory decreaseliquidityparams = INonfungiblePositionManager.DecreaseLiquidityParams({
+                    tokenId: tokenId,
+                    liquidity: liquidity,
+                    amount0Min: 0,
+                    amount1Min: 0,
+                    deadline: block.timestamp
+                });
+            nonfungiblePositionManager.decreaseLiquidity(decreaseliquidityparams);
+        }
         (, , , , , , , , , , uint128 token0Closed, uint128 token1Closed) = nonfungiblePositionManager.positions(
             tokenId
         );
-
         INonfungiblePositionManager.CollectParams memory collectparams = INonfungiblePositionManager.CollectParams({
             tokenId: tokenId,
             recipient: returnTokenToUser ? Storage.owner : address(this),

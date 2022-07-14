@@ -178,7 +178,8 @@ contract AaveModule is BaseModule {
                     token1,
                     toAaveToken,
                     _findBestFee(token1, toAaveToken),
-                    amount1Collected
+                    amount1Collected,
+                    false
                 );
             }
         } else if (amount0Collected != 0) {
@@ -186,7 +187,8 @@ contract AaveModule is BaseModule {
                 token0,
                 toAaveToken,
                 _findBestFee(token0, toAaveToken),
-                amount0Collected
+                amount0Collected,
+                false
             );
         }
 

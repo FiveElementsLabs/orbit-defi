@@ -49,34 +49,34 @@ contract Swap is ISwap {
     }
 
     ///@notice swaps token0 for token1 on uniswap
-    ///@param token0Address address of first token
-    ///@param token1Address address of second token
+    ///@param tokenIn address of first token
+    ///@param tokenOut address of second token
     ///@param fee fee tier of the pool
-    ///@param amount0In amount of token0 to swap
+    ///@param amountIn amount of token0 to swap
+    ///@param returnTokensToOwner if true returns tokens to owner, if false leaves tokens in the position manager
     function swap(
-        address token0Address,
-        address token1Address,
+        address tokenIn,
+        address tokenOut,
         uint24 fee,
-        uint256 amount0In
-    ) external override checkDeviation(token0Address, token1Address, fee) returns (uint256 amount1Out) {
+        uint256 amountIn,
+        bool returnTokensToOwner
+    ) external override checkDeviation(tokenIn, tokenOut, fee) returns (uint256 amountOut) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         ISwapRouter swapRouter = ISwapRouter(Storage.uniswapAddressHolder.swapRouterAddress());
+        ERC20Helper._approveToken(tokenIn, address(swapRouter), type(uint256).max);
 
-        ERC20Helper._approveToken(token0Address, address(swapRouter), type(uint256).max);
-        ERC20Helper._approveToken(token1Address, address(swapRouter), type(uint256).max);
-
-        ISwapRouter.ExactInputSingleParams memory swapParams = ISwapRouter.ExactInputSingleParams({
-            tokenIn: token0Address,
-            tokenOut: token1Address,
+        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
+            tokenIn: tokenIn,
+            tokenOut: tokenOut,
             fee: fee,
-            recipient: address(this),
-            deadline: block.timestamp + 120,
-            amountIn: amount0In,
+            recipient: returnTokensToOwner ? Storage.owner : address(this),
+            deadline: block.timestamp,
+            amountIn: amountIn,
             amountOutMinimum: 0,
             sqrtPriceLimitX96: 0
         });
 
-        amount1Out = swapRouter.exactInputSingle(swapParams);
-        emit Swapped(address(this), token0Address, token1Address, amount0In, amount1Out);
+        amountOut = swapRouter.exactInputSingle(params);
+        emit Swapped(address(this), tokenIn, tokenOut, amountIn, amountOut);
     }
 }

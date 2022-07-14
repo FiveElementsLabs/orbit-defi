@@ -6,6 +6,7 @@ pragma abicoder v2;
 import '@openzeppelin/contracts/math/SafeMath.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol';
 import '../helpers/UniswapNFTHelper.sol';
+import '../helpers/ERC20Helper.sol';
 import '../../interfaces/IPositionManager.sol';
 import '../../interfaces/IPositionManagerFactory.sol';
 import '../../interfaces/IUniswapAddressHolder.sol';
@@ -14,13 +15,16 @@ import '../../interfaces/actions/ICollectFees.sol';
 import '../../interfaces/actions/IClosePosition.sol';
 import '../../interfaces/actions/IDecreaseLiquidity.sol';
 import '../../interfaces/actions/IZapOut.sol';
+import '../../interfaces/actions/ISwap.sol';
 
 ///@notice WithdrawRecipes allows user to withdraw positions from PositionManager
 contract WithdrawRecipes {
+    using SafeMath for uint256;
+
     IPositionManagerFactory public immutable positionManagerFactory;
     IUniswapAddressHolder public immutable uniswapAddressHolder;
 
-    using SafeMath for uint256;
+    uint256 constant MAX_WITHDRAW_AMOUNT = 10_000;
 
     modifier onlyOwner(uint256 tokenId) {
         require(
@@ -41,10 +45,10 @@ contract WithdrawRecipes {
     ///@param partToWithdraw percentage of token to withdraw in base points
     function withdrawUniNft(uint256 tokenId, uint256 partToWithdraw) external onlyOwner(tokenId) {
         require(
-            partToWithdraw != 0 && partToWithdraw <= 10_000,
+            partToWithdraw != 0 && partToWithdraw <= MAX_WITHDRAW_AMOUNT,
             'WithdrawRecipes::withdrawUniNft: part to withdraw must be between 0 and 10000'
         );
-        if (partToWithdraw == 10_000) {
+        if (partToWithdraw == MAX_WITHDRAW_AMOUNT) {
             IClosePosition(positionManagerFactory.userToPositionManager(msg.sender)).closePosition(
                 tokenId,
                 true ///@dev return the tokens to the user
@@ -57,12 +61,15 @@ contract WithdrawRecipes {
                 INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()),
                 uniswapAddressHolder.uniswapV3FactoryAddress()
             );
-            IDecreaseLiquidity(positionManagerFactory.userToPositionManager(msg.sender)).decreaseLiquidity(
+
+            address positionManager = positionManagerFactory.userToPositionManager(msg.sender);
+
+            IDecreaseLiquidity(positionManager).decreaseLiquidity(
                 tokenId,
-                (amount0.mul(partToWithdraw)).div(10_000),
-                (amount1.mul(partToWithdraw)).div(10_000)
+                (amount0.mul(partToWithdraw)).div(MAX_WITHDRAW_AMOUNT),
+                (amount1.mul(partToWithdraw)).div(MAX_WITHDRAW_AMOUNT)
             );
-            ICollectFees(positionManagerFactory.userToPositionManager(msg.sender)).collectFees(tokenId, true);
+            ICollectFees(positionManager).collectFees(tokenId, true);
         }
     }
 
@@ -93,10 +100,55 @@ contract WithdrawRecipes {
         returns (uint256 amountWithdrawn)
     {
         require(
-            partToWithdraw != 0 && partToWithdraw <= 10_000,
+            partToWithdraw != 0 && partToWithdraw <= MAX_WITHDRAW_AMOUNT,
             'WithdrawRecipes::withdrawFromAave: part to withdraw must be between 1 and 10000'
         );
+
+        amountWithdrawn = IAaveWithdraw(positionManagerFactory.userToPositionManager(msg.sender)).withdrawFromAave(
+            token,
+            id,
+            partToWithdraw,
+            true
+        );
+    }
+
+    ///@notice withdraw a position currently on Aave and swap everything to the other token of the pool
+    ///@param id identifier of the aave position to withdraw
+    ///@param token aaveToken to be withdrawn from Aave
+    ///@param tokenOut address of the token to withdraw
+    function zapOutFromAave(
+        uint256 id,
+        address token,
+        address tokenOut
+    )
+        external
+        onlyOwner(
+            IPositionManager(positionManagerFactory.userToPositionManager(msg.sender)).getTokenIdFromAavePosition(
+                token,
+                id
+            )
+        )
+    {
         address positionManager = positionManagerFactory.userToPositionManager(msg.sender);
-        amountWithdrawn = IAaveWithdraw(positionManager).withdrawFromAave(token, id, partToWithdraw, true);
+        uint256 tokenId = IPositionManager(positionManager).getTokenIdFromAavePosition(token, id);
+
+        if (token != tokenOut) {
+            (, , uint24 fee, , ) = UniswapNFTHelper._getTokens(
+                IPositionManager(positionManager).getTokenIdFromAavePosition(token, id),
+                INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress())
+            );
+
+            uint256 amountWithdrawn = IAaveWithdraw(positionManager).withdrawFromAave(
+                token,
+                id,
+                MAX_WITHDRAW_AMOUNT,
+                false ///@dev don't return the tokens to the user here because we need to swap them first
+            );
+
+            ISwap(positionManager).swap(token, tokenOut, fee, amountWithdrawn, true);
+        } else {
+            IAaveWithdraw(positionManager).withdrawFromAave(token, id, MAX_WITHDRAW_AMOUNT, true);
+        }
+        IClosePosition(positionManager).closePosition(tokenId, true);
     }
 }
