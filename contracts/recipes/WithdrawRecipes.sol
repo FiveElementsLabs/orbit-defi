@@ -104,12 +104,14 @@ contract WithdrawRecipes {
             'WithdrawRecipes::withdrawFromAave: part to withdraw must be between 1 and 10000'
         );
 
-        amountWithdrawn = IAaveWithdraw(positionManagerFactory.userToPositionManager(msg.sender)).withdrawFromAave(
-            token,
-            id,
-            partToWithdraw,
+        address positionManager = positionManagerFactory.userToPositionManager(msg.sender);
+
+        IClosePosition(positionManager).closePosition(
+            IPositionManager(positionManager).getTokenIdFromAavePosition(token, id),
             true
         );
+
+        amountWithdrawn = IAaveWithdraw(positionManager).withdrawFromAave(token, id, partToWithdraw, true);
     }
 
     ///@notice withdraw a position currently on Aave and swap everything to the other token of the pool
@@ -134,7 +136,7 @@ contract WithdrawRecipes {
 
         if (token != tokenOut) {
             (, , uint24 fee, , ) = UniswapNFTHelper._getTokens(
-                IPositionManager(positionManager).getTokenIdFromAavePosition(token, id),
+                tokenId,
                 INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress())
             );
 
@@ -149,6 +151,7 @@ contract WithdrawRecipes {
         } else {
             IAaveWithdraw(positionManager).withdrawFromAave(token, id, MAX_WITHDRAW_AMOUNT, true);
         }
+
         IClosePosition(positionManager).closePosition(tokenId, true);
     }
 }
