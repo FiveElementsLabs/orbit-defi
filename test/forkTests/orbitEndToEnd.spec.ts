@@ -291,7 +291,7 @@ describe('Global Tests', function () {
     expect(positions.movedToAave).to.eql(expectedAave);
   });
 
-  it('should move liquidity to aave when a position is out of rnage', async function () {
+  it('should move liquidity to aave when a position is out of range', async function () {
     let PoolWbtcUsdc3000Tick = (await contracts.PoolWbtcUsdc3000.slot0()).tick;
     const WbtcUsdcPositionId = (await positionManager1.getAllUniPositions())[0];
     const WbtcUsdcPosition = await contracts.NonFungiblePositionManager.positions(WbtcUsdcPositionId);
