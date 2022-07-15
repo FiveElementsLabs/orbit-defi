@@ -76,8 +76,12 @@ contract WithdrawRecipes {
     ///@notice remove a position from positionmanager zapping out
     ///@param tokenId ID of the NFT to zap out
     ///@param tokenOut address of the token to withdraw
-    function zapOutUniNft(uint256 tokenId, address tokenOut) external onlyOwner(tokenId) {
-        IZapOut(positionManagerFactory.userToPositionManager(msg.sender)).zapOut(tokenId, tokenOut);
+    function zapOutUniNft(uint256 tokenId, address tokenOut)
+        external
+        onlyOwner(tokenId)
+        returns (uint256 amountWithdrawn)
+    {
+        amountWithdrawn = IZapOut(positionManagerFactory.userToPositionManager(msg.sender)).zapOut(tokenId, tokenOut);
     }
 
     ///@notice withdraw a position currently on Aave
@@ -130,6 +134,7 @@ contract WithdrawRecipes {
                 id
             )
         )
+        returns (uint256 amountWithdrawn)
     {
         address positionManager = positionManagerFactory.userToPositionManager(msg.sender);
         uint256 tokenId = IPositionManager(positionManager).getTokenIdFromAavePosition(token, id);
@@ -140,7 +145,7 @@ contract WithdrawRecipes {
                 INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress())
             );
 
-            uint256 amountWithdrawn = IAaveWithdraw(positionManager).withdrawFromAave(
+            amountWithdrawn = IAaveWithdraw(positionManager).withdrawFromAave(
                 token,
                 id,
                 MAX_WITHDRAW_AMOUNT,
@@ -149,7 +154,7 @@ contract WithdrawRecipes {
 
             ISwap(positionManager).swap(token, tokenOut, fee, amountWithdrawn, true);
         } else {
-            IAaveWithdraw(positionManager).withdrawFromAave(token, id, MAX_WITHDRAW_AMOUNT, true);
+            amountWithdrawn = IAaveWithdraw(positionManager).withdrawFromAave(token, id, MAX_WITHDRAW_AMOUNT, true);
         }
 
         IClosePosition(positionManager).closePosition(tokenId, true);

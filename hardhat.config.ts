@@ -97,6 +97,10 @@ export default {
     },
     polygon: {
       url: process.env.ALCHEMY_POLYGON || '',
+      accounts: [process.env.POLYGON_PRIVATE_KEY || ''],
+    },
+    polygonTest: {
+      url: process.env.ALCHEMY_POLYGON || '',
       accounts: [process.env.TEST_PRIVATE_KEY || ''],
     },
   },

@@ -3,45 +3,81 @@ import { getSelectors } from '../test/shared/fixtures';
 import { Config } from '../deploy/000_Config';
 
 async function main() {
-  const provider = new ethers.providers.JsonRpcProvider(process.env.ALCHEMY_POLYGON);
-  const signer = new ethers.Wallet(process.env.TEST_PRIVATE_KEY || '', provider);
+  console.log('**** Warning: using private key defined in hardhat.ethers.ts ****');
+  console.log('**** Please use this script along with the --network polygonTest flag ****');
 
   const PMF = await ethers.getContractAt('PositionManagerFactory', '0x6c15ee0B11661Fa5F0a2639E7D80ed72Cc53771d');
-  // new: 0xED240EaC9100F2E09C1a9b99a466C8eaaE15035f
-  const AaveWithdraw = await ethers.getContractAt('AaveWithdraw', '0x8b4Ce8F550782aA718b23Ea6B7A60E1038eE69e4');
-  const facet = {
-    facetAddress: '0x8b4Ce8F550782aA718b23Ea6B7A60E1038eE69e4',
-    action: 2,
-    functionSelectors: await getSelectors(AaveWithdraw),
+  const PM = await ethers.getContractAt('PositionManager', '0x46200F1a5bF2312302ff4d47a38F8EE33C72bd6A');
+  const Registry = await ethers.getContractAt('Registry', '0xb2016935c0C75d040c9B9De7EA7671905e84CcCF');
+
+  const deployContract = async () => {
+    const _name = 'AaveModule';
+    const _args = ['0xED240EaC9100F2E09C1a9b99a466C8eaaE15035f'];
+
+    const factory = await ethers.getContractFactory(_name);
+    const contract = await factory.deploy(..._args);
+    await contract.deployed();
+    console.log(`${name} deployed at ${contract.address}`);
   };
 
-  // for (let i = 0; i < 20; i++) {
-  //   const action = await PMF.actions(i);
-  //   console.log(action);
-  // }
+  const updateAlreadyDeployedModule = async () => {
+    const _moduleName = 'WithdrawRecipes';
+    const _moduleAddress = '0x16dFCD94b9238925729cCdA3C25e56290c7C54AA';
 
-  // await PMF.updateActionData(facet);
+    const moduleKeccak = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(_moduleName));
+    await Registry.changeContract(moduleKeccak, _moduleAddress);
+    console.log(`${_moduleName} updated to ${_moduleAddress}`);
+  };
 
-  // const WithdrawRecipesFactory = await ethers.getContractFactory('WithdrawRecipes');
-  // const withdrawRecipes = await WithdrawRecipesFactory.deploy(
-  //   '0x6c15ee0B11661Fa5F0a2639E7D80ed72Cc53771d',
-  //   '0x18dE1cC847C23EAb8B5232a5153CEe9236163825'
-  // );
-  // await withdrawRecipes.deployed();
-  // console.log('WithdrawRecipes deployed at', withdrawRecipes.address);
+  const updateAlreadyDeployedAction = async () => {
+    const _actionAddress = '0x8b4Ce8F550782aA718b23Ea6B7A60E1038eE69e4';
+    const _actionName = 'AaveWithdraw';
+    const _action = 2; // 0: add, 1: update, 2: remove
 
-  // const Registry = await ethers.getContractAt('Registry', '0xb2016935c0C75d040c9B9De7EA7671905e84CcCF');
-  // const WithdrawRecipesKeccak = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('WithdrawRecipes'));
-  // console.log(await Registry.getModuleInfo(WithdrawRecipesKeccak));
-  // await Registry.changeContract(WithdrawRecipesKeccak, '0x18eB13d5535404CbBA34Cfc89eba0dD7560c0A08');
+    const actionContract = await ethers.getContractAt(_actionName, _actionAddress);
+    const facet = {
+      facetAddress: _actionAddress,
+      action: _action,
+      functionSelectors: await getSelectors(actionContract),
+    };
 
-  // const pms = await PMF.getAllPositionManagers();
-  // for (const pm of pms) {
-  //   await PMF.updateDiamond(pm, [facet], { gasLimit: 3e6 });
-  //   console.log('done: pm: ', pm);
-  // }
+    // Update action data with facet
+    await PMF.updateActionData(facet, { gasLimit: Config.gasLimit });
 
-  // await PMF.updateActionData(facet, { gasLimit: 3e6 });
+    // Update the action for all existing pms
+    for (const pm of await PMF.getAllPositionManagers()) {
+      await PMF.updateDiamond(pm, [facet], { gasLimit: Config.gasLimit });
+      console.log(`updated ${_actionName} for pm: `, pm);
+    }
+  };
+
+  const logAllActions = async () => {
+    for (let i = 0; true; i++) console.log(await PMF.actions(i));
+  };
+
+  const logModuleInfo = async () => {
+    const _moduleName = 'WithdrawRecipes';
+
+    const moduleKeccak = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(_moduleName));
+    const moduleInfo = await Registry.getModuleInfo(moduleKeccak);
+    console.log(`Registry.moduleInfo(${_moduleName}): `, moduleInfo);
+  };
+
+  const changeAllGovernances = async () => {
+    const _newGovernance = '0xF4d83F3207788Ee14446EEC94b9b0E3548409777';
+
+    await PMF.changeGovernance(_newGovernance);
+    console.log(':: Changed PositionManagerFactory governance');
+    await Registry.changeGovernance(_newGovernance);
+    console.log(':: Changed Registry governance');
+  };
+
+  const logModuleInfoForSpecificPosition = async () => {
+    const _tokenId = 180007;
+    const _moduleAddress = '0x16dFCD94b9238925729cCdA3C25e56290c7C54AA';
+
+    console.log(await PM.getModuleInfo(_tokenId, _moduleAddress));
+  };
 }
 
 main()
