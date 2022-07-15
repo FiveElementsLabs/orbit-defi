@@ -22,7 +22,7 @@ interface ISwapToPositionRatio {
         int24 tickUpper;
     }
 
-    function swapToPositionRatioV2(SwapToPositionInput memory inputs)
+    function swapToPositionRatio(SwapToPositionInput memory inputs)
         external
         returns (uint256 amount0Out, uint256 amount1Out);
 }

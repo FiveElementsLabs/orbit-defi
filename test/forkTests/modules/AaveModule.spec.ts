@@ -1,7 +1,6 @@
 import '@nomiclabs/hardhat-ethers';
 import { expect } from 'chai';
 import { Contract } from 'ethers';
-import { AbiCoder } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import hre from 'hardhat';
 import UniswapV3Factoryjson from '@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json';
@@ -48,12 +47,10 @@ describe('AaveModule.sol', function () {
   let NonFungiblePositionManager: INonfungiblePositionManager; // NonFungiblePositionManager contract by UniswapV3
   let PositionManager: PositionManager; // Position manager contract
   let DepositRecipes: Contract;
-  let AaveDepositFallback: Contract;
   let LendingPool: Contract;
   let AaveModule: Contract;
   let usdcMock: MockToken;
   let wbtcMock: MockToken;
-  let abiCoder: AbiCoder;
   let swapRouter: Contract;
   let aUsdc: Contract;
   let aWbtc: Contract;
@@ -168,7 +165,7 @@ describe('AaveModule.sol', function () {
 
     PositionManager = (await getPositionManager(PositionManagerFactory, user)) as PositionManager;
 
-    //Get mock tokens. These need to be real Mainnet addresses
+    //Get mock tokens. These need to be real ethereum Mainnet addresses
     usdcMock = (await ethers.getContractAt('MockToken', '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48')) as MockToken;
     wbtcMock = (await ethers.getContractAt('MockToken', '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599')) as MockToken;
     await mintForkedTokens([usdcMock, wbtcMock], [user, liquidityProvider, trader], 100000000);
@@ -228,7 +225,6 @@ describe('AaveModule.sol', function () {
 
     await NonFungiblePositionManager.ownerOf(tokenId);
     await DepositRecipes.connect(user).depositUniNft([tokenId]);
-    abiCoder = ethers.utils.defaultAbiCoder;
 
     const aUsdcAddress = (await LendingPool.getReserveData(usdcMock.address)).aTokenAddress;
     aUsdc = await ethers.getContractAt(ATokenjson.abi, aUsdcAddress);
@@ -240,8 +236,7 @@ describe('AaveModule.sol', function () {
 
   describe('AaveModule - depositToAave', function () {
     it('should not deposit to aave if position is in range', async function () {
-      await AaveModule.connect(user).moveToAave(PositionManager.address, tokenId);
-      expect(await NonFungiblePositionManager.ownerOf(tokenId)).to.equal(PositionManager.address);
+      await expect(AaveModule.connect(user).moveToAave(PositionManager.address, tokenId)).to.be.reverted;
     });
 
     it('should deposit token0 to aave if position is out of range (lower side)', async function () {
@@ -326,7 +321,7 @@ describe('AaveModule.sol', function () {
     it('should not return to position if still out of range', async function () {
       await expect(
         AaveModule.connect(user).moveToUniswap(PositionManager.address, usdcMock.address, aaveId)
-      ).to.be.revertedWith('AaveModule::isMoveToUniswapNeeded: not needed.');
+      ).to.be.revertedWith('AaveModule::moveToUniswap: not needed.');
 
       expect((await aUsdc.balanceOf(PositionManager.address)).toNumber()).to.gt(0);
     });

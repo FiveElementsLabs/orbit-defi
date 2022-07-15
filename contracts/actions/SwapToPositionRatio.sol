@@ -33,8 +33,8 @@ contract SwapToPositionRatio is ISwapToPositionRatio {
     ///@param inputs struct containing the inputs for the swap
     ///@return amount0Out the new value of amount0
     ///@return amount1Out the new value of amount1
-    function swapToPositionRatioV2(SwapToPositionInput memory inputs)
-        public
+    function swapToPositionRatio(SwapToPositionInput memory inputs)
+        external
         override
         returns (uint256 amount0Out, uint256 amount1Out)
     {

@@ -1,23 +1,17 @@
 import { expect } from 'chai';
 import '@nomiclabs/hardhat-ethers';
-import { Contract, ContractFactory } from 'ethers';
+import { Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import {
-  NonFungiblePositionManagerDescriptorBytecode,
   tokensFixture,
-  poolFixture,
   routerFixture,
   RegistryFixture,
   getSelectors,
   deployUniswapContracts,
   deployContract,
 } from '../shared/fixtures';
-import { MockToken, INonfungiblePositionManager, ISwapRouter, UniswapAddressHolder, Registry } from '../../typechain';
-
-import UniswapV3Factoryjson from '@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json';
+import { MockToken, INonfungiblePositionManager, ISwapRouter, UniswapAddressHolder } from '../../typechain';
 import PositionManagerContract from '../../artifacts/contracts/PositionManager.sol/PositionManager.json';
-import NonFungiblePositionManagerjson from '@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json';
-import NonFungiblePositionManagerDescriptorjson from '@uniswap/v3-periphery/artifacts/contracts/NonfungibleTokenPositionDescriptor.sol/NonfungibleTokenPositionDescriptor.json';
 import hre from 'hardhat';
 
 describe('PositionManagerFactory.sol', function () {
@@ -34,6 +28,7 @@ describe('PositionManagerFactory.sol', function () {
   let diamondCutFacet: any;
   let registry: any;
   let mintAction: any;
+  let swapAction: any;
   let AaveAddressHolder: Contract;
 
   before(async function () {
@@ -67,6 +62,10 @@ describe('PositionManagerFactory.sol', function () {
     const Mint = await ethers.getContractFactory('Mint');
     mintAction = await Mint.deploy();
     await mintAction.deployed();
+
+    const Swap = await ethers.getContractFactory('Swap');
+    swapAction = await Swap.deploy();
+    await swapAction.deployed();
   });
 
   describe('PositionManagerFactory - create', function () {
@@ -106,18 +105,64 @@ describe('PositionManagerFactory.sol', function () {
 
       [owner] = await ethers.getSigners();
 
-      await PositionManagerFactoryInstance.connect(owner).pushActionData(
-        mintAction.address,
-        await getSelectors(mintAction)
-      );
+      await PositionManagerFactoryInstance.connect(owner).updateActionData({
+        facetAddress: mintAction.address,
+        action: 0,
+        functionSelectors: await getSelectors(mintAction),
+      });
+      await PositionManagerFactoryInstance.connect(owner).updateActionData({
+        facetAddress: swapAction.address,
+        action: 0,
+        functionSelectors: await getSelectors(swapAction),
+      });
       await registry.connect(owner).setPositionManagerFactory(PositionManagerFactoryInstance.address);
 
       await PositionManagerFactoryInstance.create();
 
       const deployedContract = await PositionManagerFactoryInstance.positionManagers(0);
-      const PositionManagerInstance = await ethers.getContractAt(PositionManagerContract.abi, deployedContract);
+      PositionManagerInstance = await ethers.getContractAt(PositionManagerContract.abi, deployedContract);
 
       expect(PositionManagerInstance).to.exist;
+    });
+
+    it('should remove the mint action from an existing position manager', async () => {
+      const positionManagerAddress = await PositionManagerFactoryInstance.positionManagers(0);
+
+      await PositionManagerFactoryInstance.updateDiamond(positionManagerAddress, [
+        {
+          facetAddress: '0x0000000000000000000000000000000000000000',
+          action: 2,
+          functionSelectors: await getSelectors(mintAction),
+        },
+      ]);
+    });
+
+    it('should change the swap action address from an existing position manager', async () => {
+      const positionManagerAddress = await PositionManagerFactoryInstance.positionManagers(0);
+
+      const Swap2 = await ethers.getContractFactory('Swap');
+      const swapAction2 = await Swap2.deploy();
+      await swapAction2.deployed();
+
+      await PositionManagerFactoryInstance.updateDiamond(positionManagerAddress, [
+        {
+          facetAddress: swapAction2.address,
+          action: 1,
+          functionSelectors: await getSelectors(swapAction2),
+        },
+      ]);
+    });
+
+    it('should remove an action from actionData array', async () => {
+      const oldActionData = await PositionManagerFactoryInstance.actions(0);
+      await PositionManagerFactoryInstance.updateActionData({
+        facetAddress: mintAction.address,
+        action: 2,
+        functionSelectors: await getSelectors(mintAction),
+      });
+      const newActionData = await PositionManagerFactoryInstance.actions(0);
+
+      expect(oldActionData.facetAddress).to.be.not.equal(newActionData.facetAddress);
     });
   });
 });

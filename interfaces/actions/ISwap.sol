@@ -4,7 +4,7 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 interface ISwap {
-    function swapV2(
+    function swap(
         address token0Address,
         address token1Address,
         uint24 fee,

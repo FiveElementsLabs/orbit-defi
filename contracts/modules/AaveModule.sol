@@ -95,8 +95,9 @@ contract AaveModule is BaseModule {
         );
 
         ///@dev move token to aave only if the position's range is outside of the tick of the pool
-        if (distanceFromRange != 0 && MathHelper.fromUint256ToUint24(uint256(data)) <= distanceFromRange)
+        if (distanceFromRange != 0 && MathHelper.fromUint256ToUint24(uint256(data)) <= distanceFromRange) {
             _moveToAave(positionManager, tokenId);
+        } else revert('AaveModule::moveToAave: move to aave is not needed');
     }
 
     ///@notice move liquidity deposited on aave back to its uniswap position
@@ -145,7 +146,7 @@ contract AaveModule is BaseModule {
                 tokenId,
                 TokenData(token0, token1, fee, tickLower, tickUpper)
             );
-        } else revert('AaveModule::isMoveToUniswapNeeded: not needed.');
+        } else revert('AaveModule::moveToUniswap: not needed.');
     }
 
     ///@notice deposit a uni v3 position's liquidity to an Aave lending pool
@@ -173,7 +174,7 @@ contract AaveModule is BaseModule {
 
         if (toAaveToken == token0) {
             if (amount1Collected != 0) {
-                amount0Collected += ISwap(positionManager).swapV2(
+                amount0Collected += ISwap(positionManager).swap(
                     token1,
                     toAaveToken,
                     _findBestFee(token1, toAaveToken),
@@ -181,7 +182,7 @@ contract AaveModule is BaseModule {
                 );
             }
         } else if (amount0Collected != 0) {
-            amount1Collected += ISwap(positionManager).swapV2(
+            amount1Collected += ISwap(positionManager).swap(
                 token0,
                 toAaveToken,
                 _findBestFee(token0, toAaveToken),
@@ -191,10 +192,10 @@ contract AaveModule is BaseModule {
 
         (uint256 id, ) = IAaveDeposit(positionManager).depositToAave(
             toAaveToken,
-            toAaveToken == token0 ? amount0Collected : amount1Collected
+            toAaveToken == token0 ? amount0Collected : amount1Collected,
+            tokenId
         );
 
-        IPositionManager(positionManager).pushTokenIdToAave(toAaveToken, id, tokenId);
         IPositionManager(positionManager).removePositionId(tokenId);
 
         emit MovedToAave(
@@ -219,9 +220,9 @@ contract AaveModule is BaseModule {
         uint256 tokenId,
         TokenData memory tokenData
     ) internal {
-        uint256 amountWithdrawn = IAaveWithdraw(positionManager).withdrawFromAaveV2(tokenFromAave, id, 10_000, false);
+        uint256 amountWithdrawn = IAaveWithdraw(positionManager).withdrawFromAave(tokenFromAave, id, 10_000, false);
 
-        (uint256 amount0Out, uint256 amount1Out) = ISwapToPositionRatio(positionManager).swapToPositionRatioV2(
+        (uint256 amount0Out, uint256 amount1Out) = ISwapToPositionRatio(positionManager).swapToPositionRatio(
             ISwapToPositionRatio.SwapToPositionInput({
                 token0Address: tokenData.token0,
                 token1Address: tokenData.token1,
@@ -234,7 +235,6 @@ contract AaveModule is BaseModule {
         );
 
         IIncreaseLiquidity(positionManager).increaseLiquidity(tokenId, amount0Out, amount1Out);
-        IPositionManager(positionManager).removeTokenIdFromAave(tokenFromAave, id);
         IPositionManager(positionManager).pushPositionId(tokenId);
 
         emit MovedToUniswap(positionManager, tokenId, tokenFromAave, amountWithdrawn, id);

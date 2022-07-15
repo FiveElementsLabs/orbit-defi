@@ -113,7 +113,7 @@ const PostDeployScript: DeployFunction = async function (hre: HardhatRuntimeEnvi
   await new Promise((resolve) => setTimeout(resolve, Config.sleep));
   console.log(':: Added keeper to whitelist');
 
-  // Set  Registry owner
+  // Set  Registry owner to Timelock
   // const Timelock = await ethers.getContract('Timelock');
   // await Registry.changeGovernance(Timelock.address, {
   //   gasPrice: Config.gasPrice,
@@ -122,7 +122,7 @@ const PostDeployScript: DeployFunction = async function (hre: HardhatRuntimeEnvi
   // await new Promise((resolve) => setTimeout(resolve, Config.sleep));
   // console.log(':: Changed Registry governance to Timelock');
 
-  // Set factory owner (has rights to push actions)
+  // Set factory owner (has rights to push actions) to Multisig
   // const PositionManagerFactory = await ethers.getContract('PositionManagerFactory');
   // await PositionManagerFactory.changeGovernance(process.env.GOVERNANCE_ADDRESS, {
   //   gasPrice: Config.gasPrice,

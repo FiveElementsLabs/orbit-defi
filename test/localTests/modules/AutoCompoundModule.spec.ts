@@ -65,8 +65,8 @@ describe('AutoCompoundModule.sol', function () {
     [Factory, NonFungiblePositionManager, SwapRouter] = await deployUniswapContracts(tokenEth);
 
     //deploy first 2 pools
-    const Pool0 = (await poolFixture(tokenEth, tokenUsdc, 3000, Factory)).pool;
-    const Pool1 = (await poolFixture(tokenEth, tokenDai, 3000, Factory)).pool;
+    const Pool0 = (await poolFixture(tokenEth, tokenUsdc, 3000, Factory, 0)).pool;
+    const Pool1 = (await poolFixture(tokenEth, tokenDai, 3000, Factory, 0)).pool;
 
     //mint 1e30 token, you can call with arbitrary amount
     await mintSTDAmount(tokenEth);

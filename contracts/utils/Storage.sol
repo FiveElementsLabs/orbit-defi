@@ -52,17 +52,6 @@ library PositionManagerStorage {
         }
     }
 
-    ///@notice get the keccak hash of all recipes contracts
-    ///@return bytes32 array with the keccak hashes of all recipes contracts
-    function getRecipesKeys() internal pure returns (bytes32[] memory) {
-        bytes32[] memory recipes = new bytes32[](2);
-
-        recipes[0] = keccak256(abi.encodePacked('DepositRecipes'));
-        recipes[1] = keccak256(abi.encodePacked('WithdrawRecipes'));
-
-        return recipes;
-    }
-
     ///@notice emitted when a contract changes ownership
     ///@param previousOwner previous owner of the contract
     ///@param newOwner new owner of the contract
@@ -70,7 +59,6 @@ library PositionManagerStorage {
 
     ///@notice set the owner field on the storage struct
     ///@param _newOwner new owner of the storage struct
-
     function setContractOwner(address _newOwner) internal {
         require(_newOwner != address(0), 'Storage::setContractOwner: new owner cannot be the null address');
         StorageStruct storage ds = getStorage();
@@ -86,7 +74,7 @@ library PositionManagerStorage {
         StorageStruct storage ds = getStorage();
         require(
             msg.sender == ds.registry.positionManagerFactoryAddress(),
-            'Storage::enforceIsContractOwner: Must be positionManagerFactory to call this function'
+            'Storage::enforceIsGovernance: Must be positionManagerFactory to call this function'
         );
     }
 

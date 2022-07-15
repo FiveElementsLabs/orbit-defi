@@ -24,7 +24,7 @@ contract IncreaseLiquidity is IIncreaseLiquidity {
         uint256 tokenId,
         uint256 amount0Desired,
         uint256 amount1Desired
-    ) public override {
+    ) external override {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
         address nonfungiblePositionManagerAddress = Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress();

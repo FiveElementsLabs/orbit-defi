@@ -53,12 +53,12 @@ contract Swap is ISwap {
     ///@param token1Address address of second token
     ///@param fee fee tier of the pool
     ///@param amount0In amount of token0 to swap
-    function swapV2(
+    function swap(
         address token0Address,
         address token1Address,
         uint24 fee,
         uint256 amount0In
-    ) public override checkDeviation(token0Address, token1Address, fee) returns (uint256 amount1Out) {
+    ) external override checkDeviation(token0Address, token1Address, fee) returns (uint256 amount1Out) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         ISwapRouter swapRouter = ISwapRouter(Storage.uniswapAddressHolder.swapRouterAddress());
 

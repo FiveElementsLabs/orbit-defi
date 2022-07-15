@@ -22,22 +22,21 @@ library SwapHelper {
     ///@param tickPool tick of the pool
     ///@param tickLower lower tick of position
     ///@param tickUpper upper tick of position
-    ///@return ratioE18 amount1/amount0 * 1e18
+    ///@return ratioX96 amount1/amount0 * 2**96
     function getRatioFromRange(
         int24 tickPool,
         int24 tickLower,
         int24 tickUpper
-    ) internal pure returns (uint256 ratioE18) {
+    ) internal pure returns (uint256 ratioX96) {
         require(
             tickLower < tickPool && tickUpper > tickPool,
             'SwapHelper::getRatioFromRange: Position should be in range to call this function'
         );
-        uint256 amount0 = 1e18;
-        uint160 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(tickPool);
-        uint160 sqrtPriceLowerX96 = TickMath.getSqrtRatioAtTick(tickLower);
-        uint160 sqrtPriceUpperX96 = TickMath.getSqrtRatioAtTick(tickUpper);
-        uint128 liquidity = LiquidityAmounts.getLiquidityForAmount0(sqrtPriceX96, sqrtPriceUpperX96, amount0);
-        ratioE18 = LiquidityAmounts.getAmount1ForLiquidity(sqrtPriceX96, sqrtPriceLowerX96, liquidity);
+        uint160 sqrtRatioX96 = TickMath.getSqrtRatioAtTick(tickPool);
+        uint160 sqrtRatioAX96 = TickMath.getSqrtRatioAtTick(tickLower);
+        uint160 sqrtRatioBX96 = TickMath.getSqrtRatioAtTick(tickUpper);
+        uint128 liquidity = LiquidityAmounts.getLiquidityForAmount0(sqrtRatioX96, sqrtRatioBX96, FixedPoint96.Q96);
+        (, ratioX96) = LiquidityAmounts.getAmountsForLiquidity(sqrtRatioX96, sqrtRatioAX96, sqrtRatioBX96, liquidity);
     }
 
     ///@notice calculate amount to be swapped in order to deposit according to the ratio selected position needs
@@ -67,23 +66,19 @@ library SwapHelper {
             amountToSwap = amount1In;
             token0In = false;
         } else {
-            uint256 ratioE18 = getRatioFromRange(tickPool, tickLower, tickUpper);
-
+            uint256 ratioX96 = getRatioFromRange(tickPool, tickLower, tickUpper);
             uint160 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(tickPool);
-
             uint256 valueX96 = (amount0In.mul((uint256(sqrtPriceX96)**2) >> FixedPoint96.RESOLUTION)).add(
                 amount1In << FixedPoint96.RESOLUTION
             );
 
-            uint256 amount1PostX96 = (ratioE18.mul(valueX96)).div(ratioE18.add(1e18));
-
-            token0In = !(amount1In >= (amount1PostX96 >> FixedPoint96.RESOLUTION));
+            uint256 amount0Post = valueX96.div(((uint256(sqrtPriceX96)**2) >> FixedPoint96.RESOLUTION).add(ratioX96));
+            token0In = amount0Post < amount0In;
 
             if (token0In) {
-                amountToSwap = ((amount1PostX96.sub(amount1In << FixedPoint96.RESOLUTION)).div(sqrtPriceX96) <<
-                    FixedPoint96.RESOLUTION).div(sqrtPriceX96);
+                amountToSwap = amount0In.sub(amount0Post);
             } else {
-                amountToSwap = amount1In.sub(amount1PostX96 >> FixedPoint96.RESOLUTION);
+                amountToSwap = (amount0Post).mul(ratioX96) >> FixedPoint96.RESOLUTION;
             }
         }
     }

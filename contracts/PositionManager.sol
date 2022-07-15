@@ -8,13 +8,6 @@ import '@openzeppelin/contracts/proxy/Initializable.sol';
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import './helpers/ERC20Helper.sol';
 import './utils/Storage.sol';
-import '../interfaces/IPositionManager.sol';
-import '../interfaces/DataTypes.sol';
-import '../interfaces/IUniswapAddressHolder.sol';
-import '../interfaces/IAaveAddressHolder.sol';
-import '../interfaces/IDiamondCut.sol';
-import '../interfaces/IRegistry.sol';
-import '../interfaces/ILendingPool.sol';
 
 /**
  * @title   Position Manager
@@ -49,7 +42,6 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
     ///@notice modifier to check if the msg.sender is the owner
     modifier onlyOwner() {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
-
         require(msg.sender == Storage.owner, 'PositionManager::onlyOwner: Only owner can call this function');
         _;
     }
@@ -57,8 +49,8 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
     ///@notice modifier to check if the msg.sender is whitelisted
     modifier onlyWhitelisted() {
         require(
-            _calledFromRecipe(msg.sender) || _calledFromActiveModule(msg.sender) || msg.sender == address(this),
-            'PositionManager::fallback: Only whitelisted addresses can call this function'
+            _calledFromActiveModule(msg.sender) || msg.sender == address(this),
+            'PositionManager::onlyWhitelisted: Only whitelisted addresses can call this function'
         );
         _;
     }
@@ -66,9 +58,8 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
     ///@notice modifier to check if the msg.sender is the PositionManagerFactory
     modifier onlyFactory() {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
-
         require(
-            IRegistry(Storage.registry).positionManagerFactoryAddress() == msg.sender,
+            Storage.registry.positionManagerFactoryAddress() == msg.sender,
             'PositionManager::init: Only PositionManagerFactory can init this contract'
         );
         _;
@@ -120,14 +111,14 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
 
     ///@notice middleware to manage the deposit of the position
     ///@param tokenId ID of the position
-    function middlewareDeposit(uint256 tokenId) public override onlyOwnedPosition(tokenId) {
+    function middlewareDeposit(uint256 tokenId) external override onlyOwnedPosition(tokenId) {
         _setDefaultDataOfPosition(tokenId);
         pushPositionId(tokenId);
     }
 
     ///@notice remove awareness of tokenId UniswapV3 NFT
     ///@param tokenId ID of the NFT to remove
-    function removePositionId(uint256 tokenId) public override onlyWhitelisted {
+    function removePositionId(uint256 tokenId) external override onlyWhitelisted {
         uint256 uniswapNFTsLength = uniswapNFTs.length;
         for (uint256 i; i < uniswapNFTsLength; ++i) {
             if (uniswapNFTs[i] == tokenId) {
@@ -212,36 +203,11 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
         return (activatedModules[_tokenId][_moduleAddress].isActive, activatedModules[_tokenId][_moduleAddress].data);
     }
 
-    ///@notice stores old position data when liquidity is moved to aave
-    ///@param token address of the token
-    ///@param id ID of the position
-    ///@param tokenId of the position
-    function pushTokenIdToAave(
-        address token,
-        uint256 id,
-        uint256 tokenId
-    ) public override onlyWhitelisted {
-        StorageStruct storage Storage = PositionManagerStorage.getStorage();
-        require(
-            Storage.aaveUserReserves[token].positionShares[id] > 0,
-            'PositionManager::pushOldPositionData: positionShares does not exist'
-        );
-
-        Storage.aavePositionsArray.push(AavePositions({id: id, tokenToAave: token}));
-        Storage.aaveUserReserves[token].tokenIds[id] = tokenId;
-    }
-
     ///@notice returns the token id of a position on Aave
     ///@param token address of the token
     ///@param id ID of aave position
     ///@return tokenId of the position
-    function getTokenIdFromAavePosition(address token, uint256 id)
-        public
-        view
-        override
-        onlyWhitelisted
-        returns (uint256)
-    {
+    function getTokenIdFromAavePosition(address token, uint256 id) external view override returns (uint256) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         AaveReserve storage aaveUserReserves = Storage.aaveUserReserves[token];
         require(
@@ -252,29 +218,9 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
         return aaveUserReserves.tokenIds[id];
     }
 
-    ///@notice removes position data from aave positions array
-    ///@param token address of the token
-    ///@param id ID of the position
-    function removeTokenIdFromAave(address token, uint256 id) public override onlyWhitelisted {
-        StorageStruct storage Storage = PositionManagerStorage.getStorage();
-
-        uint256 aavePositionsLength = Storage.aavePositionsArray.length;
-        for (uint256 i; i < aavePositionsLength; ++i) {
-            if (Storage.aavePositionsArray[i].id == id && Storage.aavePositionsArray[i].tokenToAave == token) {
-                if (Storage.aavePositionsArray.length > 1) {
-                    Storage.aavePositionsArray[i] = Storage.aavePositionsArray[aavePositionsLength - 1];
-                    Storage.aavePositionsArray.pop();
-                } else {
-                    delete Storage.aavePositionsArray;
-                }
-                break;
-            }
-        }
-    }
-
     ///@notice returns array of positions moved to aave
     ///@return Storage.AavePositions return the array of positions moved on aave
-    function getAavePositionsArray() public view override returns (AavePositions[] memory) {
+    function getAavePositionsArray() external view override returns (AavePositions[] memory) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         return Storage.aavePositionsArray;
     }
@@ -298,33 +244,19 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
 
     ///@notice function to check if an address corresponds to an active module (or this contract)
     ///@param _address input address
-    ///@return isCalledFromActiveModule boolean
-    function _calledFromActiveModule(address _address) internal view returns (bool isCalledFromActiveModule) {
+    ///@return boolean true if the address is an active module
+    function _calledFromActiveModule(address _address) internal view returns (bool) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
         bytes32[] memory keys = Storage.registry.getModuleKeys();
 
         uint256 keysLength = keys.length;
         for (uint256 i; i < keysLength; ++i) {
             (address moduleAddress, bool isActive, , ) = Storage.registry.getModuleInfo(keys[i]);
-            if (moduleAddress == _address && isActive == true) {
-                isCalledFromActiveModule = true;
-                break;
+            if (isActive && moduleAddress == _address) {
+                return true;
             }
         }
-    }
-
-    function _calledFromRecipe(address _address) internal view returns (bool isCalledFromRecipe) {
-        StorageStruct storage Storage = PositionManagerStorage.getStorage();
-        bytes32[] memory recipeKeys = PositionManagerStorage.getRecipesKeys();
-
-        uint256 recipeKeysLength = recipeKeys.length;
-        for (uint256 i; i < recipeKeysLength; ++i) {
-            (address moduleAddress, , , ) = Storage.registry.getModuleInfo(recipeKeys[i]);
-            if (moduleAddress == _address) {
-                isCalledFromRecipe = true;
-                break;
-            }
-        }
+        return false;
     }
 
     fallback() external payable onlyWhitelisted {
