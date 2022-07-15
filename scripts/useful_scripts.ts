@@ -2,13 +2,31 @@ import { ethers } from 'hardhat';
 import { getSelectors } from '../test/shared/fixtures';
 import { Config } from '../deploy/000_Config';
 
+// WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
+//
+// Functions in this script can modify the
+// live deployments if called with the wrong flags.
+// Remember to use the --network polygonTest flag for testing
+//
+// WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
+
 async function main() {
-  console.log('**** Warning: using private key defined in hardhat.ethers.ts ****');
-  console.log('**** Please use this script along with the --network polygonTest flag ****');
+  console.log('**** Warning: using private keys defined in hardhat.ethers.ts ****');
+  console.log('**** Remember use this script along with the --network polygonTest flag for testing ****');
 
   const PMF = await ethers.getContractAt('PositionManagerFactory', '0x6c15ee0B11661Fa5F0a2639E7D80ed72Cc53771d');
   const PM = await ethers.getContractAt('PositionManager', '0x46200F1a5bF2312302ff4d47a38F8EE33C72bd6A');
   const Registry = await ethers.getContractAt('Registry', '0xb2016935c0C75d040c9B9De7EA7671905e84CcCF');
+
+  // **** Available functions ****
+  // deployContract()
+  // updateAlreadyDeployedModule()
+  // updateAlreadyDeployedAction()
+  // logAllActions()
+  // logModuleInfo()
+  // logModuleInfoForSpecificPosition()
+  // changeAllGovernances()
+  // createPositionManagerForOwner()
 
   const deployContract = async () => {
     const _name = 'AaveModule';
@@ -63,6 +81,13 @@ async function main() {
     console.log(`Registry.moduleInfo(${_moduleName}): `, moduleInfo);
   };
 
+  const logModuleInfoForSpecificPosition = async () => {
+    const _tokenId = 180007;
+    const _moduleAddress = '0x16dFCD94b9238925729cCdA3C25e56290c7C54AA';
+
+    console.log(await PM.getModuleInfo(_tokenId, _moduleAddress));
+  };
+
   const changeAllGovernances = async () => {
     const _newGovernance = '0xF4d83F3207788Ee14446EEC94b9b0E3548409777';
 
@@ -72,11 +97,12 @@ async function main() {
     console.log(':: Changed Registry governance');
   };
 
-  const logModuleInfoForSpecificPosition = async () => {
-    const _tokenId = 180007;
-    const _moduleAddress = '0x16dFCD94b9238925729cCdA3C25e56290c7C54AA';
+  const createPositionManagerForOwner = async () => {
+    const _owner = '0xF4d83F3207788Ee14446EEC94b9b0E3548409777';
 
-    console.log(await PM.getModuleInfo(_tokenId, _moduleAddress));
+    await PMF.connect(_owner).create({ gasLimit: Config.gasLimit });
+    const pm = await PMF.userToPositionManager(_owner);
+    console.log(`:: Created new PositionManager for ${_owner} at ${pm}`);
   };
 }
 
