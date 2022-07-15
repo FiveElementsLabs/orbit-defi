@@ -16,6 +16,7 @@ const PostDeployScript: DeployFunction = async function (hre: HardhatRuntimeEnvi
   const AaveModule = await ethers.getContract('AaveModule');
   const DepositRecipes = await ethers.getContract('DepositRecipes');
   const WithdrawRecipes = await ethers.getContract('WithdrawRecipes');
+  const UpdateDiamond = await ethers.getContract('UpdateDiamond');
 
   // Autocompound module:     ON  with 2% fee threshold         (data = 2)
   // IdleLiquidity module:    OFF with 2% distance from range   (data = 200)
@@ -92,6 +93,19 @@ const PostDeployScript: DeployFunction = async function (hre: HardhatRuntimeEnvi
   );
   await new Promise((resolve) => setTimeout(resolve, Config.sleep));
   console.log(':: Added WithdrawRecipes to Registry');
+
+  await Registry.addNewContract(
+    hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('UpdateDiamond')),
+    UpdateDiamond.address,
+    ethers.utils.hexZeroPad(ethers.utils.hexlify(0), 32),
+    true,
+    {
+      gasPrice: Config.gasPrice,
+      gasLimit: Config.gasLimit,
+    }
+  );
+  await new Promise((resolve) => setTimeout(resolve, Config.sleep));
+  console.log(':: Added UpdateDiamond to Registry');
 
   // ****************** Add keeper(s) to the whitelist ******************
   const keeperAddress = '0xb86659C1010f60CC3fDE9EF90C9d3D71C537A526';
