@@ -76,6 +76,7 @@ contract WithdrawRecipes {
     ///@notice remove a position from positionmanager zapping out
     ///@param tokenId ID of the NFT to zap out
     ///@param tokenOut address of the token to withdraw
+    ///@return amountWithdrawn amount of tokens withdrawn
     function zapOutUniNft(uint256 tokenId, address tokenOut)
         external
         onlyOwner(tokenId)
@@ -122,6 +123,7 @@ contract WithdrawRecipes {
     ///@param id identifier of the aave position to withdraw
     ///@param token aaveToken to be withdrawn from Aave
     ///@param tokenOut address of the token to withdraw
+    ///@return amountWithdrawn amount of token withdrawn
     function zapOutFromAave(
         uint256 id,
         address token,

@@ -28,6 +28,7 @@ async function main() {
     // await logModuleInfoForSpecificPosition();
     // await changeAllGovernances();
     // await createPositionManagerForOwner();
+    // await logAllPositionManagers();
   };
 
   const deployContract = async () => {
@@ -128,6 +129,10 @@ async function main() {
     await PMF.connect(owner).create({ gasLimit: Config.gasLimit });
     const pm = await PMF.userToPositionManager(_ownerAddress);
     console.log(`:: Created new PositionManager for ${_ownerAddress} at ${pm}`);
+  };
+
+  const logAllPositionManagers = async () => {
+    await PMF.getAllPositionManagers().then(console.log);
   };
 
   await runAtEndOfFIle();
