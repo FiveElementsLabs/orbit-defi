@@ -9,6 +9,7 @@
     "deploy:mumbai": "npx hardhat --network mumbai deploy",
     "postDeploy:mumbai": "npx hardhat --network mumbai deploy --tags PostDeploy",
     "verify:mumbai": "npx hardhat --network mumbai etherscan-verify --sleep",
+    "deploy:polygonTest": "npx hardhat --network polygonTest deploy",
     "deploy:polygon": "npx hardhat --network polygon deploy",
     "postDeploy:polygon": "npx hardhat --network polygon deploy --tags PostDeploy",
     "verify:polygon": "npx hardhat --network polygon etherscan-verify --sleep"

@@ -5,9 +5,10 @@ pragma abicoder v2;
 
 interface ISwap {
     function swap(
-        address token0Address,
-        address token1Address,
+        address tokenIn,
+        address tokenOut,
         uint24 fee,
-        uint256 amount0In
-    ) external returns (uint256 amount1Out);
+        uint256 amountIn,
+        bool returnTokensToUser
+    ) external returns (uint256 amountOut);
 }

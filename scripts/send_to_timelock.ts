@@ -1,5 +1,5 @@
 import { ethers } from 'hardhat';
-import { Config } from '../deploy-v2/000_Config';
+import { Config } from '../deploy/000_Config';
 
 async function main() {
   const provider = new ethers.providers.JsonRpcProvider(process.env.ALCHEMY_POLYGON);
@@ -10,7 +10,7 @@ async function main() {
   const Timelock = await ethers.getContractAt('Timelock', timelockAddress, signer);
 
   // Specific call
-  const RegistryAddress = Config.registry;
+  const RegistryAddress = '0xb2016935c0C75d040c9B9De7EA7671905e84CcCF';
   const signature = 'addNewContract(bytes32,address,bytes32,bool)';
 
   const contractIdKeccak = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('PositionManagerFactory'));

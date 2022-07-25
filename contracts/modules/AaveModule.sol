@@ -86,7 +86,7 @@ contract AaveModule is BaseModule {
     {
         (, bytes32 data) = IPositionManager(positionManager).getModuleInfo(tokenId, address(this));
 
-        require(data != bytes32(0), 'AaveModule::isDepositNeeded: module data cannot be empty');
+        require(data != bytes32(0), 'AaveModule::moveToAave: module data cannot be empty');
 
         uint24 distanceFromRange = UniswapNFTHelper._checkDistanceFromRange(
             tokenId,
@@ -178,7 +178,8 @@ contract AaveModule is BaseModule {
                     token1,
                     toAaveToken,
                     _findBestFee(token1, toAaveToken),
-                    amount1Collected
+                    amount1Collected,
+                    false
                 );
             }
         } else if (amount0Collected != 0) {
@@ -186,7 +187,8 @@ contract AaveModule is BaseModule {
                 token0,
                 toAaveToken,
                 _findBestFee(token0, toAaveToken),
-                amount0Collected
+                amount0Collected,
+                false
             );
         }
 
