@@ -38,6 +38,9 @@ struct StorageStruct {
     uint256 aaveIdCounter;
     mapping(address => IPositionManager.AaveReserve) aaveUserReserves;
     AavePositions[] aavePositionsArray;
+    // test dynamic storage
+    // key 32bytes => uint32 5bytes => storageVars[uint32] == key
+    mapping(uint128 => bytes32) storageVars;
 }
 
 library PositionManagerStorage {
@@ -292,51 +295,51 @@ library PositionManagerStorage {
         }
     }
 
-    // // test dynamic storage
-    // // key 32bytes => uint32 5bytes => storageVars[uint32] == key
-    // mapping(uint128 => bytes32) storageVars;
+    modifier verifyKey(bytes32 hashedKey) {
+        StorageStruct storage ds = getStorage();
+        bytes16 y;
 
-    // modifier verifyKey(bytes32 hashedKey) {
-    //     uint128 y;
+        assembly {
+            y := shl(128, hashedKey)
+        }
 
-    //     assembly {
-    //         mstore(y, hashedKey)
-    //     }
+        bytes32 storageVariableHash = ds.storageVars[uint128(y)];
 
-    //     bytes32 storageVariableHash = storageVars[y];
-    //     require(
-    //         storageVariableHash == hashedKey,
-    //         'PositionManagerStorage::getDynamicStorage: Key does not exist on storage'
-    //     );
-    //     _;
-    // }
+        require(
+            storageVariableHash == hashedKey,
+            'PositionManagerStorage::getDynamicStorage: Key does not exist on storage'
+        );
+        _;
+    }
 
-    // function getDynamicStorageValue(bytes32 hashedKey) internal verifyKey(hashedKey) returns (bytes32 value) {
-    //     assembly {
-    //         value := sload(hashedKey)
-    //     }
-    // }
+    function getDynamicStorageValue(bytes32 hashedKey) internal verifyKey(hashedKey) returns (bytes32 value) {
+        assembly {
+            value := sload(hashedKey)
+        }
+    }
 
-    // ///@dev supposing we've already set the key on the mapping, we can't insert a wrong key
-    // function setDynamicStorageValue(bytes32 hashedKey, bytes32 value) internal verifyKey(hashedKey) {
-    //     assembly {
-    //         sstore(hashedKey, value)
-    //     }
-    // }
+    ///@dev supposing we've already set the key on the mapping, we can't insert a wrong key
+    function setDynamicStorageValue(bytes32 hashedKey, bytes32 value) internal verifyKey(hashedKey) {
+        assembly {
+            sstore(hashedKey, value)
+        }
+    }
 
-    // function addDynamicStorageKey(bytes32 hashedKey) {
-    //     uint128 y;
+    function addDynamicStorageKey(bytes32 hashedKey) internal {
+        StorageStruct storage ds = getStorage();
+        bytes16 y;
 
-    //     assembly {
-    //         mstore(y, hashedKey)
-    //     }
+        assembly {
+            y := shl(128, hashedKey)
+        }
 
-    //     bytes32 storageVariableHash = storageVars[y];
-    //     require(
-    //         storageVariableHash == bytes32(0),
-    //         'PositionManagerStorage::addDynamicStorageKey: Key already exists on storage'
-    //     );
+        bytes32 storageVariableHash = ds.storageVars[uint128(y)];
+        // require(
+        //     storageVariableHash == bytes32(0),
+        //     'PositionManagerStorage::addDynamicStorageKey: Key already exists on storage'
+        // );
+        if (storageVariableHash != bytes32(0)) return;
 
-    //     storageVars[y] = hashedKey;
-    // }
+        ds.storageVars[uint128(y)] = hashedKey;
+    }
 }

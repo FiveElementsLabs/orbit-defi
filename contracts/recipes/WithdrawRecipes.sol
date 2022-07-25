@@ -86,22 +86,12 @@ contract WithdrawRecipes {
     }
 
     ///@notice withdraw a position currently on Aave
-    ///@param id identifier of the aave position to withdraw
-    ///@param token aaveToken to withdraw
+    ///@param tokenId identifier of the aave position to withdraw
     ///@param partToWithdraw percentage of position withdraw in base points
     ///@return amountWithdrawn amount of token withdrawn
-    function withdrawFromAave(
-        uint256 id,
-        address token,
-        uint256 partToWithdraw
-    )
+    function withdrawFromAave(uint256 tokenId, uint256 partToWithdraw)
         external
-        onlyOwner(
-            IPositionManager(positionManagerFactory.userToPositionManager(msg.sender)).getTokenIdFromAavePosition(
-                token,
-                id
-            )
-        )
+        onlyOwner(tokenId)
         returns (uint256 amountWithdrawn)
     {
         require(
@@ -111,52 +101,46 @@ contract WithdrawRecipes {
 
         address positionManager = positionManagerFactory.userToPositionManager(msg.sender);
 
-        IClosePosition(positionManager).closePosition(
-            IPositionManager(positionManager).getTokenIdFromAavePosition(token, id),
-            true
-        );
+        IClosePosition(positionManager).closePosition(tokenId, true);
 
-        amountWithdrawn = IAaveWithdraw(positionManager).withdrawFromAave(token, id, partToWithdraw, true);
+        (, address tokenToAave) = IPositionManager(positionManager).getTokenIdFromAavePosition(tokenId);
+
+        amountWithdrawn = IAaveWithdraw(positionManager).withdrawFromAave(tokenToAave, tokenId, partToWithdraw, true);
     }
 
     ///@notice withdraw a position currently on Aave and swap everything to the other token of the pool
-    ///@param id identifier of the aave position to withdraw
-    ///@param token aaveToken to be withdrawn from Aave
+    ///@param tokenId identifier of the aave position to withdraw
     ///@param tokenOut address of the token to withdraw
     ///@return amountWithdrawn amount of token withdrawn
-    function zapOutFromAave(
-        uint256 id,
-        address token,
-        address tokenOut
-    )
+    function zapOutFromAave(uint256 tokenId, address tokenOut)
         external
-        onlyOwner(
-            IPositionManager(positionManagerFactory.userToPositionManager(msg.sender)).getTokenIdFromAavePosition(
-                token,
-                id
-            )
-        )
+        onlyOwner(tokenId)
         returns (uint256 amountWithdrawn)
     {
         address positionManager = positionManagerFactory.userToPositionManager(msg.sender);
-        uint256 tokenId = IPositionManager(positionManager).getTokenIdFromAavePosition(token, id);
+        (, address tokenToAave) = IPositionManager(positionManager).getTokenIdFromAavePosition(tokenId);
 
-        if (token != tokenOut) {
+        if (tokenToAave != tokenOut) {
             (, , uint24 fee, , ) = UniswapNFTHelper._getTokens(
                 tokenId,
                 INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress())
             );
 
             amountWithdrawn = IAaveWithdraw(positionManager).withdrawFromAave(
-                token,
-                id,
+                tokenToAave,
+                tokenId,
                 MAX_WITHDRAW_AMOUNT,
                 false ///@dev don't return the tokens to the user here because we need to swap them first
             );
 
-            ISwap(positionManager).swap(token, tokenOut, fee, amountWithdrawn, true);
+            ISwap(positionManager).swap(tokenToAave, tokenOut, fee, amountWithdrawn, true);
         } else {
-            amountWithdrawn = IAaveWithdraw(positionManager).withdrawFromAave(token, id, MAX_WITHDRAW_AMOUNT, true);
+            amountWithdrawn = IAaveWithdraw(positionManager).withdrawFromAave(
+                tokenToAave,
+                tokenId,
+                MAX_WITHDRAW_AMOUNT,
+                true
+            );
         }
 
         IClosePosition(positionManager).closePosition(tokenId, true);

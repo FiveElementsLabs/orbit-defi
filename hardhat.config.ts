@@ -13,7 +13,7 @@ import 'dotenv/config';
 
 export default {
   gasReporter: {
-    enabled: true,
+    enabled: false,
     currency: 'EUR',
     gasPrice: 35,
   },

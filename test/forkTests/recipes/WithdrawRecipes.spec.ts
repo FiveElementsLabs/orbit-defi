@@ -313,7 +313,7 @@ describe('WithdrawRecipes.sol', function () {
 
       const balanceBefore = await tokenToAave.balanceOf(user.address);
 
-      await WithdrawRecipes.connect(user).withdrawFromAave(aaveId, tokenToAave.address, 10000);
+      await WithdrawRecipes.connect(user).withdrawFromAave(tokenId, 10000);
       expect(await tokenToAave.balanceOf(user.address)).to.be.gt(balanceBefore);
     });
 
@@ -332,7 +332,7 @@ describe('WithdrawRecipes.sol', function () {
       const aaveId = events[events.length - 1].args.aaveId;
 
       const balanceBefore = await tokenOut.balanceOf(user.address);
-      await WithdrawRecipes.connect(user).zapOutFromAave(aaveId, tokenToAave.address, tokenOut.address);
+      await WithdrawRecipes.connect(user).zapOutFromAave(tokenId, tokenOut.address);
       expect(await tokenOut.balanceOf(user.address)).to.be.gt(balanceBefore);
     });
 
@@ -351,7 +351,7 @@ describe('WithdrawRecipes.sol', function () {
       const aaveId = events[events.length - 1].args.aaveId;
 
       const balanceBefore = await tokenOut.balanceOf(user.address);
-      await WithdrawRecipes.connect(user).zapOutFromAave(aaveId, tokenToAave.address, tokenOut.address);
+      await WithdrawRecipes.connect(user).zapOutFromAave(tokenId, tokenOut.address);
       expect(await tokenOut.balanceOf(user.address)).to.be.gt(balanceBefore);
     });
   });

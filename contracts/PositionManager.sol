@@ -203,19 +203,19 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
         return (activatedModules[_tokenId][_moduleAddress].isActive, activatedModules[_tokenId][_moduleAddress].data);
     }
 
-    ///@notice returns the token id of a position on Aave
-    ///@param token address of the token
-    ///@param id ID of aave position
-    ///@return tokenId of the position
-    function getTokenIdFromAavePosition(address token, uint256 id) external view override returns (uint256) {
-        StorageStruct storage Storage = PositionManagerStorage.getStorage();
-        AaveReserve storage aaveUserReserves = Storage.aaveUserReserves[token];
-        require(
-            aaveUserReserves.positionShares[id] != 0,
-            'PositionManager::getTokenIdFromAavePosition: positionShares does not exist'
+    function getTokenIdFromAavePosition(uint256 tokenId) external override returns (uint256, address) {
+        return (
+            uint256(PositionManagerStorage.getDynamicStorageValue(keccak256(abi.encodePacked(tokenId, 'aave_shares')))),
+            address(
+                uint160(
+                    uint256(
+                        PositionManagerStorage.getDynamicStorageValue(
+                            keccak256(abi.encodePacked(tokenId, 'aave_tokenToAave'))
+                        )
+                    )
+                )
+            )
         );
-
-        return aaveUserReserves.tokenIds[id];
     }
 
     ///@notice returns array of positions moved to aave

@@ -55,24 +55,39 @@ contract AaveDeposit is IAaveDeposit {
         emit DepositedOnAave(address(this), token, id, shares);
     }
 
+    ///@dev now dont use anymore aaveid since we have tokenId that is unique - store shares for tokenId and tokenToAave for tokenId
+    ///@dev since they can't be duplicated. Store totalShares for tokenToAave since we keep track of the total amount of tokens in aave.
     function _updateAavePosition(
         address token,
         uint256 shares,
         uint256 tokenId
     ) internal returns (uint256) {
-        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+        PositionManagerStorage.addDynamicStorageKey(keccak256(abi.encodePacked(tokenId, 'aave_shares')));
+        PositionManagerStorage.addDynamicStorageKey(keccak256(abi.encodePacked(token, 'aave_totalShares')));
+        PositionManagerStorage.addDynamicStorageKey(keccak256(abi.encodePacked(tokenId, 'aave_tokenToAave')));
 
-        uint256 id = Storage.aaveIdCounter;
-        require(
-            Storage.aaveUserReserves[token].positionShares[id] == 0,
-            'AaveDeposit::_pushTokenIdToAave: positionShares does not exist'
+        uint256 oldShares = uint256(
+            PositionManagerStorage.getDynamicStorageValue(keccak256(abi.encodePacked(tokenId, 'aave_shares')))
         );
-        Storage.aavePositionsArray.push(AavePositions({id: id, tokenToAave: token}));
+        uint256 sharesEmitted = uint256(
+            PositionManagerStorage.getDynamicStorageValue(keccak256(abi.encodePacked(token, 'aave_totalShares')))
+        );
 
-        Storage.aaveUserReserves[token].positionShares[id] = shares;
-        Storage.aaveUserReserves[token].sharesEmitted += shares;
-        Storage.aaveUserReserves[token].tokenIds[id] = tokenId;
-        Storage.aaveIdCounter++;
-        return id;
+        require(oldShares == 0, 'AaveDeposit::_pushTokenIdToAave: positionShares does not exist');
+        PositionManagerStorage.setDynamicStorageValue(
+            keccak256(abi.encodePacked(tokenId, 'aave_tokenToAave')),
+            bytes32(uint256(uint160(token)))
+        );
+
+        PositionManagerStorage.setDynamicStorageValue(
+            keccak256(abi.encodePacked(tokenId, 'aave_shares')),
+            bytes32(shares)
+        );
+        PositionManagerStorage.setDynamicStorageValue(
+            keccak256(abi.encodePacked(token, 'aave_totalShares')),
+            bytes32(sharesEmitted + shares)
+        );
+
+        return tokenId;
     }
 }

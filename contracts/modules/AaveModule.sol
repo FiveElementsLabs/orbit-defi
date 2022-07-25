@@ -102,16 +102,11 @@ contract AaveModule is BaseModule {
 
     ///@notice move liquidity deposited on aave back to its uniswap position
     ///@param positionManager address of the position manager
-    ///@param tokenFromAave address of the token of Aave position
-    ///@param id id of the Aave position to withdraw
-    function moveToUniswap(
-        address positionManager,
-        address tokenFromAave,
-        uint256 id
-    ) external onlyWhitelistedKeeper {
-        require(tokenFromAave != address(0), 'AaveModule::moveToUniswap: token cannot be address 0');
+    ///@param tokenId id of the uniswap nft to withdraw from aaave
+    function moveToUniswap(address positionManager, uint256 tokenId) external onlyWhitelistedKeeper {
+        (uint256 shares, address tokenFromAave) = IPositionManager(positionManager).getTokenIdFromAavePosition(tokenId);
 
-        uint256 tokenId = IPositionManager(positionManager).getTokenIdFromAavePosition(tokenFromAave, id);
+        require(tokenFromAave != address(0), 'AaveModule::moveToUniswap: token cannot be address 0');
 
         INonfungiblePositionManager NonfungiblePositionManager = INonfungiblePositionManager(
             uniswapAddressHolder.nonfungiblePositionManagerAddress()
@@ -142,7 +137,6 @@ contract AaveModule is BaseModule {
             _moveToUniswap(
                 positionManager,
                 tokenFromAave,
-                id,
                 tokenId,
                 TokenData(token0, token1, fee, tickLower, tickUpper)
             );
@@ -212,17 +206,20 @@ contract AaveModule is BaseModule {
     ///@notice return an aave position's liquidity to Uniswap nft
     ///@param positionManager address of the position manager
     ///@param tokenFromAave address of the token of Aave position
-    ///@param id id of the Aave position to withdraw
     ///@param tokenId tokenID of the position on uniswap
     ///@param tokenData struct storing data of the position on uniswap
     function _moveToUniswap(
         address positionManager,
         address tokenFromAave,
-        uint256 id,
         uint256 tokenId,
         TokenData memory tokenData
     ) internal {
-        uint256 amountWithdrawn = IAaveWithdraw(positionManager).withdrawFromAave(tokenFromAave, id, 10_000, false);
+        uint256 amountWithdrawn = IAaveWithdraw(positionManager).withdrawFromAave(
+            tokenFromAave,
+            tokenId,
+            10_000,
+            false
+        );
 
         (uint256 amount0Out, uint256 amount1Out) = ISwapToPositionRatio(positionManager).swapToPositionRatio(
             ISwapToPositionRatio.SwapToPositionInput({
@@ -239,7 +236,7 @@ contract AaveModule is BaseModule {
         IIncreaseLiquidity(positionManager).increaseLiquidity(tokenId, amount0Out, amount1Out);
         IPositionManager(positionManager).pushPositionId(tokenId);
 
-        emit MovedToUniswap(positionManager, tokenId, tokenFromAave, amountWithdrawn, id);
+        emit MovedToUniswap(positionManager, tokenId, tokenFromAave, amountWithdrawn, tokenId);
     }
 
     ///@notice compute the address of the token to send to Aave

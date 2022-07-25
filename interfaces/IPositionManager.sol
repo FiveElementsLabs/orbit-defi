@@ -47,7 +47,7 @@ interface IPositionManager {
 
     function getAavePositionsArray() external view returns (AavePositions[] memory);
 
-    function getTokenIdFromAavePosition(address token, uint256 id) external view returns (uint256 tokenId);
+    function getTokenIdFromAavePosition(uint256 tokenId) external returns (uint256, address);
 
     function getOwner() external view returns (address);
 }
