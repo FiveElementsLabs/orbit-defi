@@ -291,4 +291,52 @@ library PositionManagerStorage {
             }
         }
     }
+
+    // // test dynamic storage
+    // // key 32bytes => uint32 5bytes => storageVars[uint32] == key
+    // mapping(uint128 => bytes32) storageVars;
+
+    // modifier verifyKey(bytes32 hashedKey) {
+    //     uint128 y;
+
+    //     assembly {
+    //         mstore(y, hashedKey)
+    //     }
+
+    //     bytes32 storageVariableHash = storageVars[y];
+    //     require(
+    //         storageVariableHash == hashedKey,
+    //         'PositionManagerStorage::getDynamicStorage: Key does not exist on storage'
+    //     );
+    //     _;
+    // }
+
+    // function getDynamicStorageValue(bytes32 hashedKey) internal verifyKey(hashedKey) returns (bytes32 value) {
+    //     assembly {
+    //         value := sload(hashedKey)
+    //     }
+    // }
+
+    // ///@dev supposing we've already set the key on the mapping, we can't insert a wrong key
+    // function setDynamicStorageValue(bytes32 hashedKey, bytes32 value) internal verifyKey(hashedKey) {
+    //     assembly {
+    //         sstore(hashedKey, value)
+    //     }
+    // }
+
+    // function addDynamicStorageKey(bytes32 hashedKey) {
+    //     uint128 y;
+
+    //     assembly {
+    //         mstore(y, hashedKey)
+    //     }
+
+    //     bytes32 storageVariableHash = storageVars[y];
+    //     require(
+    //         storageVariableHash == bytes32(0),
+    //         'PositionManagerStorage::addDynamicStorageKey: Key already exists on storage'
+    //     );
+
+    //     storageVars[y] = hashedKey;
+    // }
 }
