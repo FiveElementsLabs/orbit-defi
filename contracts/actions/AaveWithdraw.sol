@@ -5,7 +5,6 @@ pragma abicoder v2;
 
 import '../../interfaces/IAToken.sol';
 import '../../interfaces/ILendingPool.sol';
-import '../../interfaces/IPositionManager.sol';
 import '../../interfaces/actions/IAaveWithdraw.sol';
 import '../utils/Storage.sol';
 
@@ -26,13 +25,13 @@ contract AaveWithdraw is IAaveWithdraw {
     );
 
     ///@notice withdraw from aave some token amount
-    ///@param token token address
+    ///@param tokenFromAave token address of the token to withdraw from Aave
     ///@param tokenId position to withdraw from
     ///@param partToWithdraw percentage of token to withdraw in base points
     ///@param returnTokensToUser true if withdrawn tokens are sent to positionManager owner
     ///@return amountWithdrawn amount of token withdrawn from aave
     function withdrawFromAave(
-        address token,
+        address tokenFromAave,
         uint256 tokenId,
         uint256 partToWithdraw,
         bool returnTokensToUser
@@ -42,34 +41,41 @@ contract AaveWithdraw is IAaveWithdraw {
             'AaveWithdraw::withdrawFromAave: part to withdraw must be between 0 and 10000'
         );
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
+
         uint256 shares = uint256(
             PositionManagerStorage.getDynamicStorageValue(keccak256(abi.encodePacked(tokenId, 'aave_shares')))
         );
         uint256 totalShares = uint256(
-            PositionManagerStorage.getDynamicStorageValue(keccak256(abi.encodePacked(token, 'aave_totalShares')))
+            PositionManagerStorage.getDynamicStorageValue(
+                keccak256(abi.encodePacked(tokenFromAave, 'aave_totalShares'))
+            )
         );
 
         require(shares != 0, 'AaveWithdraw::withdrawFromAave: no position to withdraw!');
 
         amountWithdrawn = ILendingPool(Storage.aaveAddressHolder.lendingPoolAddress()).withdraw(
-            token,
-            (_getAmount(token, tokenId, shares, totalShares) * partToWithdraw) / 10_000,
+            tokenFromAave,
+            (_getAmount(tokenFromAave, shares, totalShares) * partToWithdraw) / 10_000,
             returnTokensToUser ? Storage.owner : address(this)
         );
 
-        _removeTokenIdFromAave(token, tokenId, partToWithdraw, shares, totalShares);
-        emit WithdrawnFromAave(address(this), token, amountWithdrawn, returnTokensToUser, partToWithdraw == 10_000);
+        _removeTokenIdFromAave(tokenFromAave, tokenId, partToWithdraw, shares, totalShares);
+        emit WithdrawnFromAave(
+            address(this),
+            tokenFromAave,
+            amountWithdrawn,
+            returnTokensToUser,
+            partToWithdraw == 10_000
+        );
     }
 
     ///@notice gets balance of aToken associated to this position id
-    ///@param token underlying token addrress
-    ///@param tokenId id of the aave position
+    ///@param tokenFromAave underlying token addrress
     ///@param shares shares of the position
     ///@param totalShares total shares of the underlying token
     ///@return amount of underlying token
     function _getAmount(
-        address token,
-        uint256 tokenId,
+        address tokenFromAave,
         uint256 shares,
         uint256 totalShares
     ) internal view returns (uint256) {
@@ -77,7 +83,7 @@ contract AaveWithdraw is IAaveWithdraw {
 
         IAToken aToken = IAToken(
             ILendingPool(PositionManagerStorage.getStorage().aaveAddressHolder.lendingPoolAddress())
-                .getReserveData(token)
+                .getReserveData(tokenFromAave)
                 .aTokenAddress
         );
 

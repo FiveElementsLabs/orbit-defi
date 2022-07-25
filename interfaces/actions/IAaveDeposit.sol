@@ -8,11 +8,10 @@ interface IAaveDeposit {
     ///@param token token address
     ///@param amount amount to deposit
     ///@param tokenId tokenId of the position deposited to aave
-    ///@return id of the deposited position
     ///@return shares emitted
     function depositToAave(
         address token,
         uint256 amount,
         uint256 tokenId
-    ) external returns (uint256 id, uint256 shares);
+    ) external returns (uint256 shares);
 }

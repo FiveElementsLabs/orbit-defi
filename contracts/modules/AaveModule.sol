@@ -186,7 +186,7 @@ contract AaveModule is BaseModule {
             );
         }
 
-        (uint256 id, ) = IAaveDeposit(positionManager).depositToAave(
+        IAaveDeposit(positionManager).depositToAave(
             toAaveToken,
             toAaveToken == token0 ? amount0Collected : amount1Collected,
             tokenId
@@ -199,7 +199,7 @@ contract AaveModule is BaseModule {
             tokenId,
             toAaveToken,
             toAaveToken == token0 ? amount0Collected : amount1Collected,
-            id
+            tokenId
         );
     }
 
