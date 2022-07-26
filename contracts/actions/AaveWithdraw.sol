@@ -79,8 +79,6 @@ contract AaveWithdraw is IAaveWithdraw {
         uint256 shares,
         uint256 totalShares
     ) internal view returns (uint256) {
-        StorageStruct storage Storage = PositionManagerStorage.getStorage();
-
         IAToken aToken = IAToken(
             ILendingPool(PositionManagerStorage.getStorage().aaveAddressHolder.lendingPoolAddress())
                 .getReserveData(tokenFromAave)
@@ -103,8 +101,6 @@ contract AaveWithdraw is IAaveWithdraw {
         uint256 shares,
         uint256 totalShares
     ) internal {
-        StorageStruct storage Storage = PositionManagerStorage.getStorage();
-
         uint256 sharesWithdrawn = (shares * partToWithdraw) / 10_000;
 
         PositionManagerStorage.setDynamicStorageValue(

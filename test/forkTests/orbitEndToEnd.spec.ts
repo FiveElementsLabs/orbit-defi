@@ -325,7 +325,8 @@ describe('Global Tests', function () {
 
   it('should allow all user1 to withdraw his position from aave', async function () {
     const user1WbtcBalance = await wbtcMock.balanceOf(user1.address);
-    await orbit.WithdrawRecipes.connect(user1).withdrawFromAave(0, wbtcMock.address, 10000);
+    const positions = await positionManager1.getAllUniPositions();
+    await orbit.WithdrawRecipes.connect(user1).withdrawFromAave(positions[0], 10000);
     expect(await positionManager1.getAllUniPositions()).to.be.empty;
     expect(await wbtcMock.balanceOf(user1.address)).to.gt(user1WbtcBalance);
   });

@@ -316,7 +316,7 @@ library PositionManagerStorage {
 
     ///@notice get a specific slot of memory by the given key and read the first 32 bytes
     ///@param hashedKey key to read from
-    function getDynamicStorageValue(bytes32 hashedKey) internal verifyKey(hashedKey) returns (bytes32 value) {
+    function getDynamicStorageValue(bytes32 hashedKey) internal view verifyKey(hashedKey) returns (bytes32 value) {
         assembly {
             value := sload(hashedKey)
         }
