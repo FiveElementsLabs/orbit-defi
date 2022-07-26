@@ -35,10 +35,6 @@ struct StorageStruct {
     address owner;
     IRegistry registry;
     IAaveAddressHolder aaveAddressHolder;
-    uint256 aaveIdCounter;
-    mapping(address => IPositionManager.AaveReserve) aaveUserReserves;
-    AavePositions[] aavePositionsArray;
-    // test dynamic storage
     // key 32bytes => uint32 5bytes => storageVars[uint32] == key
     mapping(uint128 => bytes32) storageVars;
 }
@@ -295,7 +291,7 @@ library PositionManagerStorage {
         }
     }
 
-    ///@notice sort of checksum to verify that the key is valid and already whitelisted by governance
+    ///@notice check to verify that the key is valid and already whitelisted by governance
     ///@param hashedKey key to check
     modifier verifyKey(bytes32 hashedKey) {
         StorageStruct storage ds = getStorage();
@@ -343,10 +339,8 @@ library PositionManagerStorage {
         }
 
         bytes32 storageVariableHash = ds.storageVars[uint128(y)];
-        // require(
-        //     storageVariableHash == bytes32(0),
-        //     'PositionManagerStorage::addDynamicStorageKey: Key already exists on storage'
-        // );
+
+        ///@dev return if the key already exists
         if (storageVariableHash != bytes32(0)) return;
 
         ds.storageVars[uint128(y)] = hashedKey;

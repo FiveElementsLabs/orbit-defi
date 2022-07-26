@@ -49,6 +49,7 @@ describe('AaveModule.sol', function () {
   let DepositRecipes: Contract;
   let LendingPool: Contract;
   let AaveModule: Contract;
+  let DynamicStorageModule: Contract;
   let usdcMock: MockToken;
   let wbtcMock: MockToken;
   let swapRouter: Contract;
@@ -135,6 +136,7 @@ describe('AaveModule.sol', function () {
       ethers.utils.hexZeroPad(ethers.utils.hexlify(aaveDistance), 32),
       true
     );
+
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Factory')),
       PositionManagerFactory.address,

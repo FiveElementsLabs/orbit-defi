@@ -218,13 +218,6 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
         );
     }
 
-    ///@notice returns array of positions moved to aave
-    ///@return Storage.AavePositions return the array of positions moved on aave
-    function getAavePositionsArray() external view override returns (AavePositions[] memory) {
-        StorageStruct storage Storage = PositionManagerStorage.getStorage();
-        return Storage.aavePositionsArray;
-    }
-
     ///@notice return the address of this position manager owner
     ///@return address of the owner
     function getOwner() external view override returns (address) {

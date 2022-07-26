@@ -141,7 +141,7 @@ contract ZapIn is IZapIn {
             amount0Min: 0,
             amount1Min: 0,
             recipient: address(this),
-            deadline: block.timestamp + 120
+            deadline: block.timestamp
         });
 
         (tokenId, , amount0Deposited, amount1Deposited) = INonfungiblePositionManager(nonfungiblePositionManagerAddress)
