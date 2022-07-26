@@ -366,7 +366,7 @@ describe('Global Tests', function () {
 
 async function runKeeper(orbit: any, keeper: SignerWithAddress) {
   let positionManagers = await orbit.PositionManagerFactory.getAllPositionManagers();
-  let data: any, positions: any, positionManager: PositionManager;
+  let data: any, positions: any, positionManager: any;
   let compounded: any = [],
     rebalanced: any = [],
     movedToAave: any = [];
