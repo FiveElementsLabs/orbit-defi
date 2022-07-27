@@ -44,10 +44,7 @@ contract WithdrawRecipes {
     ///@param tokenId ID of deposited token
     ///@param partToWithdraw percentage of token to withdraw in base points
     function withdrawUniNft(uint256 tokenId, uint256 partToWithdraw) external onlyOwner(tokenId) {
-        require(
-            partToWithdraw != 0 && partToWithdraw <= MAX_WITHDRAW_AMOUNT,
-            'WithdrawRecipes::withdrawUniNft: part to withdraw must be between 0 and 10000'
-        );
+        require(partToWithdraw != 0 && partToWithdraw <= MAX_WITHDRAW_AMOUNT, 'WRP');
         if (partToWithdraw == MAX_WITHDRAW_AMOUNT) {
             IClosePosition(positionManagerFactory.userToPositionManager(msg.sender)).closePosition(
                 tokenId,
@@ -104,10 +101,7 @@ contract WithdrawRecipes {
         )
         returns (uint256 amountWithdrawn)
     {
-        require(
-            partToWithdraw != 0 && partToWithdraw <= MAX_WITHDRAW_AMOUNT,
-            'WithdrawRecipes::withdrawFromAave: part to withdraw must be between 1 and 10000'
-        );
+        require(partToWithdraw != 0 && partToWithdraw <= MAX_WITHDRAW_AMOUNT, 'WRA');
 
         address positionManager = positionManagerFactory.userToPositionManager(msg.sender);
 

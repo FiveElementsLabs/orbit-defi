@@ -40,8 +40,8 @@ contract Registry is IRegistry {
         int24 _maxTwapDeviation,
         uint32 _twapDuration
     ) {
-        require(_governance != address(0), 'Registry::constructor: governance cannot be address(0).');
-        require(_twapDuration != 0, 'Registry::constructor: twapDuration cannot be 0.');
+        require(_governance != address(0), 'RCG');
+        require(_twapDuration != 0, 'RCT');
 
         governance = _governance;
         maxTwapDeviation = _maxTwapDeviation;
@@ -50,24 +50,21 @@ contract Registry is IRegistry {
 
     ///@notice modifier to check if the sender is the governance contract
     modifier onlyGovernance() {
-        require(msg.sender == governance, 'Registry::onlyGovernance: Call must come from governance.');
+        require(msg.sender == governance, 'ROG');
         _;
     }
 
     ///@notice sets the Position manager factory address
     ///@param _positionManagerFactory the address of the position manager factory
     function setPositionManagerFactory(address _positionManagerFactory) external onlyGovernance {
-        require(
-            _positionManagerFactory != address(0),
-            'Registry::setPositionManagerFactory: New position manager factory cannot be the null address'
-        );
+        require(_positionManagerFactory != address(0), 'RF0');
         positionManagerFactoryAddress = _positionManagerFactory;
     }
 
     ///@notice change the address of the governance
     ///@param _governance the address of the new governance
     function changeGovernance(address _governance) external onlyGovernance {
-        require(_governance != address(0), 'Registry::changeGovernance: New governance cannot be the null address');
+        require(_governance != address(0), 'RG0');
         governance = _governance;
         emit GovernanceChanged(_governance);
     }
@@ -83,7 +80,7 @@ contract Registry is IRegistry {
         bytes32 _defaultValue,
         bool _activatedByDefault
     ) external onlyGovernance {
-        require(modules[_id].contractAddress == address(0), 'Registry::addNewContract: Entry already exists.');
+        require(modules[_id].contractAddress == address(0), 'RAE');
         modules[_id] = Entry({
             contractAddress: _contractAddress,
             activated: true,
@@ -98,7 +95,7 @@ contract Registry is IRegistry {
     ///@param _id keccak256 of module id string
     ///@param _newContractAddress address of the new module
     function changeContract(bytes32 _id, address _newContractAddress) external onlyGovernance {
-        require(modules[_id].contractAddress != address(0), 'Registry::changeContract: Entry does not exist.');
+        require(modules[_id].contractAddress != address(0), 'RCE');
         modules[_id].contractAddress = _newContractAddress;
         emit ContractChanged(modules[_id].contractAddress, _newContractAddress, _id);
     }
@@ -107,7 +104,7 @@ contract Registry is IRegistry {
     ///@param _id keccak256 of module id string
     ///@param _activated boolean to activate or deactivate module
     function switchModuleState(bytes32 _id, bool _activated) external onlyGovernance {
-        require(modules[_id].contractAddress != address(0), 'Registry::switchModuleState: Entry does not exist.');
+        require(modules[_id].contractAddress != address(0), 'RSE');
         modules[_id].activated = _activated;
         emit ModuleSwitched(_id, _activated);
     }
@@ -115,14 +112,14 @@ contract Registry is IRegistry {
     ///@notice adds a new whitelisted keeper
     ///@param _keeper address of the new keeper
     function addKeeperToWhitelist(address _keeper) external override onlyGovernance {
-        require(!whitelistedKeepers[_keeper], 'Registry::addKeeperToWhitelist: Keeper is already whitelisted.');
+        require(!whitelistedKeepers[_keeper], 'RKW');
         whitelistedKeepers[_keeper] = true;
     }
 
     ///@notice remove a whitelisted keeper
     ///@param _keeper address of the keeper to remove
     function removeKeeperFromWhitelist(address _keeper) external override onlyGovernance {
-        require(whitelistedKeepers[_keeper], 'Registry::removeKeeperFromWhitelist: Keeper is not whitelisted.');
+        require(whitelistedKeepers[_keeper], 'RKN');
         whitelistedKeepers[_keeper] = false;
     }
 
@@ -136,8 +133,8 @@ contract Registry is IRegistry {
     ///@param _id keccak256 of module id string
     ///@param _defaultData default data for the module
     function setDefaultValue(bytes32 _id, bytes32 _defaultData) external onlyGovernance {
-        require(modules[_id].contractAddress != address(0), 'Registry::setDefaultValue: Entry does not exist.');
-        require(_defaultData != bytes32(0), 'Registry::setDefaultValue: Default data cannot be empty.');
+        require(modules[_id].contractAddress != address(0), 'RDE');
+        require(_defaultData != bytes32(0), 'RD0');
 
         modules[_id].defaultData = _defaultData;
     }
@@ -146,7 +143,7 @@ contract Registry is IRegistry {
     ///@param _id keccak256 of module id string
     ///@param _activatedByDefault default activation bool for the module
     function setDefaultActivation(bytes32 _id, bool _activatedByDefault) external onlyGovernance {
-        require(modules[_id].contractAddress != address(0), 'Registry::setDefaultValue: Entry does not exist.');
+        require(modules[_id].contractAddress != address(0), 'RS0');
         modules[_id].activatedByDefault = _activatedByDefault;
     }
 
@@ -159,7 +156,7 @@ contract Registry is IRegistry {
     ///@notice set twap duration
     ///@param _twapDuration the new twap duration
     function setTwapDuration(uint32 _twapDuration) external onlyGovernance {
-        require(_twapDuration != 0, 'Registry::setTwapDuration: Twap duration cannot be 0.');
+        require(_twapDuration != 0, 'RT0');
         twapDuration = _twapDuration;
     }
 

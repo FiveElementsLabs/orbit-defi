@@ -22,7 +22,7 @@ contract PositionManagerFactory is IPositionManagerFactory {
     event PositionManagerCreated(address indexed positionManager, address user);
 
     modifier onlyGovernance() {
-        require(msg.sender == governance, 'PositionManagerFactory::onlyGovernance: Only governance can add actions');
+        require(msg.sender == governance, 'PFG');
         _;
     }
 
@@ -43,20 +43,14 @@ contract PositionManagerFactory is IPositionManagerFactory {
     ///@notice changes the address of the governance
     ///@param _governance address of the new governance
     function changeGovernance(address _governance) external onlyGovernance {
-        require(
-            _governance != address(0),
-            'PositionManagerFactory::changeGovernance: New governance cannot be the null address'
-        );
+        require(_governance != address(0), 'PFC');
         governance = _governance;
     }
 
     ///@notice changes the address of the registry
     ///@param _registry address of the new registry
     function changeRegistry(address _registry) external onlyGovernance {
-        require(
-            _registry != address(0),
-            'PositionManagerFactory::changeRegistry: New registry cannot be the null address'
-        );
+        require(_registry != address(0), 'PFR');
         registry = _registry;
     }
 
@@ -83,7 +77,7 @@ contract PositionManagerFactory is IPositionManagerFactory {
                     return;
                 }
             }
-            require(false, 'PositionManagerFactory::updateActionData: Action not found');
+            require(false, 'PFU');
         }
 
         if (facetAction.action == IDiamondCut.FacetCutAction.Replace) {
@@ -94,7 +88,7 @@ contract PositionManagerFactory is IPositionManagerFactory {
                     return;
                 }
             }
-            require(false, 'PositionManagerFactory::updateActionData: Action not found');
+            require(false, 'PFU');
         }
 
         if (facetAction.action == IDiamondCut.FacetCutAction.Add) {
@@ -110,23 +104,20 @@ contract PositionManagerFactory is IPositionManagerFactory {
                             break;
                         }
                     }
-                    require(different, 'PositionManagerFactory::updateActionData: Action already exists');
+                    require(different, 'PFE');
                 }
             }
             actions.push(facetAction);
             return;
         }
 
-        require(false, 'PositionManagerFactory::updateActionData: Invalid action');
+        require(false, 'PFI');
     }
 
     ///@notice deploy new positionManager and assign to userAddress
     ///@return address[] return array of PositionManager address updated with the last deployed PositionManager
     function create() external override returns (address[] memory) {
-        require(
-            userToPositionManager[msg.sender] == address(0),
-            'PositionManagerFactory::create: User already has a PositionManager'
-        );
+        require(userToPositionManager[msg.sender] == address(0), 'PFP');
         PositionManager manager = new PositionManager(msg.sender, diamondCutFacet, registry);
         positionManagers.push(address(manager));
         userToPositionManager[msg.sender] = address(manager);

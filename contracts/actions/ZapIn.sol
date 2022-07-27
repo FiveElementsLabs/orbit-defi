@@ -41,8 +41,8 @@ contract ZapIn is IZapIn {
         int24 tickUpper,
         uint24 fee
     ) external override returns (uint256 tokenId) {
-        require(token0 != token1, 'ZapIn::zapIn: token0 and token1 cannot be the same');
-        require(amountIn != 0, 'ZapIn::zapIn: tokenIn cannot be 0');
+        require(token0 != token1, 'ZZT');
+        require(amountIn != 0, 'ZZ0');
 
         (token0, token1, isToken0In) = _reorderTokens(token0, token1, isToken0In);
 

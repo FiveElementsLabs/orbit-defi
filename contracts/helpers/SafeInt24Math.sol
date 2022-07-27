@@ -27,10 +27,10 @@ library SafeInt24Math {
             return 0;
         }
 
-        require(!(a == -1 && b == _INT_24_MIN), 'SafeInt24Math::mul: multiplication overflow');
+        require(!(a == -1 && b == _INT_24_MIN), 'SM0');
 
         int24 c = a * b;
-        require(c / a == b, 'SafeInt24Math::mul: multiplication overflow');
+        require(c / a == b, 'SM1');
 
         return c;
     }
@@ -48,8 +48,8 @@ library SafeInt24Math {
      * - The divisor cannot be zero.
      */
     function div(int24 a, int24 b) internal pure returns (int24) {
-        require(b != 0, 'SafeInt24Math::div: division by zero');
-        require(!(b == -1 && a == _INT_24_MIN), 'SafeInt24Math::div: division overflow');
+        require(b != 0, 'SM2');
+        require(!(b == -1 && a == _INT_24_MIN), 'SM3');
 
         int24 c = a / b;
 
@@ -68,7 +68,7 @@ library SafeInt24Math {
      */
     function sub(int24 a, int24 b) internal pure returns (int24) {
         int24 c = a - b;
-        require((b >= 0 && c <= a) || (b < 0 && c > a), 'SafeInt24Math::sub: subtraction overflow');
+        require((b >= 0 && c <= a) || (b < 0 && c > a), 'SM4');
 
         return c;
     }
@@ -85,7 +85,7 @@ library SafeInt24Math {
      */
     function add(int24 a, int24 b) internal pure returns (int24) {
         int24 c = a + b;
-        require((b >= 0 && c >= a) || (b < 0 && c < a), 'SafeInt24Math::add: addition overflow');
+        require((b >= 0 && c >= a) || (b < 0 && c < a), 'SM5');
 
         return c;
     }
