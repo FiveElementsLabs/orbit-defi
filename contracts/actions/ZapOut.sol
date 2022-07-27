@@ -136,7 +136,7 @@ contract ZapOut is IZapOut {
         }
 
         if (bestLiquidity == 0) {
-            revert('ZapOut::_findBestFee: No pool found with desired tokens');
+            revert('ZFP');
         }
     }
 

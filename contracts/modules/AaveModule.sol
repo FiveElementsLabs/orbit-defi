@@ -86,7 +86,7 @@ contract AaveModule is BaseModule {
     {
         (, bytes32 data) = IPositionManager(positionManager).getModuleInfo(tokenId, address(this));
 
-        require(data != bytes32(0), 'AaveModule::moveToAave: module data cannot be empty');
+        require(data != bytes32(0), 'AME');
 
         uint24 distanceFromRange = UniswapNFTHelper._checkDistanceFromRange(
             tokenId,
@@ -97,7 +97,7 @@ contract AaveModule is BaseModule {
         ///@dev move token to aave only if the position's range is outside of the tick of the pool
         if (distanceFromRange != 0 && MathHelper.fromUint256ToUint24(uint256(data)) <= distanceFromRange) {
             _moveToAave(positionManager, tokenId);
-        } else revert('AaveModule::moveToAave: move to aave is not needed');
+        } else revert('AMN');
     }
 
     ///@notice move liquidity deposited on aave back to its uniswap position
@@ -109,7 +109,7 @@ contract AaveModule is BaseModule {
         address tokenFromAave,
         uint256 id
     ) external onlyWhitelistedKeeper {
-        require(tokenFromAave != address(0), 'AaveModule::moveToUniswap: token cannot be address 0');
+        require(tokenFromAave != address(0), 'AMT');
 
         uint256 tokenId = IPositionManager(positionManager).getTokenIdFromAavePosition(tokenFromAave, id);
 
@@ -146,7 +146,7 @@ contract AaveModule is BaseModule {
                 tokenId,
                 TokenData(token0, token1, fee, tickLower, tickUpper)
             );
-        } else revert('AaveModule::moveToUniswap: not needed.');
+        } else revert('AMU');
     }
 
     ///@notice deposit a uni v3 position's liquidity to an Aave lending pool
@@ -266,12 +266,12 @@ contract AaveModule is BaseModule {
         if (tickPool > tickLower && tickPool > tickUpper) toAaveToken = token1;
         else if (tickPool < tickLower && tickPool < tickUpper) toAaveToken = token0;
 
-        require(toAaveToken != address(0), 'AaveModule::_moveToAave: position is in range.');
+        require(toAaveToken != address(0), 'AMP');
 
         require(
             ILendingPool(aaveAddressHolder.lendingPoolAddress()).getReserveData(toAaveToken).aTokenAddress !=
                 address(0),
-            'AaveModule::_moveToAave: Aave token not found.'
+            'AMF'
         );
     }
 
@@ -296,7 +296,7 @@ contract AaveModule is BaseModule {
         }
 
         if (bestLiquidity == 0) {
-            revert('AaveModule::_findBestFee: No pool found with desired tokens');
+            revert('AMD');
         }
     }
 

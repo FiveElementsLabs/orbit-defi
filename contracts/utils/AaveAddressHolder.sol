@@ -28,10 +28,7 @@ contract AaveAddressHolder is IAaveAddressHolder {
 
     ///@notice restrict some function called only by governance
     modifier onlyGovernance() {
-        require(
-            msg.sender == registry.governance(),
-            'AaveAddressHolder::onlyGovernance: Only governance can call this function'
-        );
+        require(msg.sender == registry.governance(), 'AHG');
         _;
     }
 }

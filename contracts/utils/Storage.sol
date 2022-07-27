@@ -60,7 +60,7 @@ library PositionManagerStorage {
     ///@notice set the owner field on the storage struct
     ///@param _newOwner new owner of the storage struct
     function setContractOwner(address _newOwner) internal {
-        require(_newOwner != address(0), 'Storage::setContractOwner: new owner cannot be the null address');
+        require(_newOwner != address(0), 'SNO');
         StorageStruct storage ds = getStorage();
         address previousOwner = ds.owner;
         ds.owner = _newOwner;
@@ -72,10 +72,7 @@ library PositionManagerStorage {
     ///@notice make sure that a function is called by the PositionManagerFactory contract
     function enforceIsGovernance() internal view {
         StorageStruct storage ds = getStorage();
-        require(
-            msg.sender == ds.registry.positionManagerFactoryAddress(),
-            'Storage::enforceIsGovernance: Must be positionManagerFactory to call this function'
-        );
+        require(msg.sender == ds.registry.positionManagerFactoryAddress(), 'SMF');
     }
 
     ///@notice emitted when a facet is cut into the diamond
@@ -103,7 +100,7 @@ library PositionManagerStorage {
             } else if (action == IDiamondCut.FacetCutAction.Remove) {
                 removeFunctions(_diamondCut[facetIndex].facetAddress, _diamondCut[facetIndex].functionSelectors);
             } else {
-                revert('LibDiamondCut: Incorrect FacetCutAction');
+                revert('SIF');
             }
         }
         emit DiamondCut(_diamondCut, _init, _calldata);
@@ -114,9 +111,9 @@ library PositionManagerStorage {
     ///@param _facetAddress address of the facet
     ///@param _functionSelectors function selectors to add
     function addFunctions(address _facetAddress, bytes4[] memory _functionSelectors) internal {
-        require(_functionSelectors.length != 0, 'PositionManagerStorage::addFunctions: No selectors in facet to cut');
+        require(_functionSelectors.length != 0, 'SNS');
         StorageStruct storage ds = getStorage();
-        require(_facetAddress != address(0), "PositionManagerStorage::addFunctions: Add facet can't be address(0)");
+        require(_facetAddress != address(0), 'SA0');
         uint96 selectorPosition = uint96(ds.facetFunctionSelectors[_facetAddress].functionSelectors.length);
 
         // add new facet address if it does not exist
@@ -128,10 +125,7 @@ library PositionManagerStorage {
         for (uint256 selectorIndex; selectorIndex < _functionSelectorsLength; ++selectorIndex) {
             bytes4 selector = _functionSelectors[selectorIndex];
             address oldFacetAddress = ds.selectorToFacetAndPosition[selector].facetAddress;
-            require(
-                oldFacetAddress == address(0),
-                "PositionManagerStorage::addFunctions: Can't add function that already exists"
-            );
+            require(oldFacetAddress == address(0), 'SFE');
             addFunction(ds, selector, selectorPosition, _facetAddress);
             selectorPosition++;
         }
@@ -169,14 +163,8 @@ library PositionManagerStorage {
         address _facetAddress,
         bytes4 _selector
     ) internal {
-        require(
-            _facetAddress != address(0),
-            "PositionManagerStorage::removeFunction: Can't remove function that doesn't exist"
-        );
-        require(
-            _facetAddress != address(this),
-            "PositionManagerStorage::removeFunction: Can't remove immutable function"
-        );
+        require(_facetAddress != address(0), 'SRE');
+        require(_facetAddress != address(this), 'SRI');
 
         // replace selector with last selector, then delete last selector
         uint256 selectorPosition = ds.selectorToFacetAndPosition[_selector].functionSelectorPosition;
@@ -212,12 +200,9 @@ library PositionManagerStorage {
     ///@param _facetAddress address of the facet
     ///@param _functionSelectors function selectors to replace
     function replaceFunctions(address _facetAddress, bytes4[] memory _functionSelectors) internal {
-        require(
-            _functionSelectors.length != 0,
-            'PositionManagerStorage::replaceFunctions: No selectors in facet to cut'
-        );
+        require(_functionSelectors.length != 0, 'SRF');
         StorageStruct storage ds = getStorage();
-        require(_facetAddress != address(0), "PositionManagerStorage::replaceFunctions: Add facet can't be address(0)");
+        require(_facetAddress != address(0), 'SR0');
         uint96 selectorPosition = uint96(ds.facetFunctionSelectors[_facetAddress].functionSelectors.length);
 
         // add new facet address if it does not exist
@@ -230,10 +215,7 @@ library PositionManagerStorage {
             bytes4 selector = _functionSelectors[selectorIndex];
             address oldFacetAddress = ds.selectorToFacetAndPosition[selector].facetAddress;
 
-            require(
-                oldFacetAddress != _facetAddress,
-                "PositionManagerStorage::replaceFunctions: Can't replace function with same function"
-            );
+            require(oldFacetAddress != _facetAddress, 'SRR');
 
             removeFunction(ds, oldFacetAddress, selector);
             addFunction(ds, selector, selectorPosition, _facetAddress);
@@ -245,17 +227,11 @@ library PositionManagerStorage {
     ///@param _facetAddress address of the facet
     ///@param _functionSelectors function selectors to remove
     function removeFunctions(address _facetAddress, bytes4[] memory _functionSelectors) internal {
-        require(
-            _functionSelectors.length != 0,
-            'PositionManagerStorage::removeFunctions: No selectors in facet to cut'
-        );
+        require(_functionSelectors.length != 0, 'SES');
 
         StorageStruct storage ds = getStorage();
 
-        require(
-            _facetAddress == address(0),
-            'PositionManagerStorage::removeFunctions: Remove facet address must be address(0)'
-        );
+        require(_facetAddress == address(0), 'SE0');
 
         uint256 _functionSelectorsLength = _functionSelectors.length;
         for (uint256 selectorIndex; selectorIndex < _functionSelectorsLength; ++selectorIndex) {
@@ -270,15 +246,9 @@ library PositionManagerStorage {
     ///@param _calldata delegatecall data
     function initializeDiamondCut(address _init, bytes memory _calldata) internal {
         if (_init == address(0)) {
-            require(
-                _calldata.length == 0,
-                'PositionManagerStorage::initializeDiamondCut: _init is address(0) but_calldata is not empty'
-            );
+            require(_calldata.length == 0, 'SI0');
         } else {
-            require(
-                _calldata.length != 0,
-                'PositionManagerStorage::initializeDiamondCut: _calldata is empty but _init is not address(0)'
-            );
+            require(_calldata.length != 0, 'SIC');
 
             (bool success, bytes memory error) = _init.delegatecall(_calldata);
 
@@ -286,7 +256,7 @@ library PositionManagerStorage {
                 if (error.length != 0) {
                     revert(string(error));
                 } else {
-                    revert('PositionManagerStorage::initializeDiamondCut: _init function reverted');
+                    revert('SIR');
                 }
             }
         }
