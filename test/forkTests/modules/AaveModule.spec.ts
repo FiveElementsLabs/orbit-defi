@@ -315,9 +315,7 @@ describe('AaveModule.sol', function () {
     });
 
     it('should not return to position if still out of range', async function () {
-      await expect(AaveModule.connect(user).moveToUniswap(PositionManager.address, tokenId)).to.be.revertedWith(
-        'AaveModule::moveToUniswap: not needed.'
-      );
+      await expect(AaveModule.connect(user).moveToUniswap(PositionManager.address, tokenId)).to.be.revertedWith('AMU');
 
       expect((await aUsdc.balanceOf(PositionManager.address)).toNumber()).to.gt(0);
     });

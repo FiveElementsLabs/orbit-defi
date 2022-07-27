@@ -271,7 +271,7 @@ describe('ZapIn.sol', function () {
     it('should fail if amountIn is 0', async function () {
       await expect(
         ZapInFallback.connect(user).zapIn(tokenUsdc.address, tokenDai.address, false, 0, -600, 600, 500)
-      ).to.be.revertedWith('ZapIn::zapIn: tokenIn cannot be 0');
+      ).to.be.revertedWith('ZZ0');
     });
 
     it('should fail to zap if twap deviation is too high', async function () {
@@ -308,7 +308,7 @@ describe('ZapIn.sol', function () {
           600,
           500
         )
-      ).to.be.revertedWith('SwapHelper::checkDeviation: Price deviation is too high');
+      ).to.be.revertedWith('SHD');
     });
   });
 });

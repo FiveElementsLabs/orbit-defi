@@ -357,9 +357,7 @@ describe('ZapOut.sol', function () {
       const tokenId2 = mintReceipt2.events[mintReceipt2.events.length - 1].args.tokenId.toNumber();
 
       // This zap should fail because of maxTwapDeviation
-      await expect(ZapOutFallback.connect(user).zapOut(tokenId2, tokenDai.address)).to.be.revertedWith(
-        'SwapHelper::checkDeviation: Price deviation is too high'
-      );
+      await expect(ZapOutFallback.connect(user).zapOut(tokenId2, tokenDai.address)).to.be.revertedWith('SHD');
     });
 
     it('should correctly exit a position for nonzero tick of a pool', async function () {

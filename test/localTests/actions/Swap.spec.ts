@@ -165,7 +165,7 @@ describe('Swap.sol', function () {
       // This swap should fail because of maxTwapDeviation
       await expect(
         SwapFallback.connect(user).swap(tokenEth.address, tokenUsdc.address, 3000, amount0In, false)
-      ).to.be.revertedWith('SwapHelper::checkDeviation: Price deviation is too high');
+      ).to.be.revertedWith('SHD');
     });
 
     it('should revert if pool does not exist', async function () {

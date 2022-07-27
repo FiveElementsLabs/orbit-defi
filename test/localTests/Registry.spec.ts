@@ -75,7 +75,7 @@ describe('Registry.sol', function () {
           true
         );
       } catch (err: any) {
-        expect(err.toString()).to.have.string('Registry::onlyGovernance: Call must come from governance.');
+        expect(err.toString()).to.have.string('ROG');
       }
     });
     it('Should set default activation', async function () {
