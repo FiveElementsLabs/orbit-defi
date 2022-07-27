@@ -6,6 +6,7 @@
 #### AW - AaveWithdraw.sol
 
 **AWN** - AaveWithdraw::withdrawFromAave: no position to withdraw!
+**AW0** - AaveWithdraw::withdrawFromAave: part to withdraw must be between 0 and 10000
 
 #### IL - IncreaseLiquidity.sol
 
