@@ -104,7 +104,7 @@ contract AaveModule is BaseModule {
     ///@param positionManager address of the position manager
     ///@param tokenId id of the uniswap nft to withdraw from aaave
     function moveToUniswap(address positionManager, uint256 tokenId) external onlyWhitelistedKeeper {
-        (, address tokenFromAave) = IPositionManager(positionManager).getTokenIdFromAavePosition(tokenId);
+        (, address tokenFromAave) = IPositionManager(positionManager).getAaveDataFromTokenId(tokenId);
 
         require(tokenFromAave != address(0), 'AaveModule::moveToUniswap: token cannot be address 0');
 

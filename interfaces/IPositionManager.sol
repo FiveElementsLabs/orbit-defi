@@ -42,7 +42,7 @@ interface IPositionManager {
 
     function removePositionId(uint256 index) external;
 
-    function getTokenIdFromAavePosition(uint256 tokenId) external returns (uint256, address);
+    function getAaveDataFromTokenId(uint256 tokenId) external returns (uint256, address);
 
     function getOwner() external view returns (address);
 }

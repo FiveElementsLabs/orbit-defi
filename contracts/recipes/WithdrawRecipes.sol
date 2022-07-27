@@ -103,7 +103,7 @@ contract WithdrawRecipes {
 
         IClosePosition(positionManager).closePosition(tokenId, true);
 
-        (, address tokenToAave) = IPositionManager(positionManager).getTokenIdFromAavePosition(tokenId);
+        (, address tokenToAave) = IPositionManager(positionManager).getAaveDataFromTokenId(tokenId);
 
         amountWithdrawn = IAaveWithdraw(positionManager).withdrawFromAave(tokenToAave, tokenId, partToWithdraw, true);
     }
@@ -118,7 +118,7 @@ contract WithdrawRecipes {
         returns (uint256 amountWithdrawn)
     {
         address positionManager = positionManagerFactory.userToPositionManager(msg.sender);
-        (, address tokenToAave) = IPositionManager(positionManager).getTokenIdFromAavePosition(tokenId);
+        (, address tokenToAave) = IPositionManager(positionManager).getAaveDataFromTokenId(tokenId);
 
         if (tokenToAave != tokenOut) {
             (, , uint24 fee, , ) = UniswapNFTHelper._getTokens(
