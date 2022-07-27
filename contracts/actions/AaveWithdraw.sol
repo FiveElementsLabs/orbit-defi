@@ -38,6 +38,7 @@ contract AaveWithdraw is IAaveWithdraw {
         bool returnTokensToUser
     ) external override returns (uint256 amountWithdrawn) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
+        require(partToWithdraw != 0 && partToWithdraw <= 10_000, 'AW0');
         require(Storage.aaveUserReserves[token].positionShares[id] != 0, 'AWN');
 
         amountWithdrawn = ILendingPool(Storage.aaveAddressHolder.lendingPoolAddress()).withdraw(
