@@ -59,16 +59,8 @@ contract Mint is IMint {
         uint256 amount1Leftover = IERC20(inputs.token1Address).balanceOf(address(this));
 
         ///@dev send leftover tokens back to the user if necessary
-        if (amount0Leftover != 0)
-            require(
-                IERC20(inputs.token0Address).transfer(Storage.owner, amount0Leftover),
-                'Mint::mint: Failed transfer of leftover token0'
-            );
-        if (amount1Leftover != 0)
-            require(
-                IERC20(inputs.token1Address).transfer(Storage.owner, amount1Leftover),
-                'Mint::mint: Failed transfer of leftover token1'
-            );
+        if (amount0Leftover != 0) require(IERC20(inputs.token0Address).transfer(Storage.owner, amount0Leftover), 'MM0');
+        if (amount1Leftover != 0) require(IERC20(inputs.token1Address).transfer(Storage.owner, amount1Leftover), 'MM1');
 
         IPositionManager(address(this)).middlewareDeposit(tokenId);
         emit PositionMinted(address(this), tokenId);

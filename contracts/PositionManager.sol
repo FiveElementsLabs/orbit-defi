@@ -42,26 +42,20 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
     ///@notice modifier to check if the msg.sender is the owner
     modifier onlyOwner() {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
-        require(msg.sender == Storage.owner, 'PositionManager::onlyOwner: Only owner can call this function');
+        require(msg.sender == Storage.owner, 'PM0');
         _;
     }
 
     ///@notice modifier to check if the msg.sender is whitelisted
     modifier onlyWhitelisted() {
-        require(
-            _calledFromActiveModule(msg.sender) || msg.sender == address(this),
-            'PositionManager::onlyWhitelisted: Only whitelisted addresses can call this function'
-        );
+        require(_calledFromActiveModule(msg.sender) || msg.sender == address(this), 'PMW');
         _;
     }
 
     ///@notice modifier to check if the msg.sender is the PositionManagerFactory
     modifier onlyFactory() {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
-        require(
-            Storage.registry.positionManagerFactoryAddress() == msg.sender,
-            'PositionManager::init: Only PositionManagerFactory can init this contract'
-        );
+        require(Storage.registry.positionManagerFactoryAddress() == msg.sender, 'PMI');
         _;
     }
 
@@ -72,7 +66,7 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
             INonfungiblePositionManager(Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress()).ownerOf(
                 tokenId
             ) == address(this),
-            'PositionManager::onlyOwnedPosition: positionManager is not owner of the token'
+            'PMT'
         );
         _;
     }
@@ -185,7 +179,7 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
         bytes32 data
     ) external override onlyOwner onlyOwnedPosition(tokenId) {
         uint256 moduleData = uint256(data);
-        require(moduleData != 0, 'PositionManager::setModuleData: moduleData must be greater than 0%');
+        require(moduleData != 0, 'PMM');
         activatedModules[tokenId][moduleAddress].data = data;
     }
 
@@ -231,7 +225,7 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
         uint256 amount = ERC20Helper._getBalance(tokenAddress, address(this));
         uint256 got = ERC20Helper._withdrawTokens(tokenAddress, msg.sender, amount);
 
-        require(amount == got, 'PositionManager::withdrawERC20: ERC20 transfer failed.');
+        require(amount == got, 'PME');
         emit ERC20Withdrawn(tokenAddress, msg.sender, got);
     }
 
@@ -256,7 +250,7 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
         address facet = Storage.selectorToFacetAndPosition[msg.sig].facetAddress;
-        require(facet != address(0), 'PositionManager::Fallback: Function does not exist');
+        require(facet != address(0), 'PM');
 
         ///@dev Execute external function from facet using delegatecall and return any value.
         assembly {

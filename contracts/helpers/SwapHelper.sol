@@ -28,10 +28,7 @@ library SwapHelper {
         int24 tickLower,
         int24 tickUpper
     ) internal pure returns (uint256 ratioX96) {
-        require(
-            tickLower < tickPool && tickUpper > tickPool,
-            'SwapHelper::getRatioFromRange: Position should be in range to call this function'
-        );
+        require(tickLower < tickPool && tickUpper > tickPool, 'SHR');
         uint160 sqrtRatioX96 = TickMath.getSqrtRatioAtTick(tickPool);
         uint160 sqrtRatioAX96 = TickMath.getSqrtRatioAtTick(tickLower);
         uint160 sqrtRatioBX96 = TickMath.getSqrtRatioAtTick(tickUpper);
@@ -54,7 +51,7 @@ library SwapHelper {
         uint256 amount0In,
         uint256 amount1In
     ) internal pure returns (uint256 amountToSwap, bool token0In) {
-        require(amount0In != 0 || amount1In != 0, 'SwapHelper::calcAmountToSwap: at least one amountIn should be != 0');
+        require(amount0In != 0 || amount1In != 0, 'SHA');
 
         //if tickPoolool >= tickUpper, then my range is under the current tick, so my position will all be in token1
         if (tickPool >= tickUpper) {
@@ -95,7 +92,7 @@ library SwapHelper {
         (, int24 currentTick, , , , , ) = pool.slot0();
         int24 twap = getTwap(pool, twapDuration);
         int24 deviation = currentTick > twap ? currentTick.sub(twap) : twap.sub(currentTick);
-        require(deviation <= maxTwapDeviation, 'SwapHelper::checkDeviation: Price deviation is too high');
+        require(deviation <= maxTwapDeviation, 'SHD');
     }
 
     ///@notice Fetch time-weighted average price in ticks from Uniswap pool for specified duration

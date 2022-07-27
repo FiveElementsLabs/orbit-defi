@@ -38,7 +38,7 @@ contract AaveDeposit is IAaveDeposit {
 
         IAToken aToken = IAToken(lendingPool.getReserveData(token).aTokenAddress);
 
-        require(address(aToken) != address(0), 'AaveDeposit::depositToAave: Aave token not found.');
+        require(address(aToken) != address(0), 'ADN');
 
         uint256 balanceBefore = aToken.scaledBalanceOf(address(this));
 
@@ -74,7 +74,7 @@ contract AaveDeposit is IAaveDeposit {
 
         require(
             PositionManagerStorage.getDynamicStorageValue(keccak256(abi.encodePacked(tokenId, 'aave_shares'))) == 0,
-            'AaveDeposit::_pushTokenIdToAave: positionShares does not exist'
+            'ADS'
         );
         PositionManagerStorage.setDynamicStorageValue(
             keccak256(abi.encodePacked(tokenId, 'aave_tokenToAave')),

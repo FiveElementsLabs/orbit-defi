@@ -39,11 +39,8 @@ contract IdleLiquidityModule is BaseModule {
     ///@param _uniswapAddressHolder address of the uniswap address holder
     ///@param _registry address of the registry
     constructor(address _uniswapAddressHolder, address _registry) BaseModule(_registry) {
-        require(
-            _uniswapAddressHolder != address(0),
-            'IdleLiquidityModule::Constructor:uniswapAddressHolder cannot be 0'
-        );
-        require(_registry != address(0), 'IdleLiquidityModule::Constructor:registry cannot be 0');
+        require(_uniswapAddressHolder != address(0), 'ILU');
+        require(_registry != address(0), 'ILR');
 
         uniswapAddressHolder = IUniswapAddressHolder(_uniswapAddressHolder);
     }
@@ -59,7 +56,7 @@ contract IdleLiquidityModule is BaseModule {
         address nonfungiblePositionManagerAddress = uniswapAddressHolder.nonfungiblePositionManagerAddress();
 
         (, bytes32 rebalanceDistance) = IPositionManager(positionManager).getModuleInfo(tokenId, address(this));
-        require(rebalanceDistance != bytes32(0), 'IdleLiquidityModule:: rebalance: Rebalance distance is 0');
+        require(rebalanceDistance != bytes32(0), 'ILD');
 
         ///@dev can rebalance only if the pool tick is outside the position range, and it is far enough from it
         if (
@@ -70,7 +67,7 @@ contract IdleLiquidityModule is BaseModule {
             ) >= MathHelper.fromUint256ToUint24(uint256(rebalanceDistance))
         ) {
             _rebalance(positionManager, tokenId, nonfungiblePositionManagerAddress);
-        } else revert('IdleLiquidityModule::rebalance: not needed.');
+        } else revert('ILN');
     }
 
     ///@notice rebalances the position by swapping the tokens

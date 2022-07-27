@@ -32,8 +32,8 @@ contract AutoCompoundModule is BaseModule {
     ///@param _addressHolder the address of the uniswap address holder contract
     ///@param _registry the address of the registry contract
     constructor(address _addressHolder, address _registry) BaseModule(_registry) {
-        require(_addressHolder != address(0), 'AutoCompoundModule::Constructor:addressHolder cannot be 0');
-        require(_registry != address(0), 'AutoCompoundModule::Constructor:registry cannot be 0');
+        require(_addressHolder != address(0), 'ACA');
+        require(_registry != address(0), 'ACR');
         addressHolder = IUniswapAddressHolder(_addressHolder);
     }
 
@@ -60,7 +60,7 @@ contract AutoCompoundModule is BaseModule {
         );
 
         (, bytes32 data) = IPositionManager(positionManager).getModuleInfo(tokenId, address(this));
-        require(data != bytes32(0), 'AutoCompoundModule::_checkIfCompoundIsNeeded: module data cannot be empty');
+        require(data != bytes32(0), 'ACM');
 
         (uint160 sqrtPriceX96, , , , , , ) = IUniswapV3Pool(
             UniswapNFTHelper._getPoolFromTokenId(tokenId, NonfungiblePositionManager, uniswapV3FactoryAddress)
@@ -69,7 +69,7 @@ contract AutoCompoundModule is BaseModule {
         ///@dev check if compound need to be done
         if (_isThresholdReached(amount0, amount1, uncollectedFees0, uncollectedFees1, sqrtPriceX96, uint256(data))) {
             _performAutoCompound(NonfungiblePositionManager, positionManager, tokenId);
-        } else revert('AutoCompoundModule::autoCompoundFees: not needed.');
+        } else revert('ACN');
     }
 
     function _performAutoCompound(

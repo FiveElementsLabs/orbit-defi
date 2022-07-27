@@ -29,10 +29,7 @@ contract IncreaseLiquidity is IIncreaseLiquidity {
 
         address nonfungiblePositionManagerAddress = Storage.uniswapAddressHolder.nonfungiblePositionManagerAddress();
 
-        require(
-            amount0Desired != 0 || amount1Desired != 0,
-            'IncreaseLiquidity::increaseLiquidity: Amounts cannot be both zero'
-        );
+        require(amount0Desired != 0 || amount1Desired != 0, 'ILA');
 
         (address token0Address, address token1Address, , , ) = UniswapNFTHelper._getTokens(
             tokenId,

@@ -36,10 +36,6 @@ contract AaveWithdraw is IAaveWithdraw {
         uint256 partToWithdraw,
         bool returnTokensToUser
     ) external override returns (uint256 amountWithdrawn) {
-        require(
-            partToWithdraw != 0 && partToWithdraw <= 10_000,
-            'AaveWithdraw::withdrawFromAave: part to withdraw must be between 0 and 10000'
-        );
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
         uint256 shares = uint256(
@@ -51,7 +47,8 @@ contract AaveWithdraw is IAaveWithdraw {
             )
         );
 
-        require(shares != 0, 'AaveWithdraw::withdrawFromAave: no position to withdraw!');
+        require(shares != 0, 'AWN');
+        require(partToWithdraw != 0 && partToWithdraw <= 10_000, 'AW0');
 
         amountWithdrawn = ILendingPool(Storage.aaveAddressHolder.lendingPoolAddress()).withdraw(
             tokenFromAave,

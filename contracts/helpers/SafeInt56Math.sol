@@ -22,8 +22,8 @@ library SafeInt56Math {
      * - The divisor cannot be zero.
      */
     function div(int56 a, int56 b) internal pure returns (int56) {
-        require(b != 0, 'SafeInt56Math::div: division by zero');
-        require(!(b == -1 && a == _INT_56_MIN), 'SafeInt56Math::div: division overflow');
+        require(b != 0, 'SM6');
+        require(!(b == -1 && a == _INT_56_MIN), 'SM7');
 
         int56 c = a / b;
 
@@ -42,7 +42,7 @@ library SafeInt56Math {
      */
     function sub(int56 a, int56 b) internal pure returns (int56) {
         int56 c = a - b;
-        require((b >= 0 && c <= a) || (b < 0 && c > a), 'SafeInt56Math::sub: subtraction overflow');
+        require((b >= 0 && c <= a) || (b < 0 && c > a), 'SM8');
 
         return c;
     }
