@@ -56,7 +56,7 @@ contract AaveWithdraw is IAaveWithdraw {
             returnTokensToUser ? Storage.owner : address(this)
         );
 
-        _removeTokenIdFromAave(tokenFromAave, tokenId, partToWithdraw, shares, totalShares);
+        _updateShares(tokenFromAave, tokenId, partToWithdraw, shares, totalShares);
         emit WithdrawnFromAave(
             address(this),
             tokenFromAave,
@@ -91,7 +91,7 @@ contract AaveWithdraw is IAaveWithdraw {
     ///@param partToWithdraw percentage of token to withdraw in base points
     ///@param shares shares of the position
     ///@param totalShares total shares of the underlying token
-    function _removeTokenIdFromAave(
+    function _updateShares(
         address token,
         uint256 tokenId,
         uint256 partToWithdraw,

@@ -53,7 +53,7 @@ contract AaveDeposit is IAaveDeposit {
         emit DepositedOnAave(address(this), token, tokenId, shares);
     }
 
-    ///@dev now dont use anymore aaveid since we have tokenId that is unique - store shares for tokenId and tokenToAave for tokenId
+    ///@dev now don't use anymore aaveid since we have tokenId that is unique - store shares for tokenId and tokenToAave for tokenId
     ///@dev since they can't be duplicated. Store totalShares for tokenToAave since we keep track of the total amount of tokens in aave.
     ///@notice update aave position with new shares
     ///@param token token address of the token to deposit to Aave

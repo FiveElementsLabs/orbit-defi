@@ -197,6 +197,10 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
         return (activatedModules[_tokenId][_moduleAddress].isActive, activatedModules[_tokenId][_moduleAddress].data);
     }
 
+    ///@notice get info for a aaveModule for tokenId position
+    ///@param tokenId ID of the position
+    ///@return uin256 shares of the position on aave
+    ///@return address tokenToAave address
     function getAaveDataFromTokenId(uint256 tokenId) external view override returns (uint256, address) {
         return (
             uint256(PositionManagerStorage.getDynamicStorageValue(keccak256(abi.encodePacked(tokenId, 'aave_shares')))),
