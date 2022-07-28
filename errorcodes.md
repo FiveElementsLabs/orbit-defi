@@ -87,6 +87,7 @@
 **SI0** - PositionManagerStorage::initializeDiamondCut: \_init is address(0) but_calldata is not empty
 **SIC** - PositionManagerStorage::initializeDiamondCut: \_calldata is empty but \_init is not address(0)
 **SIR** - PositionManagerStorage::initializeDiamondCut: \_init function reverted
+**SDK** - PositionManagerStorage::getDynamicStorage: Key does not exist on storage
 
 #### PF - PositionManagerFactory.sol
 

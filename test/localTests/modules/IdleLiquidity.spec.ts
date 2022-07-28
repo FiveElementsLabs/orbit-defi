@@ -203,9 +203,7 @@ describe('IdleLiquidityModule.sol', function () {
         abiCoder.encode(['uint24'], [2])
       );
       // rebalance
-      await expect(IdleLiquidityModule.rebalance(PositionManager.address, tokenId)).to.be.revertedWith(
-        'IdleLiquidityModule::rebalance: not needed.'
-      );
+      await expect(IdleLiquidityModule.rebalance(PositionManager.address, tokenId)).to.be.revertedWith('ILN');
     });
 
     it('should rebalance a uni position that is out of range', async function () {

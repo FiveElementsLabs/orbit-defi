@@ -49,6 +49,7 @@ describe('AaveModule.sol', function () {
   let DepositRecipes: Contract;
   let LendingPool: Contract;
   let AaveModule: Contract;
+  let DynamicStorageModule: Contract;
   let usdcMock: MockToken;
   let wbtcMock: MockToken;
   let swapRouter: Contract;
@@ -135,6 +136,7 @@ describe('AaveModule.sol', function () {
       ethers.utils.hexZeroPad(ethers.utils.hexlify(aaveDistance), 32),
       true
     );
+
     await registry.addNewContract(
       hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes('Factory')),
       PositionManagerFactory.address,
@@ -281,13 +283,7 @@ describe('AaveModule.sol', function () {
       expect(slot0.tick).to.gt(tickLower);
       expect(slot0.tick).to.lt(tickUpper);
 
-      const positions = await PositionManager.connect(user).getAavePositionsArray();
-
-      const tx = await AaveModule.connect(user).moveToUniswap(
-        PositionManager.address,
-        positions[0].tokenToAave,
-        positions[0].id
-      );
+      const tx = await AaveModule.connect(user).moveToUniswap(PositionManager.address, tokenId);
       await tx.wait();
       expect(await aUsdc.balanceOf(PositionManager.address)).to.equal(0);
       expect(await aWbtc.balanceOf(PositionManager.address)).to.equal(0);
@@ -319,9 +315,7 @@ describe('AaveModule.sol', function () {
     });
 
     it('should not return to position if still out of range', async function () {
-      await expect(
-        AaveModule.connect(user).moveToUniswap(PositionManager.address, usdcMock.address, aaveId)
-      ).to.be.revertedWith('AaveModule::moveToUniswap: not needed.');
+      await expect(AaveModule.connect(user).moveToUniswap(PositionManager.address, tokenId)).to.be.revertedWith('AMU');
 
       expect((await aUsdc.balanceOf(PositionManager.address)).toNumber()).to.gt(0);
     });
@@ -343,13 +337,7 @@ describe('AaveModule.sol', function () {
       expect(slot0.tick).to.gt(tickLower);
       expect(slot0.tick).to.lt(tickUpper);
 
-      const positions = await PositionManager.connect(user).getAavePositionsArray();
-
-      const tx = await AaveModule.connect(user).moveToUniswap(
-        PositionManager.address,
-        positions[0].tokenToAave,
-        positions[0].id
-      );
+      const tx = await AaveModule.connect(user).moveToUniswap(PositionManager.address, tokenId);
       await tx.wait();
       expect(await aWbtc.balanceOf(PositionManager.address)).to.equal(0);
       expect(await aUsdc.balanceOf(PositionManager.address)).to.equal(0);
@@ -407,13 +395,7 @@ describe('AaveModule.sol', function () {
       expect(pool0Tick).to.gt(tickLower - minimumTickVariation);
       expect(pool0Tick).to.lt(tickLower);
 
-      const positions = await PositionManager.connect(user).getAavePositionsArray();
-
-      tx = await AaveModule.connect(user).moveToUniswap(
-        PositionManager.address,
-        positions[0].tokenToAave,
-        positions[0].id
-      );
+      tx = await AaveModule.connect(user).moveToUniswap(PositionManager.address, tokenId);
       await tx.wait();
       expect(await aUsdc.balanceOf(PositionManager.address)).to.equal(0);
       expect(await aWbtc.balanceOf(PositionManager.address)).to.equal(0);
@@ -471,13 +453,7 @@ describe('AaveModule.sol', function () {
       expect(pool0Tick).to.lt(tickUpper + minimumTickVariation);
       expect(pool0Tick).to.gt(tickUpper);
 
-      const positions = await PositionManager.connect(user).getAavePositionsArray();
-
-      tx = await AaveModule.connect(user).moveToUniswap(
-        PositionManager.address,
-        positions[0].tokenToAave,
-        positions[0].id
-      );
+      tx = await AaveModule.connect(user).moveToUniswap(PositionManager.address, tokenId);
       await tx.wait();
       expect(await aUsdc.balanceOf(PositionManager.address)).to.equal(0);
       expect(await aWbtc.balanceOf(PositionManager.address)).to.equal(0);
@@ -508,7 +484,7 @@ describe('AaveModule.sol', function () {
       expect((await NonFungiblePositionManager.positions(tokenId)).liquidity.toNumber()).to.be.closeTo(0, 100);
 
       await PositionManager.connect(user).toggleModule(tokenId, AaveModule.address, false);
-      await AaveModule.connect(user).moveToUniswap(PositionManager.address, usdcMock.address, aaveId);
+      await AaveModule.connect(user).moveToUniswap(PositionManager.address, tokenId);
       expect(await aWbtc.balanceOf(PositionManager.address)).to.equal(0);
       expect(await aUsdc.balanceOf(PositionManager.address)).to.equal(0);
     });

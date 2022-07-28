@@ -271,7 +271,7 @@ describe('ZapIn.sol', function () {
     it('should fail if amountIn is 0', async function () {
       await expect(
         ZapInFallback.connect(user).zapIn(tokenUsdc.address, tokenDai.address, false, 0, -600, 600, 500)
-      ).to.be.revertedWith('ZapIn::zapIn: tokenIn cannot be 0');
+      ).to.be.revertedWith('ZZ0');
     });
 
     it('should fail to zap if twap deviation is too high', async function () {
@@ -308,51 +308,7 @@ describe('ZapIn.sol', function () {
           600,
           500
         )
-      ).to.be.revertedWith('SwapHelper::checkDeviation: Price deviation is too high');
-    });
-
-    it('should mint for any tick of the pool', async function () {
-      //make some trades to change the tick of the pool
-      let poolTick = Math.round((await PoolEthUsdc500.slot0())[1] / 10) * 10;
-      const swapAmount = '0x' + (1e25).toString(16);
-      while (poolTick > -500 && poolTick < 500) {
-        tokenEth.connect(liquidityProvider).approve(SwapRouter.address, swapAmount);
-        await SwapRouter.connect(liquidityProvider).exactInputSingle([
-          tokenEth.address,
-          tokenUsdc.address,
-          500,
-          liquidityProvider.address,
-          Date.now() + 1000,
-          swapAmount,
-          0,
-          0,
-        ]);
-        poolTick = Math.round((await PoolEthUsdc500.slot0())[1] / 10) * 10;
-      }
-      await registry.setMaxTwapDeviation(2 ** 23 - 1);
-      const beforeLength = await PositionManager.getAllUniPositions();
-      const amount = 1e6;
-      await PositionManager.withdrawERC20(tokenEth.address);
-      await PositionManager.withdrawERC20(tokenUsdc.address);
-      await ZapInFallback.connect(user).zapIn(
-        tokenEth.address,
-        tokenUsdc.address,
-        false,
-        amount,
-        poolTick - 600,
-        poolTick + 600,
-        500
-      );
-      const afterLength = await PositionManager.getAllUniPositions();
-      expect(Number(afterLength.length)).to.be.gt(Number(beforeLength.length));
-      expect(await tokenEth.balanceOf(PositionManager.address)).to.be.closeTo(
-        BigNumber.from(0),
-        BigNumber.from((amount * 1e12) / 500)
-      );
-      expect(await tokenUsdc.balanceOf(PositionManager.address)).to.be.closeTo(
-        BigNumber.from(0),
-        BigNumber.from(amount / 500)
-      );
+      ).to.be.revertedWith('SHD');
     });
   });
 });

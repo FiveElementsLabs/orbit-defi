@@ -244,7 +244,7 @@ describe('SwapToPositionRatio.sol', function () {
           tickLower: tickLower,
           tickUpper: tickUpper,
         })
-      ).to.be.revertedWith('SwapHelper::checkDeviation: Price deviation is too high');
+      ).to.be.revertedWith('SHD');
     });
 
     it('should revert if pool does not exist', async function () {

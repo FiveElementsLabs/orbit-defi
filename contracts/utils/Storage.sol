@@ -35,9 +35,8 @@ struct StorageStruct {
     address owner;
     IRegistry registry;
     IAaveAddressHolder aaveAddressHolder;
-    uint256 aaveIdCounter;
-    mapping(address => IPositionManager.AaveReserve) aaveUserReserves;
-    AavePositions[] aavePositionsArray;
+    // key 32bytes => uint32 5bytes => storageVars[uint32] == key
+    mapping(uint128 => bytes32) storageVars;
 }
 
 library PositionManagerStorage {
@@ -260,5 +259,57 @@ library PositionManagerStorage {
                 }
             }
         }
+    }
+
+    ///@notice check to verify that the key is valid and already whitelisted by governance
+    ///@param hashedKey key to check
+    modifier verifyKey(bytes32 hashedKey) {
+        StorageStruct storage ds = getStorage();
+        bytes16 y;
+
+        assembly {
+            y := shl(128, hashedKey)
+        }
+
+        bytes32 storageVariableHash = ds.storageVars[uint128(y)];
+
+        require(storageVariableHash == hashedKey, 'SDK');
+        _;
+    }
+
+    ///@notice get a specific slot of memory by the given key and read the first 32 bytes
+    ///@param hashedKey key to read from
+    function getDynamicStorageValue(bytes32 hashedKey) internal view verifyKey(hashedKey) returns (bytes32 value) {
+        assembly {
+            value := sload(hashedKey)
+        }
+    }
+
+    ///@dev supposing we've already set the key on the mapping, we can't insert a wrong key
+    ///@notice set a specific slot of memory by the given key and write the first 32 bytes
+    ///@param hashedKey key to write to
+    ///@param value value to write
+    function setDynamicStorageValue(bytes32 hashedKey, bytes32 value) internal verifyKey(hashedKey) {
+        assembly {
+            sstore(hashedKey, value)
+        }
+    }
+
+    ///@notice add a new hashedKey to the mapping in storage, sort of whitelist
+    ///@param hashedKey key to add to the mapping
+    function addDynamicStorageKey(bytes32 hashedKey) internal {
+        StorageStruct storage ds = getStorage();
+        bytes16 y;
+
+        assembly {
+            y := shl(128, hashedKey)
+        }
+
+        bytes32 storageVariableHash = ds.storageVars[uint128(y)];
+
+        ///@dev return if the key already exists
+        if (storageVariableHash != bytes32(0)) return;
+
+        ds.storageVars[uint128(y)] = hashedKey;
     }
 }

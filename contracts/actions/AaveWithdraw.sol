@@ -5,7 +5,6 @@ pragma abicoder v2;
 
 import '../../interfaces/IAToken.sol';
 import '../../interfaces/ILendingPool.sol';
-import '../../interfaces/IPositionManager.sol';
 import '../../interfaces/actions/IAaveWithdraw.sol';
 import '../utils/Storage.sol';
 
@@ -26,82 +25,96 @@ contract AaveWithdraw is IAaveWithdraw {
     );
 
     ///@notice withdraw from aave some token amount
-    ///@param token token address
-    ///@param id position to withdraw from
+    ///@param tokenFromAave token address of the token to withdraw from Aave
+    ///@param tokenId position to withdraw from
     ///@param partToWithdraw percentage of token to withdraw in base points
     ///@param returnTokensToUser true if withdrawn tokens are sent to positionManager owner
     ///@return amountWithdrawn amount of token withdrawn from aave
     function withdrawFromAave(
-        address token,
-        uint256 id,
+        address tokenFromAave,
+        uint256 tokenId,
         uint256 partToWithdraw,
         bool returnTokensToUser
     ) external override returns (uint256 amountWithdrawn) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
+
+        uint256 shares = uint256(
+            PositionManagerStorage.getDynamicStorageValue(keccak256(abi.encodePacked(tokenId, 'aave_shares')))
+        );
+        uint256 totalShares = uint256(
+            PositionManagerStorage.getDynamicStorageValue(
+                keccak256(abi.encodePacked(tokenFromAave, 'aave_totalShares'))
+            )
+        );
+
+        require(shares != 0, 'AWN');
         require(partToWithdraw != 0 && partToWithdraw <= 10_000, 'AW0');
-        require(Storage.aaveUserReserves[token].positionShares[id] != 0, 'AWN');
 
         amountWithdrawn = ILendingPool(Storage.aaveAddressHolder.lendingPoolAddress()).withdraw(
-            token,
-            (_getAmount(token, id) * partToWithdraw) / 10_000,
+            tokenFromAave,
+            (_getAmount(tokenFromAave, shares, totalShares) * partToWithdraw) / 10_000,
             returnTokensToUser ? Storage.owner : address(this)
         );
 
-        _removeTokenIdFromAave(token, id, partToWithdraw);
-        emit WithdrawnFromAave(address(this), token, amountWithdrawn, returnTokensToUser, partToWithdraw == 10_000);
+        _updateShares(tokenFromAave, tokenId, partToWithdraw, shares, totalShares);
+        emit WithdrawnFromAave(
+            address(this),
+            tokenFromAave,
+            amountWithdrawn,
+            returnTokensToUser,
+            partToWithdraw == 10_000
+        );
     }
 
     ///@notice gets balance of aToken associated to this position id
-    ///@param token underlying token addrress
-    ///@param id id of the aave position
+    ///@param tokenFromAave underlying token addrress
+    ///@param shares shares of the position
+    ///@param totalShares total shares of the underlying token
     ///@return amount of underlying token
-    function _getAmount(address token, uint256 id) internal view returns (uint256) {
-        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+    function _getAmount(
+        address tokenFromAave,
+        uint256 shares,
+        uint256 totalShares
+    ) internal view returns (uint256) {
         IAToken aToken = IAToken(
             ILendingPool(PositionManagerStorage.getStorage().aaveAddressHolder.lendingPoolAddress())
-                .getReserveData(token)
+                .getReserveData(tokenFromAave)
                 .aTokenAddress
         );
 
-        return
-            (aToken.balanceOf(address(this)) * Storage.aaveUserReserves[token].positionShares[id]) /
-            Storage.aaveUserReserves[token].sharesEmitted;
+        return (aToken.balanceOf(address(this)) * shares) / totalShares;
     }
 
     ///@notice remove shares associated to withdrawn tokens and remove tokenID from aave reserves
     ///@param token address of token withdrawn
-    ///@param id of the withdrawn position
+    ///@param tokenId of the withdrawn position
     ///@param partToWithdraw percentage of token to withdraw in base points
-    function _removeTokenIdFromAave(
+    ///@param shares shares of the position
+    ///@param totalShares total shares of the underlying token
+    function _updateShares(
         address token,
-        uint256 id,
-        uint256 partToWithdraw
+        uint256 tokenId,
+        uint256 partToWithdraw,
+        uint256 shares,
+        uint256 totalShares
     ) internal {
-        StorageStruct storage Storage = PositionManagerStorage.getStorage();
+        uint256 sharesWithdrawn = (shares * partToWithdraw) / 10_000;
 
-        uint256 sharesWithdrawn = (Storage.aaveUserReserves[token].positionShares[id] * partToWithdraw) / 10_000;
-        Storage.aaveUserReserves[token].sharesEmitted -= sharesWithdrawn;
+        PositionManagerStorage.setDynamicStorageValue(
+            keccak256(abi.encodePacked(token, 'aave_totalShares')),
+            bytes32(totalShares - sharesWithdrawn)
+        );
+
         if (partToWithdraw == 10_000) {
-            Storage.aaveUserReserves[token].positionShares[id] = 0;
-            Storage.aaveUserReserves[token].tokenIds[id] = 0;
-
-            uint256 aavePositionsLength = Storage.aavePositionsArray.length;
-            if (aavePositionsLength == 1) {
-                delete Storage.aavePositionsArray;
-                return;
-            }
-
-            for (uint256 i; i < aavePositionsLength; ++i) {
-                if (Storage.aavePositionsArray[i].id == id && Storage.aavePositionsArray[i].tokenToAave == token) {
-                    {
-                        Storage.aavePositionsArray[i] = Storage.aavePositionsArray[aavePositionsLength - 1];
-                        Storage.aavePositionsArray.pop();
-                        return;
-                    }
-                }
-            }
+            PositionManagerStorage.setDynamicStorageValue(
+                keccak256(abi.encodePacked(tokenId, 'aave_shares')),
+                bytes32(0)
+            );
         } else {
-            Storage.aaveUserReserves[token].positionShares[id] -= sharesWithdrawn;
+            PositionManagerStorage.setDynamicStorageValue(
+                keccak256(abi.encodePacked(tokenId, 'aave_shares')),
+                bytes32(shares - sharesWithdrawn)
+            );
         }
     }
 }

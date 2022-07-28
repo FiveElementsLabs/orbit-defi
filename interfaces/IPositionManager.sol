@@ -3,9 +3,6 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
-import '../contracts/utils/Storage.sol';
-
 interface IPositionManager {
     struct ModuleInfo {
         bool isActive;
@@ -45,9 +42,7 @@ interface IPositionManager {
 
     function removePositionId(uint256 index) external;
 
-    function getAavePositionsArray() external view returns (AavePositions[] memory);
-
-    function getTokenIdFromAavePosition(address token, uint256 id) external view returns (uint256 tokenId);
+    function getAaveDataFromTokenId(uint256 tokenId) external returns (uint256, address);
 
     function getOwner() external view returns (address);
 }
