@@ -98,10 +98,12 @@ export default {
     polygon: {
       url: process.env.ALCHEMY_POLYGON || '',
       accounts: [process.env.POLYGON_PRIVATE_KEY || ''],
+      live: true,
     },
     polygonTest: {
       url: process.env.ALCHEMY_POLYGON || '',
       accounts: [process.env.TEST_PRIVATE_KEY || ''],
+      live: true,
     },
   },
   etherscan: {
