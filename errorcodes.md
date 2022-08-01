@@ -35,7 +35,7 @@
 #### AM - AaveModule.sol
 
 **AME** - AaveModule::moveToAave: module data cannot be empty
-**AMA** - AaveModule::moveToAave: move to aave is not needed
+**AMN** - AaveModule::moveToAave: move to aave is not needed
 **AMT** - AaveModule::moveToUniswap: token cannot be address 0
 **AMU** - AaveModule::moveToUniswap: not needed.
 **AMP** - AaveModule::\_moveToAave: position is in range.
