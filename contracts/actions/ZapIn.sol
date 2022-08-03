@@ -146,8 +146,6 @@ contract ZapIn is IZapIn {
 
         (tokenId, , amount0Deposited, amount1Deposited) = INonfungiblePositionManager(nonfungiblePositionManagerAddress)
             .mint(params);
-
-        IPositionManager(address(this)).middlewareDeposit(tokenId);
     }
 
     ///@notice orders token addresses

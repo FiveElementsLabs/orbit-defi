@@ -55,7 +55,6 @@ contract ZapOut is IZapOut {
         );
 
         nonfungiblePositionManager.burn(tokenId);
-        IPositionManager(address(this)).removePositionId(tokenId);
 
         if (tokenOut != token0) {
             amount0 = _swapToTokenOut(tokenOut, token0, amount0);

@@ -37,6 +37,14 @@
 ## AM - AaveModule.sol
 
 - **AME** - AaveModule::moveToAave: module data cannot be empty
+- **AMN** - AaveModule::moveToAave: move to aave is not needed
+- **AMT** - AaveModule::moveToUniswap: token cannot be address 0
+- **AMU** - AaveModule::moveToUniswap: not needed.
+- **AMP** - AaveModule::\_moveToAave: position is in range.
+- **AMF** - AaveModule::\_moveToAave: Aave token not found.
+- **AMD** - AaveModule::\_findBestFee: No pool found with desired tokens
+
+- **AME** - AaveModule::moveToAave: module data cannot be empty
 - **AMA** - AaveModule::moveToAave: move to aave is not needed
 - **AMT** - AaveModule::moveToUniswap: token cannot be address 0
 - **AMU** - AaveModule::moveToUniswap: not needed.

@@ -60,10 +60,6 @@ contract ClosePosition is IClosePosition {
 
         nonfungiblePositionManager.burn(tokenId);
 
-        //remove id from position manager array
-        IPositionManager(address(this)).removePositionId(tokenId);
-
-        //delete the position from the position manager
         emit PositionClosed(address(this), tokenId);
 
         //return the tokenId and tokens closed

@@ -91,7 +91,6 @@ contract IdleLiquidityModule is BaseModule {
             tokenId,
             false
         );
-
         ///@dev call swapToPositionAction to perform the swap
         (uint256 amount0Swapped, uint256 amount1Swapped) = ISwapToPositionRatio(positionManager).swapToPositionRatio(
             ISwapToPositionRatio.SwapToPositionInput({
@@ -104,11 +103,12 @@ contract IdleLiquidityModule is BaseModule {
                 tickUpper: tickUpper
             })
         );
-
         ///@dev call mintAction
         (uint256 mintedPosition, , ) = IMint(positionManager).mint(
             IMint.MintInput(token0, token1, fee, tickLower, tickUpper, amount0Swapped, amount1Swapped)
         );
+
+        IPositionManager(positionManager).middlewareUniswap(mintedPosition, tokenId);
 
         emit positionRebalanced(positionManager, tokenId, mintedPosition, amount0Closed, amount1Closed);
     }

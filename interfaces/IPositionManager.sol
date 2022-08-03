@@ -34,13 +34,9 @@ interface IPositionManager {
 
     function withdrawERC20(address tokenAddress) external;
 
-    function middlewareDeposit(uint256 tokenId) external;
+    function middlewareUniswap(uint256 tokenId, uint256 oldTokenId) external;
 
     function getAllUniPositions() external view returns (uint256[] memory);
-
-    function pushPositionId(uint256 tokenId) external;
-
-    function removePositionId(uint256 index) external;
 
     function getAaveDataFromTokenId(uint256 tokenId) external returns (uint256, address);
 
