@@ -45,11 +45,14 @@ contract WithdrawRecipes {
     ///@param partToWithdraw percentage of token to withdraw in base points
     function withdrawUniNft(uint256 tokenId, uint256 partToWithdraw) external onlyOwner(tokenId) {
         require(partToWithdraw != 0 && partToWithdraw <= MAX_WITHDRAW_AMOUNT, 'WRP');
+        address positionManager = positionManagerFactory.userToPositionManager(msg.sender);
+
         if (partToWithdraw == MAX_WITHDRAW_AMOUNT) {
-            IClosePosition(positionManagerFactory.userToPositionManager(msg.sender)).closePosition(
+            IClosePosition(positionManager).closePosition(
                 tokenId,
                 true ///@dev return the tokens to the user
             );
+            IPositionManager(positionManager).middlewareUniswap(0, tokenId);
         } else {
             // 1. get position size
             // 2. divide for part to withdraw
@@ -58,8 +61,6 @@ contract WithdrawRecipes {
                 INonfungiblePositionManager(uniswapAddressHolder.nonfungiblePositionManagerAddress()),
                 uniswapAddressHolder.uniswapV3FactoryAddress()
             );
-
-            address positionManager = positionManagerFactory.userToPositionManager(msg.sender);
 
             IDecreaseLiquidity(positionManager).decreaseLiquidity(
                 tokenId,
@@ -79,7 +80,9 @@ contract WithdrawRecipes {
         onlyOwner(tokenId)
         returns (uint256 amountWithdrawn)
     {
-        amountWithdrawn = IZapOut(positionManagerFactory.userToPositionManager(msg.sender)).zapOut(tokenId, tokenOut);
+        address positionManager = positionManagerFactory.userToPositionManager(msg.sender);
+        amountWithdrawn = IZapOut(positionManager).zapOut(tokenId, tokenOut);
+        IPositionManager(positionManager).middlewareUniswap(0, tokenId);
     }
 
     ///@notice withdraw a position currently on Aave
@@ -95,7 +98,10 @@ contract WithdrawRecipes {
 
         address positionManager = positionManagerFactory.userToPositionManager(msg.sender);
 
-        IClosePosition(positionManager).closePosition(tokenId, true);
+        if (partToWithdraw == MAX_WITHDRAW_AMOUNT) {
+            IClosePosition(positionManager).closePosition(tokenId, true);
+            IPositionManager(positionManager).middlewareUniswap(0, tokenId);
+        }
 
         (, address tokenToAave) = IPositionManager(positionManager).getAaveDataFromTokenId(tokenId);
 
@@ -138,5 +144,6 @@ contract WithdrawRecipes {
         }
 
         IClosePosition(positionManager).closePosition(tokenId, true);
+        IPositionManager(positionManager).middlewareUniswap(0, tokenId);
     }
 }

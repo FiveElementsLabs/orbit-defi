@@ -44,7 +44,7 @@ contract DepositRecipes {
                 tokenIds[i],
                 '0x0'
             );
-            IPositionManager(positionManagerAddress).middlewareDeposit(tokenIds[i]);
+            IPositionManager(positionManagerAddress).middlewareUniswap(tokenIds[i], 0);
             emit PositionDeposited(positionManagerAddress, msg.sender, tokenIds[i]);
         }
     }
@@ -67,15 +67,16 @@ contract DepositRecipes {
         uint256 amount0Desired,
         uint256 amount1Desired
     ) external returns (uint256 tokenId) {
-        address positionManagerAddress = positionManagerFactory.userToPositionManager(msg.sender);
+        address positionManager = positionManagerFactory.userToPositionManager(msg.sender);
 
         ///@dev send tokens to position manager to be able to call the mint action
-        IERC20(token0).safeTransferFrom(msg.sender, positionManagerAddress, amount0Desired);
-        IERC20(token1).safeTransferFrom(msg.sender, positionManagerAddress, amount1Desired);
+        IERC20(token0).safeTransferFrom(msg.sender, positionManager, amount0Desired);
+        IERC20(token1).safeTransferFrom(msg.sender, positionManager, amount1Desired);
 
-        (tokenId, , ) = IMint(positionManagerAddress).mint(
+        (tokenId, , ) = IMint(positionManager).mint(
             IMint.MintInput(token0, token1, fee, tickLower, tickUpper, amount0Desired, amount1Desired)
         );
+        IPositionManager(positionManager).middlewareUniswap(tokenId, 0);
     }
 
     ///@notice mints a uni NFT with a single input token, tokens must be passed correctly ordered
@@ -96,16 +97,9 @@ contract DepositRecipes {
         int24 tickUpper,
         uint24 fee
     ) external returns (uint256 tokenId) {
-        address positionManagerAddress = positionManagerFactory.userToPositionManager(msg.sender);
+        address positionManager = positionManagerFactory.userToPositionManager(msg.sender);
 
-        (tokenId) = IZapIn(positionManagerAddress).zapIn(
-            token0,
-            token1,
-            isToken0In,
-            amountIn,
-            tickLower,
-            tickUpper,
-            fee
-        );
+        (tokenId) = IZapIn(positionManager).zapIn(token0, token1, isToken0In, amountIn, tickLower, tickUpper, fee);
+        IPositionManager(positionManager).middlewareUniswap(tokenId, 0);
     }
 }

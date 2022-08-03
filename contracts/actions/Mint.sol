@@ -62,7 +62,6 @@ contract Mint is IMint {
         if (amount0Leftover != 0) require(IERC20(inputs.token0Address).transfer(Storage.owner, amount0Leftover), 'MM0');
         if (amount1Leftover != 0) require(IERC20(inputs.token1Address).transfer(Storage.owner, amount1Leftover), 'MM1');
 
-        IPositionManager(address(this)).middlewareDeposit(tokenId);
         emit PositionMinted(address(this), tokenId);
     }
 }

@@ -244,6 +244,21 @@ describe('Global Tests', function () {
     const expectedRebalances = await positionManager3.getAllUniPositions();
     const expectedAave: any = [];
     const positions = await runKeeper(orbit, keeper);
+    const positionIdNew = await positionManager3.getAllUniPositions();
+
+    const infoAave = await positionManager3.getModuleInfo(positionIdNew.toString(), orbit.AaveModule.address);
+    const infoAaveOld = await positionManager3.getModuleInfo(expectedRebalances.toString(), orbit.AaveModule.address);
+    const infoRebalance = await positionManager3.getModuleInfo(
+      positionIdNew.toString(),
+      orbit.IdleLiquidityModule.address
+    );
+    const infoRebalanceOld = await positionManager3.getModuleInfo(
+      expectedRebalances.toString(),
+      orbit.IdleLiquidityModule.address
+    );
+
+    expect(infoAave.isActive).to.equal(infoAaveOld.isActive);
+    expect(infoRebalance.isActive).to.equal(infoRebalanceOld.isActive);
     expect(positions.compounded).to.eql(expectedCompounds);
     expect(positions.rebalanced).to.eql(expectedRebalances);
     expect(positions.movedToAave).to.eql(expectedAave);
@@ -326,9 +341,11 @@ describe('Global Tests', function () {
   it('should allow all user1 to withdraw his position from aave', async function () {
     const user1WbtcBalance = await wbtcMock.balanceOf(user1.address);
     const positions = await positionManager1.getAllUniPositions();
+    await orbit.WithdrawRecipes.connect(user1).withdrawFromAave(positions[0], 5000);
+    expect(await wbtcMock.balanceOf(user1.address)).to.gt(user1WbtcBalance);
+    expect(await positionManager1.getAllUniPositions()).to.not.be.empty;
     await orbit.WithdrawRecipes.connect(user1).withdrawFromAave(positions[0], 10000);
     expect(await positionManager1.getAllUniPositions()).to.be.empty;
-    expect(await wbtcMock.balanceOf(user1.address)).to.gt(user1WbtcBalance);
   });
 
   it('should allow all user2 to withdraw his position, 50% at a time', async function () {
