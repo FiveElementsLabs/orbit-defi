@@ -1,32 +1,38 @@
 import { ethers } from 'hardhat';
 import { getSelectors } from '../test/shared/fixtures';
 import { Config } from '../deploy/000_Config';
+import { Timelock, Registry, PositionManagerFactory, PositionManager } from '../typechain';
 
 const printWarning = (network: string) => {
   console.warn('\nWARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING');
   console.log('WARNING\t\t\t\t\t\t\t\t\tWARNING');
   console.log('WARNING\t\tUsing private keys defined in hardhat.ethers.ts\t\tWARNING');
-  console.log(`WARNING\t\tCurrently running on network: "${network}"\t\tWARNING`);
+  console.log(`WARNING\t\tCurrently running on network: "${network}"\t\t\tWARNING`);
   console.log('WARNING\t\t\t\t\t\t\t\t\tWARNING');
   console.warn('WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING\n');
 };
 
 async function main() {
   const network = process.env.HARDHAT_NETWORK;
+
   if (!network) throw new Error("Couldn't find a Hardhat network. Please specify --network flag");
 
   printWarning(network);
 
   const registryAddress = require(`../deployments/${network}/Registry.json`)?.address;
+  const timelockAddress = require(`../deployments/${network}/Timelock.json`)?.address;
   const pmfAddress = require(`../deployments/${network}/PositionManagerFactory.json`)?.address;
-  if (!pmfAddress || !registryAddress) throw new Error("Couldn't find some addresses, check deployments");
+
+  if (!pmfAddress || !registryAddress || !timelockAddress)
+    throw new Error("Couldn't find some addresses, check deployments");
 
   // You have to specify a PositionManager address manually, as we don't deploy them
   const pmAddress = '0x46200F1a5bF2312302ff4d47a38F8EE33C72bd6A';
 
-  const PM = await ethers.getContractAt('PositionManager', pmAddress);
-  const Registry = await ethers.getContractAt('Registry', registryAddress);
-  const PMF = await ethers.getContractAt('PositionManagerFactory', pmfAddress);
+  const PM = (await ethers.getContractAt('PositionManager', pmAddress)) as PositionManager;
+  const Registry = (await ethers.getContractAt('Registry', registryAddress)) as Registry;
+  const Timelock = (await ethers.getContractAt('Timelock', timelockAddress)) as Timelock;
+  const PMF = (await ethers.getContractAt('PositionManagerFactory', pmfAddress)) as PositionManagerFactory;
 
   const runAtEndOfFIle = async () => {
     // await deployContract();
@@ -40,16 +46,19 @@ async function main() {
     // await createPositionManagerForOwner();
     // await logAllPositionManagers();
     // await whitelistNewKeeper();
+    // await addContractToRegistry();
+    // await setNewPendingAdminOnTimelock();
+    // await confirmNewAdminOnTimelock();
   };
 
   const deployContract = async () => {
-    const _name = 'AaveModule';
-    const _args = ['0xED240EaC9100F2E09C1a9b99a466C8eaaE15035f'];
+    const _name = 'AutoCompoundModule';
+    const _args = ['0xC661870dffDF3847481FF97015e2502aeFe04B35', '0xE41ebE287e5AbCb8598929e78AE6aD59B74a1631'];
 
     const factory = await ethers.getContractFactory(_name);
     const contract = await factory.deploy(..._args);
     await contract.deployed();
-    console.log(`${name} deployed at ${contract.address}`);
+    console.log(`${_name} deployed at ${contract?.address}`);
   };
 
   const updateAlreadyDeployedModule = async () => {
@@ -154,6 +163,36 @@ async function main() {
 
     await (await Registry.addKeeperToWhitelist(_newKeeper, { gasLimit: Config.gasLimit })).wait();
     console.log(`:: Added ${_newKeeper} to keeper whitelist`);
+  };
+
+  const addContractToRegistry = async () => {
+    const _contractName = 'AutoCompundModuleClone';
+    const _contractAddress = '0xC812607BB6ddC9E8c7e0B6E00C9ad909b4C0964A';
+    const _defaultValue = 2;
+    const _activeByDefault = false;
+
+    const moduleId = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(_contractName));
+    const defaultValue = ethers.utils.hexZeroPad(ethers.utils.hexlify(_defaultValue), 32);
+
+    await (
+      await Registry.addNewContract(moduleId, _contractAddress, defaultValue, _activeByDefault, {
+        gasLimit: Config.gasLimit,
+      })
+    ).wait();
+
+    console.log(`:: Added ${_contractName} to registry`);
+  };
+
+  const setNewPendingAdminOnTimelock = async () => {
+    const _newPendingAdmin = '0xA0A41b8800179b633e71edDC241F64C91a09E6ea';
+
+    await (await Timelock.setNewPendingAdmin(_newPendingAdmin, { gasLimit: Config.gasLimit })).wait();
+    console.log(`:: Set new pending admin to ${_newPendingAdmin}`);
+  };
+
+  const confirmNewAdminOnTimelock = async () => {
+    await (await Timelock.confirmNewAdmin({ gasLimit: Config.gasLimit })).wait();
+    console.log(`:: Confirmed new admin of Timelock`);
   };
 
   await runAtEndOfFIle();
