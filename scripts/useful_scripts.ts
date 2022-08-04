@@ -75,8 +75,10 @@ async function main() {
     );
     const pm = await PMF.userToPositionManager(_ownerAddress);
     const PM = await ethers.getContractAt('PositionManager', pm);
-    await PM.connect(owner).toggleModule(_tokenId, _moduleAddress, true, { gasLimit: Config.gasLimit });
-    await PM.connect(owner).setModuleData(_tokenId, _moduleAddress, moduleData, { gasLimit: Config.gasLimit });
+    await (await PM.connect(owner).toggleModule(_tokenId, _moduleAddress, true, { gasLimit: Config.gasLimit }))?.wait();
+    await (
+      await PM.connect(owner).setModuleData(_tokenId, _moduleAddress, moduleData, { gasLimit: Config.gasLimit })
+    )?.wait();
   };
 
   const updateAlreadyDeployedAction = async () => {
@@ -92,11 +94,12 @@ async function main() {
     };
 
     // Update action data with facet
-    await PMF.updateActionData(facet, { gasLimit: Config.gasLimit });
+    await (await PMF.updateActionData(facet, { gasLimit: Config.gasLimit })).wait();
 
     // Update the action for all existing PMs
+    // note: consider adding nonce manually
     for (const pm of await PMF.getAllPositionManagers()) {
-      await PMF.updateDiamond(pm, [facet], { gasLimit: Config.gasLimit });
+      await (await PMF.updateDiamond(pm, [facet], { gasLimit: Config.gasLimit })).wait();
       console.log(`updated ${_actionName} for pm: `, pm);
     }
   };
@@ -121,11 +124,11 @@ async function main() {
   };
 
   const changeAllGovernances = async () => {
-    const _newGovernance = '0xF4d83F3207788Ee14446EEC94b9b0E3548409777';
+    const _newGovernance = '0xA0A41b8800179b633e71edDC241F64C91a09E6ea';
 
-    await PMF.changeGovernance(_newGovernance, { gasLimit: Config.gasLimit });
+    await (await PMF.changeGovernance(_newGovernance, { gasLimit: Config.gasLimit })).wait();
     console.log(':: Changed PositionManagerFactory governance');
-    await Registry.changeGovernance(_newGovernance, { gasLimit: Config.gasLimit });
+    await (await Registry.changeGovernance(_newGovernance, { gasLimit: Config.gasLimit })).wait();
     console.log(':: Changed Registry governance');
   };
 
@@ -137,7 +140,7 @@ async function main() {
       _ownerPrivateKey,
       new ethers.providers.JsonRpcProvider(process.env.ALCHEMY_POLYGON)
     );
-    await PMF.connect(owner).create({ gasLimit: Config.gasLimit });
+    await (await PMF.connect(owner).create({ gasLimit: Config.gasLimit })).wait();
     const pm = await PMF.userToPositionManager(_ownerAddress);
     console.log(`:: Created new PositionManager for ${_ownerAddress} at ${pm}`);
   };
@@ -149,7 +152,7 @@ async function main() {
   const whitelistNewKeeper = async () => {
     const _newKeeper = '';
 
-    await Registry.addKeeperToWhitelist(_newKeeper, { gasLimit: Config.gasLimit });
+    await (await Registry.addKeeperToWhitelist(_newKeeper, { gasLimit: Config.gasLimit })).wait();
     console.log(`:: Added ${_newKeeper} to keeper whitelist`);
   };
 
