@@ -2,21 +2,31 @@ import { ethers } from 'hardhat';
 import { getSelectors } from '../test/shared/fixtures';
 import { Config } from '../deploy/000_Config';
 
-// WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
-//
-// Functions in this script can modify the
-// live deployments if called with the wrong flags.
-// Remember to use the --network polygonTest flag for testing
-//
-// WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
+const printWarning = (network: string) => {
+  console.warn('\nWARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING');
+  console.log('WARNING\t\t\t\t\t\t\t\t\tWARNING');
+  console.log('WARNING\t\tUsing private keys defined in hardhat.ethers.ts\t\tWARNING');
+  console.log(`WARNING\t\tCurrently running on network: "${network}"\t\tWARNING`);
+  console.log('WARNING\t\t\t\t\t\t\t\t\tWARNING');
+  console.warn('WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING\n');
+};
 
 async function main() {
-  console.log('**** Warning: using private keys defined in hardhat.ethers.ts ****');
-  console.log('**** Remember use this script along with the --network polygonTest flag for testing ****');
+  const network = process.env.HARDHAT_NETWORK;
+  if (!network) throw new Error("Couldn't find a Hardhat network. Please specify --network flag");
 
-  const PMF = await ethers.getContractAt('PositionManagerFactory', '0x6c15ee0B11661Fa5F0a2639E7D80ed72Cc53771d');
-  const PM = await ethers.getContractAt('PositionManager', '0x46200F1a5bF2312302ff4d47a38F8EE33C72bd6A');
-  const Registry = await ethers.getContractAt('Registry', '0xb2016935c0C75d040c9B9De7EA7671905e84CcCF');
+  printWarning(network);
+
+  const registryAddress = require(`../deployments/${network}/Registry.json`)?.address;
+  const pmfAddress = require(`../deployments/${network}/PositionManagerFactory.json`)?.address;
+  if (!pmfAddress || !registryAddress) throw new Error("Couldn't find some addresses, check deployments");
+
+  // You have to specify a PositionManager address manually, as we don't deploy them
+  const pmAddress = '0x46200F1a5bF2312302ff4d47a38F8EE33C72bd6A';
+
+  const PM = await ethers.getContractAt('PositionManager', pmAddress);
+  const Registry = await ethers.getContractAt('Registry', registryAddress);
+  const PMF = await ethers.getContractAt('PositionManagerFactory', pmfAddress);
 
   const runAtEndOfFIle = async () => {
     // await deployContract();
@@ -29,6 +39,7 @@ async function main() {
     // await changeAllGovernances();
     // await createPositionManagerForOwner();
     // await logAllPositionManagers();
+    // await whitelistNewKeeper();
   };
 
   const deployContract = async () => {
@@ -133,6 +144,13 @@ async function main() {
 
   const logAllPositionManagers = async () => {
     await PMF.getAllPositionManagers().then(console.log);
+  };
+
+  const whitelistNewKeeper = async () => {
+    const _newKeeper = '';
+
+    await Registry.addKeeperToWhitelist(_newKeeper, { gasLimit: Config.gasLimit });
+    console.log(`:: Added ${_newKeeper} to keeper whitelist`);
   };
 
   await runAtEndOfFIle();
