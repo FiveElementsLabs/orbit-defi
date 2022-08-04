@@ -103,16 +103,21 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
         Storage.aaveAddressHolder = IAaveAddressHolder(_aaveAddressHolder);
     }
 
-    ///@notice middleware to manage the deposit of the position
-    ///@param tokenId ID of the position
-    function middlewareDeposit(uint256 tokenId) external override onlyOwnedPosition(tokenId) {
-        _setDefaultDataOfPosition(tokenId);
-        pushPositionId(tokenId);
+    ///@notice middleware to manage the position deposit or withdraw
+    ///@param newTokenId ID of the position
+    ///@param oldTokenId ID of the position to remove
+    function middlewareUniswap(uint256 newTokenId, uint256 oldTokenId) external override onlyWhitelisted {
+        if (oldTokenId != 0) _removePositionId(oldTokenId);
+
+        if (newTokenId != 0) {
+            _pushPositionId(newTokenId);
+            _setDefaultDataOfPosition(newTokenId, oldTokenId);
+        }
     }
 
     ///@notice remove awareness of tokenId UniswapV3 NFT
     ///@param tokenId ID of the NFT to remove
-    function removePositionId(uint256 tokenId) external override onlyWhitelisted {
+    function _removePositionId(uint256 tokenId) internal {
         uint256 uniswapNFTsLength = uniswapNFTs.length;
         for (uint256 i; i < uniswapNFTsLength; ++i) {
             if (uniswapNFTs[i] == tokenId) {
@@ -127,7 +132,7 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
 
     ///@notice add tokenId in the uniswapNFTs array
     ///@param tokenId ID of the added NFT
-    function pushPositionId(uint256 tokenId) public override onlyOwnedPosition(tokenId) {
+    function _pushPositionId(uint256 tokenId) internal onlyOwnedPosition(tokenId) {
         uniswapNFTs.push(tokenId);
     }
 
@@ -139,8 +144,9 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
     }
 
     ///@notice set default data for every module
-    ///@param tokenId ID of the position
-    function _setDefaultDataOfPosition(uint256 tokenId) internal onlyOwnedPosition(tokenId) {
+    ///@param newTokenId ID of the new position
+    ///@param oldTokenId ID of the old position
+    function _setDefaultDataOfPosition(uint256 newTokenId, uint256 oldTokenId) internal onlyOwnedPosition(newTokenId) {
         StorageStruct storage Storage = PositionManagerStorage.getStorage();
 
         bytes32[] memory moduleKeys = Storage.registry.getModuleKeys();
@@ -150,9 +156,14 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
             (address moduleAddress, , bytes32 defaultData, bool activatedByDefault) = Storage.registry.getModuleInfo(
                 moduleKeys[i]
             );
-
-            activatedModules[tokenId][moduleAddress].isActive = activatedByDefault;
-            activatedModules[tokenId][moduleAddress].data = defaultData;
+            if (oldTokenId != 0) {
+                (bool isActive, bytes32 oldData) = getModuleInfo(oldTokenId, moduleAddress);
+                activatedModules[newTokenId][moduleAddress].isActive = isActive;
+                activatedModules[newTokenId][moduleAddress].data = oldData;
+            } else {
+                activatedModules[newTokenId][moduleAddress].isActive = activatedByDefault;
+                activatedModules[newTokenId][moduleAddress].data = defaultData;
+            }
         }
     }
 
@@ -189,7 +200,7 @@ contract PositionManager is IPositionManager, ERC721Holder, Initializable {
     ///@return isActive is module activated
     ///@return data of the module
     function getModuleInfo(uint256 _tokenId, address _moduleAddress)
-        external
+        public
         view
         override
         returns (bool isActive, bytes32 data)
