@@ -14,11 +14,6 @@
 
 - **ILA** - IncreaseLiquidity::increaseLiquidity: Amounts cannot be both zero
 
-## MM - Mint.sol
-
-- **MM0** - Mint::mint: Failed transfer of leftover token0
-- **MM1** - Mint::mint: Failed transfer of leftover token1
-
 ## ZZ - ZapIn.sol
 
 - **ZZT** - ZapIn::zapIn: token0 and token1 cannot be the same

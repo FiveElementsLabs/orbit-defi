@@ -190,7 +190,6 @@ describe('IdleLiquidityModule.sol', function () {
 
     const receipt: any = await txMint.wait();
     tokenId = receipt.events[receipt.events.length - 1].args.tokenId;
-    PositionManager.pushPositionId(tokenId);
     // user approve autocompound module
     await PositionManager.toggleModule(tokenId, IdleLiquidityModule.address, true);
   });
@@ -281,7 +280,6 @@ describe('IdleLiquidityModule.sol', function () {
 
       const receipt: any = await txMint.wait();
       tokenId = receipt.events[receipt.events.length - 1].args.tokenId;
-      PositionManager.pushPositionId(tokenId);
       // user approve autocompound module
       await PositionManager.toggleModule(tokenId, IdleLiquidityModule.address, true);
 
