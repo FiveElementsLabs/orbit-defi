@@ -98,7 +98,7 @@ describe('SwapHelper.sol', function () {
         amount0In,
         amount1In
       );
-      expect(amountToSwap.toNumber()).to.be.closeTo((amount1In + amount0In) / 2, (amount1In - amount0In) / 1e4);
+      expect(amountToSwap.toNumber()).to.be.closeTo((amount1In - amount0In) / 2, (amount1In - amount0In) / 1e4);
       expect(token0In).to.equal(false);
     });
 

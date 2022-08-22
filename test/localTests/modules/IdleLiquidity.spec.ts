@@ -54,8 +54,8 @@ describe('IdleLiquidityModule.sol', function () {
     liquidityProvider = await liquidityProvider;
 
     //deploy the tokens - ETH, USDC
-    tokenEth = (await tokensFixture('ETH', 18)).tokenFixture;
     tokenUsdc = (await tokensFixture('USDC', 6)).tokenFixture;
+    tokenEth = (await tokensFixture('ETH', 18)).tokenFixture;
     tokenDai = (await tokensFixture('DAI', 18)).tokenFixture;
 
     //deploy factory, used for pools
@@ -63,7 +63,7 @@ describe('IdleLiquidityModule.sol', function () {
     Router = (await routerFixture()).ruoterDeployFixture;
 
     //deploy first pool
-    Pool0 = (await poolFixture(tokenEth, tokenUsdc, 3000, Factory, 200000)).pool;
+    Pool0 = (await poolFixture(tokenUsdc, tokenEth, 3000, Factory, 200800)).pool;
     Pool1 = (await poolFixture(tokenEth, tokenDai, 500, Factory, -50000)).pool;
 
     //mint 1e30 token, you can call with arbitrary amount
@@ -128,12 +128,12 @@ describe('IdleLiquidityModule.sol', function () {
 
     //approval nfts
     await NonFungiblePositionManager.setApprovalForAll(PositionManager.address, true);
-
+    console.log('pre mint');
     // give pool some liquidity
     await NonFungiblePositionManager.connect(liquidityProvider).mint(
       {
-        token0: tokenEth.address,
-        token1: tokenUsdc.address,
+        token0: tokenUsdc.address,
+        token1: tokenEth.address,
         fee: 3000,
         tickLower: 0 - 60 * 10000,
         tickUpper: 0 + 60 * 10000,
@@ -146,40 +146,42 @@ describe('IdleLiquidityModule.sol', function () {
       },
       { gasLimit: 670000 }
     );
+    console.log('post mint');
 
-    await NonFungiblePositionManager.connect(liquidityProvider).mint(
-      {
-        token0: tokenEth.address,
-        token1: tokenDai.address,
-        fee: 500,
-        tickLower: 0 - 60 * 10000,
-        tickUpper: 0 + 60 * 10000,
-        amount0Desired: '0x' + (1e26).toString(16),
-        amount1Desired: '0x' + (1e26).toString(16),
-        amount0Min: 0,
-        amount1Min: 0,
-        recipient: liquidityProvider.address,
-        deadline: Date.now() + 1000,
-      },
-      { gasLimit: 670000 }
-    );
+    // await NonFungiblePositionManager.connect(liquidityProvider).mint(
+    //   {
+    //     token0: tokenEth.address,
+    //     token1: tokenDai.address,
+    //     fee: 500,
+    //     tickLower: 0 - 60 * 10000,
+    //     tickUpper: 0 + 60 * 10000,
+    //     amount0Desired: '0x' + (1e26).toString(16),
+    //     amount1Desired: '0x' + (1e26).toString(16),
+    //     amount0Min: 0,
+    //     amount1Min: 0,
+    //     recipient: liquidityProvider.address,
+    //     deadline: Date.now() + 1000,
+    //   },
+    //   { gasLimit: 670000 }
+    // );
+    console.log('post mint');
 
     await registry.setMaxTwapDeviation(1000000);
   });
   beforeEach(async function () {
     //mint NFT
     const tick = (await Pool0.slot0()).tick;
-    const tickLower = Math.round(tick / 60) * 60 - 600;
-    const tickUpper = Math.round(tick / 60) * 60 + 600;
+    const tickLower = 200640;
+    const tickUpper = 201000;
     const txMint = await NonFungiblePositionManager.connect(user).mint(
       {
-        token0: tokenEth.address,
-        token1: tokenUsdc.address,
+        token0: tokenUsdc.address,
+        token1: tokenEth.address,
         fee: 3000,
         tickLower: tickLower,
         tickUpper: tickUpper,
-        amount0Desired: '0x' + (5e17).toString(16),
-        amount1Desired: '0x' + (5e17).toString(16),
+        amount0Desired: '0x' + (100e6).toString(16),
+        amount1Desired: '0x' + (0.06e18).toString(16),
         amount0Min: 0,
         amount1Min: 0,
         recipient: PositionManager.address,
@@ -206,10 +208,28 @@ describe('IdleLiquidityModule.sol', function () {
     });
 
     it('should rebalance a uni position that is out of range', async function () {
-      while ((await Pool0.slot0()).tick <= 206000) {
+      const nftHelper = await deployContract('MockUniswapNFTHelper', []);
+
+      const targetTick = 201214;
+      const amountsBeforeW = await nftHelper.getAmountsfromTokenId(
+        tokenId,
+        NonFungiblePositionManager.address,
+        Factory.address
+      );
+      console.log(amountsBeforeW);
+
+      while ((await Pool0.slot0()).tick <= targetTick) {
+        console.log((await Pool0.slot0()).tick);
         // Do a trade to change tick
-        await Router.connect(liquidityProvider).swap(Pool0.address, false, '0x' + (1e25).toString(16));
+        await Router.connect(liquidityProvider).swap(Pool0.address, false, '0x' + (1e23).toString(16));
       }
+
+      const amountsOld = await nftHelper.getAmountsfromTokenId(
+        tokenId,
+        NonFungiblePositionManager.address,
+        Factory.address
+      );
+      console.log((await NonFungiblePositionManager.positions(tokenId)).liquidity, ' liq');
 
       const tick = (await Pool0.slot0()).tick;
 
@@ -236,7 +256,6 @@ describe('IdleLiquidityModule.sol', function () {
       const tokenEthLeftover = (await tokenEth.balanceOf(user.address)).sub(userBalanceEth);
       const tokenUsdcLeftover = (await tokenUsdc.balanceOf(user.address)).sub(userBalanceUsdc);
 
-      const nftHelper = await deployContract('MockUniswapNFTHelper', []);
       const amounts = await nftHelper.getAmountsfromTokenId(
         tokenId.add(1),
         NonFungiblePositionManager.address,
@@ -244,8 +263,16 @@ describe('IdleLiquidityModule.sol', function () {
       );
 
       //usdc is token0 and eth is token1
-      expect(tokenUsdcLeftover).to.be.closeTo(BigNumber.from(0), amounts[0].div(BigNumber.from(1000)));
-      expect(tokenEthLeftover).to.be.closeTo(BigNumber.from(0), amounts[1].div(BigNumber.from(1000)));
+      console.log((await NonFungiblePositionManager.positions(tokenId.add(1))).liquidity, ' liq');
+      console.log(tokenUsdcLeftover.toString());
+      console.log(tokenEthLeftover.toString());
+      console.log(amountsOld[0].toString());
+      console.log(amountsOld[1].toString());
+      console.log(amounts[0].toString());
+      console.log(amounts[1].toString());
+
+      expect(tokenUsdcLeftover).to.be.closeTo(BigNumber.from(0), amounts[0].div(BigNumber.from(100)));
+      expect(tokenEthLeftover).to.be.closeTo(BigNumber.from(0), amounts[1].div(BigNumber.from(100)));
     });
 
     it('should faild cause inesistent tokenId', async function () {
@@ -269,7 +296,7 @@ describe('IdleLiquidityModule.sol', function () {
           tickLower: tickLower,
           tickUpper: tickUpper,
           amount0Desired: '0x' + (1e18).toString(16),
-          amount1Desired: '0x' + (1e18).toString(16),
+          amount1Desired: '0x' + (2000e18).toString(16),
           amount0Min: 0,
           amount1Min: 0,
           recipient: PositionManager.address,
