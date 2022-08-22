@@ -128,7 +128,6 @@ describe('IdleLiquidityModule.sol', function () {
 
     //approval nfts
     await NonFungiblePositionManager.setApprovalForAll(PositionManager.address, true);
-    console.log('pre mint');
     // give pool some liquidity
     await NonFungiblePositionManager.connect(liquidityProvider).mint(
       {
@@ -146,25 +145,23 @@ describe('IdleLiquidityModule.sol', function () {
       },
       { gasLimit: 670000 }
     );
-    console.log('post mint');
 
-    // await NonFungiblePositionManager.connect(liquidityProvider).mint(
-    //   {
-    //     token0: tokenEth.address,
-    //     token1: tokenDai.address,
-    //     fee: 500,
-    //     tickLower: 0 - 60 * 10000,
-    //     tickUpper: 0 + 60 * 10000,
-    //     amount0Desired: '0x' + (1e26).toString(16),
-    //     amount1Desired: '0x' + (1e26).toString(16),
-    //     amount0Min: 0,
-    //     amount1Min: 0,
-    //     recipient: liquidityProvider.address,
-    //     deadline: Date.now() + 1000,
-    //   },
-    //   { gasLimit: 670000 }
-    // );
-    console.log('post mint');
+    await NonFungiblePositionManager.connect(liquidityProvider).mint(
+      {
+        token0: tokenDai.address,
+        token1: tokenEth.address,
+        fee: 500,
+        tickLower: 0 - 60 * 10000,
+        tickUpper: 0 + 60 * 10000,
+        amount0Desired: '0x' + (1e26).toString(16),
+        amount1Desired: '0x' + (1e26).toString(16),
+        amount0Min: 0,
+        amount1Min: 0,
+        recipient: liquidityProvider.address,
+        deadline: Date.now() + 1000,
+      },
+      { gasLimit: 670000 }
+    );
 
     await registry.setMaxTwapDeviation(1000000);
   });
@@ -216,10 +213,8 @@ describe('IdleLiquidityModule.sol', function () {
         NonFungiblePositionManager.address,
         Factory.address
       );
-      console.log(amountsBeforeW);
 
       while ((await Pool0.slot0()).tick <= targetTick) {
-        console.log((await Pool0.slot0()).tick);
         // Do a trade to change tick
         await Router.connect(liquidityProvider).swap(Pool0.address, false, '0x' + (1e23).toString(16));
       }
@@ -229,7 +224,6 @@ describe('IdleLiquidityModule.sol', function () {
         NonFungiblePositionManager.address,
         Factory.address
       );
-      console.log((await NonFungiblePositionManager.positions(tokenId)).liquidity, ' liq');
 
       const tick = (await Pool0.slot0()).tick;
 
@@ -247,7 +241,6 @@ describe('IdleLiquidityModule.sol', function () {
 
       // rebalance
       await IdleLiquidityModule.rebalance(PositionManager.address, tokenId);
-
       await expect(NonFungiblePositionManager.ownerOf(tokenId)).to.be.reverted;
       expect(await NonFungiblePositionManager.ownerOf(tokenId.add(1))).to.equal(PositionManager.address);
       expect(Math.abs((await NonFungiblePositionManager.positions(tokenId.add(1))).tickLower)).to.be.lt(Math.abs(tick));
@@ -263,13 +256,6 @@ describe('IdleLiquidityModule.sol', function () {
       );
 
       //usdc is token0 and eth is token1
-      console.log((await NonFungiblePositionManager.positions(tokenId.add(1))).liquidity, ' liq');
-      console.log(tokenUsdcLeftover.toString());
-      console.log(tokenEthLeftover.toString());
-      console.log(amountsOld[0].toString());
-      console.log(amountsOld[1].toString());
-      console.log(amounts[0].toString());
-      console.log(amounts[1].toString());
 
       expect(tokenUsdcLeftover).to.be.closeTo(BigNumber.from(0), amounts[0].div(BigNumber.from(100)));
       expect(tokenEthLeftover).to.be.closeTo(BigNumber.from(0), amounts[1].div(BigNumber.from(100)));
@@ -290,8 +276,8 @@ describe('IdleLiquidityModule.sol', function () {
       const tickUpper = Math.round(tick / 60) * 60 + 600;
       const txMint = await NonFungiblePositionManager.connect(user).mint(
         {
-          token0: tokenEth.address,
-          token1: tokenDai.address,
+          token0: tokenDai.address,
+          token1: tokenEth.address,
           fee: 500,
           tickLower: tickLower,
           tickUpper: tickUpper,
@@ -347,8 +333,8 @@ describe('IdleLiquidityModule.sol', function () {
       );
 
       //eth is token0 and dai is token1
-      expect(tokenEthLeftover).to.be.closeTo(BigNumber.from(0), amounts[0].div(BigNumber.from(1000)));
-      expect(tokenDaiLeftover).to.be.closeTo(BigNumber.from(0), amounts[1].div(BigNumber.from(1000)));
+      expect(tokenEthLeftover).to.be.closeTo(BigNumber.from(0), amounts[1].div(BigNumber.from(1000)));
+      expect(tokenDaiLeftover).to.be.closeTo(BigNumber.from(0), amounts[0].div(BigNumber.from(1000)));
     });
   });
 });
