@@ -75,7 +75,7 @@ library SwapHelper {
             if (token0In) {
                 amountToSwap = amount0In.sub(amount0Post);
             } else {
-                amountToSwap = (amount0Post).mul(ratioX96) >> FixedPoint96.RESOLUTION;
+                amountToSwap = amount1In.sub((amount0Post).mul(ratioX96) >> FixedPoint96.RESOLUTION);
             }
         }
     }
