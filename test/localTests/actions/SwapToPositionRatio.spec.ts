@@ -138,7 +138,7 @@ describe('SwapToPositionRatio.sol', function () {
     )) as Contract;
   });
 
-  describe('doAction', function () {
+  describe('swapToPositionRatio', function () {
     it('should correctly swap to exact position ratio amount0In', async function () {
       const tickLower = -600;
       const tickUpper = 600;

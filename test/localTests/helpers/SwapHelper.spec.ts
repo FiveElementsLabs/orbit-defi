@@ -28,8 +28,8 @@ describe('SwapHelper.sol', function () {
       const tickPool = 0;
       const tickLower = -300;
       const tickUpper = 300;
-      const ratioE18 = await MockSwapHelper.getRatioFromRange(tickPool, tickLower, tickUpper);
-      expect(ratioE18.toString()).to.be.equal('79228162514264337593543950302');
+      const ratioX96 = await MockSwapHelper.getRatioFromRange(tickPool, tickLower, tickUpper);
+      expect(ratioX96.toString()).to.be.equal('79228162514264337593543950302'); //ratioX96 should be equal to 2**96
     });
 
     it('should calculate ratio in the right direction', async function () {
@@ -89,8 +89,8 @@ describe('SwapHelper.sol', function () {
       const tickPool = 0;
       const tickLower = -300;
       const tickUpper = 300;
-      const amount0In = 1e5;
-      const amount1In = 5e5;
+      const amount0In = 3e8;
+      const amount1In = 7.5e8;
       const [amountToSwap, token0In] = await MockSwapHelper.calcAmountToSwap(
         tickPool,
         tickLower,
@@ -98,7 +98,11 @@ describe('SwapHelper.sol', function () {
         amount0In,
         amount1In
       );
-      expect(amountToSwap.toNumber()).to.be.closeTo((amount1In - amount0In) / 2, (amount1In - amount0In) / 1e4);
+      expect(amountToSwap.toNumber()).to.be.closeTo(
+        Math.abs(amount1In - amount0In) / 2,
+        Math.abs(amount1In - amount0In) / 1e4
+      ); //0.02% tolerance
+
       expect(token0In).to.equal(false);
     });
 
@@ -106,8 +110,8 @@ describe('SwapHelper.sol', function () {
       const tickPool = 0;
       const tickLower = -300;
       const tickUpper = 300;
-      const amount0In = 1e6;
-      const amount1In = 5e5;
+      const amount0In = 4e9;
+      const amount1In = 1e7;
       const [amountToSwap, token0In] = await MockSwapHelper.calcAmountToSwap(
         tickPool,
         tickLower,
@@ -115,7 +119,10 @@ describe('SwapHelper.sol', function () {
         amount0In,
         amount1In
       );
-      expect(amountToSwap.toNumber()).to.be.closeTo((amount0In - amount1In) / 2, (amount0In - amount1In) / 1e4);
+      expect(amountToSwap.toNumber()).to.be.closeTo(
+        Math.abs(amount0In - amount1In) / 2,
+        Math.abs(amount0In - amount1In) / 1e4
+      ); //0.02% tolerance
       expect(token0In).to.equal(true);
     });
 
@@ -135,7 +142,18 @@ describe('SwapHelper.sol', function () {
       const tickUpper = 300;
       const amount0In = 0;
       const amount1In = 5e5;
-      await MockSwapHelper.calcAmountToSwap(tickPool, tickLower, tickUpper, amount0In, amount1In);
+      const [amountToSwap, token0In] = await MockSwapHelper.calcAmountToSwap(
+        tickPool,
+        tickLower,
+        tickUpper,
+        amount0In,
+        amount1In
+      );
+      expect(amountToSwap.toNumber()).to.be.closeTo(
+        Math.abs(amount0In - amount1In) / 2,
+        Math.abs(amount0In - amount1In) / 1e4
+      ); //0.02% tolerance
+      expect(token0In).to.equal(false);
     });
 
     it('should revert if both amount are zero', async function () {
