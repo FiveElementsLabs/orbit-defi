@@ -62,7 +62,7 @@ contract PositionManagerFactory is IPositionManagerFactory {
         external
         onlyGovernance
     {
-        IDiamondCut(positionManager).diamondCut(actionsToUpdate, 0x0000000000000000000000000000000000000000, '');
+        IDiamondCut(positionManager).diamondCut(actionsToUpdate, address(0), '');
     }
 
     ///@notice adds or removes an action to/from the factory
@@ -122,7 +122,7 @@ contract PositionManagerFactory is IPositionManagerFactory {
         positionManagers.push(address(manager));
         userToPositionManager[msg.sender] = address(manager);
         manager.init(msg.sender, uniswapAddressHolder, aaveAddressHolder);
-        IDiamondCut(address(manager)).diamondCut(actions, 0x0000000000000000000000000000000000000000, '');
+        IDiamondCut(address(manager)).diamondCut(actions, address(0), '');
 
         emit PositionManagerCreated(address(manager), msg.sender);
 

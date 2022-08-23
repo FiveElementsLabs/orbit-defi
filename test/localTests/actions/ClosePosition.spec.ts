@@ -151,7 +151,6 @@ describe('ClosePosition.sol', function () {
 
     const receipt: any = await txMint.wait();
     tokenId = receipt.events[receipt.events.length - 1].args.tokenId;
-    await PositionManager.pushPositionId(tokenId);
   });
 
   describe('ClosePositionAction - closePosition', function () {

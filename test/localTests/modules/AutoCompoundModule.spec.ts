@@ -168,8 +168,6 @@ describe('AutoCompoundModule.sol', function () {
     const receipt: any = await mintTx.wait();
     tokenId = receipt.events[receipt.events.length - 1].args.tokenId;
 
-    await PositionManager.pushPositionId(tokenId);
-
     // user approve autocompound module
     await PositionManager.toggleModule(2, autoCompound.address, true);
   });

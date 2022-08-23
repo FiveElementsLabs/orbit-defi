@@ -4,6 +4,8 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
+
 import '@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol';
 import '../helpers/ERC20Helper.sol';
 import '../utils/Storage.sol';
@@ -12,6 +14,8 @@ import '../../interfaces/actions/IMint.sol';
 
 ///@notice action to mint a UniswapV3 position NFT
 contract Mint is IMint {
+    using SafeERC20 for IERC20;
+
     ///@notice emitted when a UniswapNFT is deposited in PositionManager
     ///@param positionManager address of PositionManager
     ///@param tokenId Id of deposited token
@@ -59,8 +63,8 @@ contract Mint is IMint {
         uint256 amount1Leftover = IERC20(inputs.token1Address).balanceOf(address(this));
 
         ///@dev send leftover tokens back to the user if necessary
-        if (amount0Leftover != 0) require(IERC20(inputs.token0Address).transfer(Storage.owner, amount0Leftover), 'MM0');
-        if (amount1Leftover != 0) require(IERC20(inputs.token1Address).transfer(Storage.owner, amount1Leftover), 'MM1');
+        if (amount0Leftover != 0) IERC20(inputs.token0Address).safeTransfer(Storage.owner, amount0Leftover);
+        if (amount1Leftover != 0) IERC20(inputs.token1Address).safeTransfer(Storage.owner, amount1Leftover);
 
         emit PositionMinted(address(this), tokenId);
     }

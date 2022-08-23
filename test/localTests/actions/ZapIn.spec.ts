@@ -228,11 +228,11 @@ describe('ZapIn.sol', function () {
 
   describe('ZapIn.sol', function () {
     it('should correctly mint a position', async function () {
-      const beforeLength = await PositionManager.getAllUniPositions();
+      const beforeLength = await NonFungiblePositionManager.balanceOf(ZapInFallback.address);
       const poolTick = Math.round((await PoolUsdcDai500.slot0())[1] / 10) * 10;
 
       await ZapInFallback.connect(user).zapIn(
-        tokenUsdc.address,
+        tokenEth.address,
         tokenDai.address,
         true,
         1000,
@@ -240,12 +240,13 @@ describe('ZapIn.sol', function () {
         poolTick + 600,
         500
       );
-      const afterLength = await PositionManager.getAllUniPositions();
+
+      const afterLength = await NonFungiblePositionManager.balanceOf(ZapInFallback.address);
       expect(Number(afterLength)).to.be.gt(Number(beforeLength));
     });
 
     it('should mint a position with tokens with different decimals', async function () {
-      const beforeLength = await PositionManager.getAllUniPositions();
+      const beforeLength = await NonFungiblePositionManager.balanceOf(ZapInFallback.address);
       await ZapInFallback.connect(user).zapIn(
         tokenEth.address,
         tokenUsdc.address,
@@ -255,17 +256,19 @@ describe('ZapIn.sol', function () {
         600,
         500
       );
-      const afterLength = await PositionManager.getAllUniPositions();
-      expect(Number(afterLength[1])).to.be.gt(Number(beforeLength));
+      const afterLength = await NonFungiblePositionManager.balanceOf(ZapInFallback.address);
+
+      expect(Number(afterLength)).to.be.gt(Number(beforeLength));
     });
 
     it('should mint out of range', async function () {
-      const beforeLength = await PositionManager.getAllUniPositions();
+      const beforeLength = await await NonFungiblePositionManager.balanceOf(ZapInFallback.address);
       await PositionManager.withdrawERC20(tokenEth.address);
       await PositionManager.withdrawERC20(tokenUsdc.address);
       await ZapInFallback.connect(user).zapIn(tokenEth.address, tokenUsdc.address, false, 10000, 400, 500, 500);
-      const afterLength = await PositionManager.getAllUniPositions();
-      expect(Number(afterLength.length)).to.be.gt(Number(beforeLength.length));
+
+      const afterLength = await await NonFungiblePositionManager.balanceOf(ZapInFallback.address);
+      expect(Number(afterLength)).to.be.gt(Number(beforeLength));
     });
 
     it('should fail if amountIn is 0', async function () {

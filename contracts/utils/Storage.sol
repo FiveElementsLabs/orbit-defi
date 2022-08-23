@@ -35,8 +35,7 @@ struct StorageStruct {
     address owner;
     IRegistry registry;
     IAaveAddressHolder aaveAddressHolder;
-    // key 32bytes => uint32 5bytes => storageVars[uint32] == key
-    mapping(uint128 => bytes32) storageVars;
+    mapping(bytes32 => bytes32) storageVars;
 }
 
 library PositionManagerStorage {
@@ -265,15 +264,10 @@ library PositionManagerStorage {
     ///@param hashedKey key to check
     modifier verifyKey(bytes32 hashedKey) {
         StorageStruct storage ds = getStorage();
-        bytes16 y;
 
-        assembly {
-            y := shl(128, hashedKey)
-        }
+        bytes32 storageVariableHash = ds.storageVars[hashedKey];
 
-        bytes32 storageVariableHash = ds.storageVars[uint128(y)];
-
-        require(storageVariableHash == hashedKey, 'SDK');
+        require(storageVariableHash == bytes32(uint256(1)), 'SDK');
         _;
     }
 
@@ -299,17 +293,12 @@ library PositionManagerStorage {
     ///@param hashedKey key to add to the mapping
     function addDynamicStorageKey(bytes32 hashedKey) internal {
         StorageStruct storage ds = getStorage();
-        bytes16 y;
 
-        assembly {
-            y := shl(128, hashedKey)
-        }
-
-        bytes32 storageVariableHash = ds.storageVars[uint128(y)];
+        bytes32 storageVariableHash = ds.storageVars[hashedKey];
 
         ///@dev return if the key already exists
         if (storageVariableHash != bytes32(0)) return;
 
-        ds.storageVars[uint128(y)] = hashedKey;
+        ds.storageVars[hashedKey] = bytes32(uint256(1));
     }
 }

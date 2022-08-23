@@ -166,7 +166,6 @@ describe('DecreaseLiquidity.sol', function () {
 
     const mintReceipt = (await txMint.wait()) as any;
     tokenId = mintReceipt.events[mintReceipt.events.length - 1].args.tokenId;
-    await PositionManager.pushPositionId(tokenId);
     DecreaseLiquidityFallback = (await ethers.getContractAt(
       'IDecreaseLiquidity',
       PositionManager.address
